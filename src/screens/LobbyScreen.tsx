@@ -49,9 +49,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const { playerName, setPlayerName, createRoom, joinRoom } = useMultiplayer();
 
   const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
-  const [nameInput, setNameInput] = useState(playerName || 'Guest');
-  const [playerCount, setPlayerCount] = useState(4);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
+  const [nameInput, setNameInput] = useState(playerName || 'Shark');
+  const [playerCount, setPlayerCount] = useState<number | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -67,17 +67,20 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     if (trimmed) await setPlayerName(trimmed);
   }, [nameInput, setPlayerName]);
 
+  const canStartMatch = playerCount !== null && selectedDifficulty !== null;
+
   const handleQuickMatch = useCallback(async () => {
+    if (!canStartMatch) return;
     await saveName();
-    setBotDifficulty(selectedDifficulty);
-    onQuickMatch?.(selectedDifficulty, playerCount - 1, nameInput.trim() || 'Guest');
-  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch]);
+    setBotDifficulty(selectedDifficulty!);
+    onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || 'Shark');
+  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
 
   const handleCreateRoom = useCallback(async () => {
     await saveName();
     setIsCreating(true);
     try {
-      const config: Partial<GameConfig> = { playerCount, maxCards: 10, autoStart: false };
+      const config: Partial<GameConfig> = { playerCount: playerCount ?? 4, maxCards: 10, autoStart: false };
       await createRoom(config);
       onRoomCreated();
     } catch (error: unknown) {
@@ -113,14 +116,13 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     }
   }, [joinCode, saveName, joinRoom, onRoomJoined, t]);
 
-  const TabButton: React.FC<{ tab: LobbyTab; label: string; accent?: boolean }> = ({ tab, label, accent }) => {
+  const TabButton: React.FC<{ tab: LobbyTab; label: string }> = ({ tab, label }) => {
     const isActive = activeTab === tab;
     return (
       <Pressable
         style={[
           styles.tabBtn,
-          { backgroundColor: isActive ? (accent ? colors.success : colors.accent) : colors.surface, borderColor: colors.glassLight },
-          isActive && { borderColor: 'transparent' },
+          { backgroundColor: isActive ? colors.accent : colors.surface, borderColor: colors.accent },
         ]}
         onPress={() => setActiveTab(tab)}
       >
@@ -135,10 +137,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.glassLight }]}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('lobby.welcome', 'Game Lobby')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Game Lobby</Text>
         {onSettings && (
           <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn}>
-            <Text style={{ fontSize: 20 }}>⚙</Text>
+            <Text style={{ fontSize: 20, color: colors.textPrimary }}>⚙</Text>
           </Pressable>
         )}
       </View>
@@ -168,7 +170,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         <View style={styles.tabRow}>
           <TabButton tab="create" label={t('lobby.createRoom')} />
           <TabButton tab="join" label={t('multiplayer.joinRoom')} />
-          <TabButton tab="bots" label={t('lobby.playVsBots', 'Play vs Bots')} accent />
+          <TabButton tab="bots" label={t('lobby.playVsBots', 'Play vs Bots')} />
         </View>
 
         {/* Tab content */}
@@ -176,7 +178,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           <View style={styles.tabContent}>
             {/* Player count */}
             <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
-              {t('lobby.playerCount', { count: playerCount })}
+              {t('lobby.playerCount', { count: playerCount ?? 0 })}
             </Text>
             <View style={styles.chipRow}>
               {[2, 3, 4, 5, 6].map((n) => (
@@ -187,7 +189,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                   style={[
                     styles.chip,
                     { backgroundColor: colors.surface, borderColor: colors.glassLight },
-                    playerCount === n && { backgroundColor: colors.success, borderColor: colors.success },
+                    playerCount === n && { backgroundColor: colors.accent, borderColor: colors.accent },
                   ]}
                 >
                   <Text style={[
@@ -229,8 +231,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
             {/* Start */}
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.accentMuted }]}
+              style={[styles.actionBtn, { backgroundColor: canStartMatch ? colors.accent : colors.accentMuted, opacity: canStartMatch ? 1 : 0.5 }]}
               onPress={handleQuickMatch}
+              disabled={!canStartMatch}
               testID="btn-quick-match"
             >
               <Text style={styles.actionBtnText}>
@@ -249,7 +252,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               style={[styles.codeInput, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.glassLight }]}
               value={joinCode}
               onChangeText={(v) => setJoinCode(v.toUpperCase().substring(0, 6))}
-              placeholder="A B C 1 2 3"
+              placeholder="ABC123"
               placeholderTextColor={colors.textMuted}
               maxLength={6}
               autoCapitalize="characters"
@@ -257,7 +260,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               testID="input-join-code"
             />
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: colors.accentMuted, opacity: joinCode.trim().length === 6 ? 1 : 0.5 }]}
+              style={[styles.actionBtn, { backgroundColor: joinCode.trim().length === 6 ? colors.accent : colors.accentMuted, opacity: joinCode.trim().length === 6 ? 1 : 0.5 }]}
               onPress={handleJoinRoom}
               disabled={joinCode.trim().length !== 6}
               testID="btn-join-room"
@@ -394,6 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 8,
     paddingHorizontal: Spacing.lg,
+    textAlign: 'center',
   },
   // Action button
   actionBtn: {
