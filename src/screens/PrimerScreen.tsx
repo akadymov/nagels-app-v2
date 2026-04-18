@@ -36,8 +36,10 @@ const SuitSpan = ({ suit, symbol }: { suit: keyof typeof Colors; symbol: string 
   </Text>
 );
 
-const BiddingVisual = () => (
-  <Text style={[TextStyles.h2, { textAlign: 'center', color: Colors.textPrimary }]}>
+const BiddingVisual = () => {
+  const { colors } = useTheme();
+  return (
+  <Text style={[TextStyles.h2, { textAlign: 'center', color: colors.textPrimary }]}>
     {'Trump '}
     <SuitSpan suit="hearts" symbol={SuitSymbols.hearts} />
     {' beats\n'}
@@ -47,7 +49,8 @@ const BiddingVisual = () => (
     {' '}
     <SuitSpan suit="clubs" symbol={SuitSymbols.clubs} />
   </Text>
-);
+  );
+};
 
 const SCREENS: Array<{
   key: string;
