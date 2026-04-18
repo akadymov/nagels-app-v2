@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, Radius, Spacing, TextStyles } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 
 // Button heights
 const BUTTON_HEIGHTS = {
@@ -62,6 +63,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   textStyle,
   testID,
 }) => {
+  const { colors } = useTheme();
   const [pressed, setPressed] = useState(false);
 
   const handlePress = async () => {
@@ -91,7 +93,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
       case 'secondary':
         return {
           container: {
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderColor: accentColor,
             borderWidth: 2,
           },

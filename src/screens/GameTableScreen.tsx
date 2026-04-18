@@ -725,9 +725,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         <View style={styles.betBannerOverlay}>
           <View style={[styles.betBannerModal, tricksDiff > 0 ? styles.betBannerFight : styles.betBannerGive, { backgroundColor: isDark ? colors.surface : undefined }]}>
             <Pressable style={styles.betBannerCloseBtn} onPress={() => setShowBetBanner(false)}>
-              <Text style={styles.betBannerCloseText}>✕</Text>
+              <Text style={[styles.betBannerCloseText, { color: isDark ? colors.textMuted : undefined }]}>✕</Text>
             </Pressable>
-            <Text style={styles.betBannerText}>
+            <Text style={[styles.betBannerText, { color: isDark ? colors.textPrimary : colors.textPrimary }]}>
               {tricksDiff > 0
                 ? t('game.toFight', { count: tricksDiff })
                 : t('game.toGive', { count: Math.abs(tricksDiff) })}

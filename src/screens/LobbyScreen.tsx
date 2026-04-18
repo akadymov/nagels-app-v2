@@ -158,7 +158,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         />
 
         {/* Player Count */}
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
           {t('lobby.playerCount', { count: playerCount })}
         </Text>
         <View style={styles.playerCountRow}>
@@ -169,6 +169,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               testID={`player-count-${n}`}
               style={[
                 styles.countOption,
+                { backgroundColor: colors.surface, borderColor: colors.glassLight },
                 playerCount === n && styles.countOptionSelected,
               ]}
             >
@@ -184,13 +185,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
         {/* Difficulty */}
         <Text style={styles.label}>{t('lobby.selectDifficulty')}</Text>
-        <View style={[styles.difficultyRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+        <View style={styles.difficultyRow}>
           {(Object.keys(BotDifficulties) as BotDifficulty[]).map((d) => (
             <Pressable
               key={d}
               onPress={() => setSelectedDifficulty(d)}
               style={[
                 styles.difficultyPill,
+                { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 },
                 selectedDifficulty === d && styles.difficultyPillSelected,
               ]}
             >
