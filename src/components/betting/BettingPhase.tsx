@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   },
   topBarRow2: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
   },
   iconBtn: {
     width: 30,
