@@ -1191,13 +1191,11 @@ const styles = StyleSheet.create({
 
   // Active player highlight
   activePlayer: {
-    shadowColor: Colors.accent,
+    shadowColor: '#E6BF33',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 6,
-    borderColor: Colors.accent,
-    borderWidth: 2,
   },
 
   // Turn and played indicators
