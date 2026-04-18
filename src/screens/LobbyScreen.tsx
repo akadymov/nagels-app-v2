@@ -147,11 +147,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         {/* Nickname */}
         <Text style={styles.label}>{t('multiplayer.yourName')}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.glassLight }]}
           value={nameInput}
           onChangeText={setNameInput}
           placeholder="Guest"
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           maxLength={20}
           autoCapitalize="words"
           testID="input-player-name"
@@ -184,7 +184,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
         {/* Difficulty */}
         <Text style={styles.label}>{t('lobby.selectDifficulty')}</Text>
-        <View style={styles.difficultyRow}>
+        <View style={[styles.difficultyRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           {(Object.keys(BotDifficulties) as BotDifficulty[]).map((d) => (
             <Pressable
               key={d}
@@ -238,14 +238,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         <Divider label={t('lobby.or')} />
 
         {/* Join Room */}
-        <View style={styles.joinCard}>
+        <View style={[styles.joinCard, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={styles.joinLabel}>{t('multiplayer.enterRoomCode')}</Text>
           <TextInput
-            style={styles.joinInput}
+            style={[styles.joinInput, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight }]}
             value={joinCode}
             onChangeText={(t) => setJoinCode(t.toUpperCase().substring(0, 6))}
             placeholder="ABC123"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             maxLength={6}
             autoCapitalize="characters"
             textAlign="center"
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   input: {
     ...TextStyles.body,
-    backgroundColor: '#ffffff',
+    backgroundColor: undefined, // themed via inline
     borderWidth: 1,
     borderColor: Colors.glassLight,
     borderRadius: Radius.md,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: Radius.md,
-    backgroundColor: '#ffffff',
+    backgroundColor: undefined, // themed via inline
     borderWidth: 1,
     borderColor: Colors.glassLight,
     alignItems: 'center',
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: Radius.full,
-    backgroundColor: '#ffffff',
+    backgroundColor: undefined, // themed via inline
     borderWidth: 1,
     borderColor: Colors.glassLight,
     alignItems: 'center',
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   joinCard: {
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    backgroundColor: '#ffffff',
+    backgroundColor: undefined, // themed via inline
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.glassLight,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.xs,
-    backgroundColor: '#ffffff',
+    backgroundColor: undefined, // themed via inline
     borderTopWidth: 1,
     borderTopColor: Colors.glassLight,
   },
