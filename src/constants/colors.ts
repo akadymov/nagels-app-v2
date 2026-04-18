@@ -1,70 +1,171 @@
 /**
  * Nägels Online - Color System
- * Light theme, inspired by the legacy app design
- * Primary: deep blue #13428f, background: light gray #e7e7e7
+ * Supports light and dark themes.
  */
 
-export const Colors = {
-  // Primary brand blue (legacy primary color)
-  accent: '#13428f' as const,           // Deep blue (primary action)
-  accentSecondary: '#5dc2fc' as const,  // Light cyan (secondary / hover)
-  accentMuted: '#7ba7d4' as const,      // Muted blue (tertiary)
+/** Shared colors — identical in both themes */
+const shared = {
+  // Brand
+  accent: '#13428f',
+  accentSecondary: '#5dc2fc',
+  accentMuted: '#7ba7d4',
+  highlight: '#13428f',
 
-  // Highlight for key interactive elements
-  highlight: '#13428f' as const,        // Deep blue
+  // Card suits (4-color deck)
+  diamonds: '#0094FF',
+  hearts: '#BE1931',
+  clubs: '#308552',
+  spades: '#1a1a1a',
 
-  // Card suits - 4-color deck (matching legacy)
-  diamonds: '#0094FF' as const,         // Blue diamonds
-  hearts: '#BE1931' as const,           // Crimson hearts
-  clubs: '#308552' as const,            // Green clubs
-  spades: '#1a1a1a' as const,           // Near-black spades
+  // Status
+  success: '#308552',
+  warning: '#e67e22',
+  error: '#b10000',
+  info: '#13428f',
 
-  // Surface / border colors - light theme
-  glassLight: 'rgba(0, 0, 0, 0.12)' as const,       // Subtle border
-  glassDark: 'rgba(255, 255, 255, 0.95)' as const,   // White surface
-  glassMedium: 'rgba(0, 0, 0, 0.06)' as const,       // Very light tint
-  glassHighlight: 'rgba(19, 66, 143, 0.1)' as const, // Blue tint highlight
+  // Trump
+  trumpActive: '#13428f',
+  trumpInactive: '#888888',
 
-  // Text colors - dark on light background
-  textPrimary: '#1a1a1a' as const,      // Near black
-  textSecondary: '#444444' as const,    // Dark gray
-  textMuted: '#888888' as const,        // Medium gray
-  textDisabled: '#bbbbbb' as const,     // Light gray
+  // Player states
+  activePlayerBorder: '#E6BF33',
+  selectedCardBorder: '#E6BF33',
+} as const;
 
-  // Background colors - light theme
-  background: '#e8e8e8' as const,       // Light gray (legacy main background)
-  backgroundDark: '#d8d8d8' as const,   // Slightly darker gray
-  cardTable: '#e8e8e8' as const,        // Same light gray
+export const lightColors = {
+  ...shared,
 
-  // Gradient presets - light theme
-  warmTop: ['#f5f5f5', '#e8e8e8'] as const,
-  warmBottom: ['#e8e8e8', '#d8d8d8'] as const,
-  deepRich: ['#f2f2f2', '#e2e2e2'] as const,
+  // Backgrounds
+  background: '#e8e8e8',
+  backgroundDark: '#d8d8d8',
+  surface: '#ffffff',
+  surfaceSecondary: '#f5f5f5',
 
-  // Status colors
-  success: '#308552' as const,          // Green
-  warning: '#e67e22' as const,          // Orange
-  error: '#b10000' as const,            // Red
-  info: '#13428f' as const,             // Blue
+  // Game table
+  table: '#33734D',
+  tableInner: '#296140',
+  tableBorder: '#4D8C63',
+  cardTable: '#e8e8e8',
 
-  // Trump indicator
-  trumpActive: '#13428f' as const,      // Blue when active
-  trumpInactive: '#888888' as const,    // Gray when inactive
+  // Cards
+  card: '#ffffff',
+  cardBorder: '#C7C7CC',
+
+  // Glass effects
+  glassLight: 'rgba(0, 0, 0, 0.12)',
+  glassDark: 'rgba(255, 255, 255, 0.95)',
+  glassMedium: 'rgba(0, 0, 0, 0.06)',
+  glassHighlight: 'rgba(19, 66, 143, 0.1)',
+
+  // Text
+  textPrimary: '#1a1a1a',
+  textSecondary: '#444444',
+  textMuted: '#888888',
+  textDisabled: '#bbbbbb',
+
+  // Player profiles
+  profileBg: 'rgba(8, 10, 14, 0.7)',
+  profileText: '#ffffff',
+  profileStats: '#C0C0C7',
+
+  // Gradients
+  warmTop: ['#f5f5f5', '#e8e8e8'] as readonly [string, string],
+  warmBottom: ['#e8e8e8', '#d8d8d8'] as readonly [string, string],
+  deepRich: ['#f2f2f2', '#e2e2e2'] as readonly [string, string],
+
+  // Status bar
+  statusBarStyle: 'dark-content' as const,
+  statusBarBg: '#e8e8e8',
+
+  // Icon buttons
+  iconButtonBg: '#F0F0F0',
+  iconButtonText: '#1a1a1a',
+
+  // Bid chips
+  bidChipDisabled: '#D6D6D6',
+  bidChipDisabledText: '#888888',
+} as const;
+
+export const darkColors = {
+  ...shared,
+
+  // Backgrounds
+  background: '#141720',
+  backgroundDark: '#0E1016',
+  surface: '#1F2130',
+  surfaceSecondary: '#292D38',
+
+  // Game table
+  table: '#595F70',
+  tableInner: '#4D5463',
+  tableBorder: '#6B7185',
+  cardTable: '#141720',
+
+  // Cards — white in dark theme too
+  card: '#ffffff',
+  cardBorder: '#C7C7CC',
+
+  // Glass effects (adapted for dark)
+  glassLight: 'rgba(255, 255, 255, 0.08)',
+  glassDark: 'rgba(30, 33, 48, 0.95)',
+  glassMedium: 'rgba(255, 255, 255, 0.04)',
+  glassHighlight: 'rgba(93, 194, 252, 0.1)',
+
+  // Text
+  textPrimary: '#EDEDED',
+  textSecondary: '#B3B3BA',
+  textMuted: '#737380',
+  textDisabled: '#4A4A55',
+
+  // Player profiles
+  profileBg: 'rgba(8, 10, 14, 0.7)',
+  profileText: '#ffffff',
+  profileStats: '#C0C0C7',
+
+  // Gradients
+  warmTop: ['#1F2130', '#141720'] as readonly [string, string],
+  warmBottom: ['#141720', '#0E1016'] as readonly [string, string],
+  deepRich: ['#1F2130', '#141720'] as readonly [string, string],
+
+  // Status bar
+  statusBarStyle: 'light-content' as const,
+  statusBarBg: '#141720',
+
+  // Icon buttons
+  iconButtonBg: '#383D4D',
+  iconButtonText: '#DEDEE2',
+
+  // Bid chips
+  bidChipDisabled: '#4D525C',
+  bidChipDisabledText: '#737380',
+} as const;
+
+/** Theme color type — uses string for color values to allow both light and dark variants */
+export type ThemeColors = {
+  [K in keyof typeof lightColors]: (typeof lightColors)[K] extends readonly [string, string]
+    ? readonly [string, string]
+    : string;
 };
+
+/** Legacy Colors — maps to light theme for backward compatibility */
+export const Colors = lightColors;
 
 export type ColorKey = keyof typeof Colors;
 
-/**
- * Get trump color by suit
- */
-export const getTrumpColor = (suit: 'diamonds' | 'hearts' | 'clubs' | 'spades' | 'notrump'): string => {
-  if (suit === 'notrump') return Colors.trumpActive;
-  return Colors[suit];
+/** Get colors for a specific theme */
+export function getColors(theme: 'light' | 'dark'): ThemeColors {
+  return theme === 'dark' ? darkColors : lightColors;
+}
+
+/** Get trump color by suit */
+export const getTrumpColor = (
+  suit: 'diamonds' | 'hearts' | 'clubs' | 'spades' | 'notrump',
+): string => {
+  if (suit === 'notrump') return shared.trumpActive;
+  return shared[suit];
 };
 
-/**
- * Suit symbols
- */
+/** Suit symbols */
 export const SuitSymbols = {
   diamonds: '♦',
   hearts: '♥',
