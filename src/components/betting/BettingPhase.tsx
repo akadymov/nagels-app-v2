@@ -152,6 +152,21 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     return Array.from({ length: cardsPerPlayer + 1 }, (_, i) => i);
   }, [cardsPerPlayer]);
 
+  // Blocked bets (for explanation)
+  const blockedBets = useMemo(() => {
+    return allBets.filter(b => !allowedBets.includes(b) && b <= cardsPerPlayer);
+  }, [allBets, allowedBets, cardsPerPlayer]);
+
+  // Smart hint: count trumps and aces in hand
+  const smartHint = useMemo(() => {
+    if (!myPlayer) return null;
+    const hand = myPlayer.hand;
+    const trumpCount = trumpSuit === 'notrump' ? 0 : hand.filter(c => c.suit === trumpSuit).length;
+    const aceCount = hand.filter(c => c.rank === 'A').length;
+    const bidsSoFar = players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
+    return { trumpCount, aceCount, bidsSoFar };
+  }, [myPlayer, trumpSuit, players]);
+
   const renderBetChip = (bet: number) => {
     const isAllowed = allowedBets.includes(bet);
     const isSelected = myPlayer?.bet === bet;
@@ -227,10 +242,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         </View>
 
         {/* Subtitle */}
-        <Text style={styles.screenSubtitle}>{t('game.placeBets')}</Text>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>{t('game.placeBets')}</Text>
 
-        {/* Players and their bets - Prominent vertical list */}
-        <View style={styles.playersContainer}>
+        {/* Players — compact horizontal cards */}
+        <View style={styles.playersRow}>
           {players.map((player, index) => {
             const isBetting = index === bettingPlayerIndex;
             const hasBet = player.bet !== null && player.bet !== undefined;
@@ -245,36 +260,32 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               <View
                 key={player.id}
                 style={[
-                  styles.playerRow,
-                  isBetting && styles.playerRowActive,
-                  isMe && styles.playerRowMe,
+                  styles.playerCard,
+                  { backgroundColor: colors.surface, borderColor: colors.glassLight },
+                  isBetting && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                  isMe && { borderColor: colors.accent, borderWidth: 2 },
                 ]}
               >
-                <View style={styles.playerRowLeft}>
-                  {isBetting && <View style={styles.bettingDot} />}
-                  <Text style={[styles.playerRowName, isBetting && styles.playerRowNameActive, isMe && styles.playerRowNameMe]} numberOfLines={1}>
-                    {displayName}
-                  </Text>
-                  {isBetting && (
-                    <Text style={styles.bettingIndicator}>{t('game.betting')}</Text>
-                  )}
-                </View>
-                <View style={[styles.playerRowBetBadge, hasBet && styles.playerRowBetBadgeConfirmed]}>
-                  <Text style={[styles.playerRowBetText, hasBet && styles.playerRowBetTextConfirmed]}>
-                    {hasBet ? player.bet : '?'}
-                  </Text>
-                </View>
+                <Text style={[styles.playerCardName, { color: isMe ? colors.accent : colors.textPrimary }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <Text style={[
+                  styles.playerCardBet,
+                  { color: hasBet ? colors.success : colors.textMuted },
+                ]}>
+                  {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') : '...'}
+                </Text>
               </View>
             );
           })}
+        </View>
 
-          {/* Sum of all bets */}
-          <View style={styles.betsSummary}>
-            <Text style={styles.betsSummaryLabel}>{t('game.totalBets')}:</Text>
-            <Text style={styles.betsSummaryValue}>
-              {players.reduce((sum, p) => sum + (p.bet ?? 0), 0)} / {cardsPerPlayer}
-            </Text>
-          </View>
+        {/* Bids summary */}
+        <View style={[styles.betsSummary, { backgroundColor: colors.surfaceSecondary }]}>
+          <Text style={[styles.betsSummaryLabel, { color: colors.textSecondary }]}>{t('game.totalBets')}:</Text>
+          <Text style={[styles.betsSummaryValue, { color: colors.textPrimary }]}>
+            {players.reduce((sum, p) => sum + (p.bet ?? 0), 0)} / {cardsPerPlayer}
+          </Text>
         </View>
 
         {/* Spacer to push cards to bottom (thumb zone) */}
@@ -299,6 +310,15 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
           </View>
         )}
 
+        {/* Smart hint */}
+        {isMyTurn && smartHint && !myPlayer?.bet && (
+          <View style={[styles.smartHint, { backgroundColor: isDark ? 'rgba(93,194,252,0.1)' : 'rgba(19,66,143,0.07)' }]}>
+            <Text style={[styles.smartHintText, { color: colors.accent }]}>
+              💡 {smartHint.trumpCount} {t('game.trumps', 'trumps')} ({getTrumpSymbol(trumpSuit)}), {smartHint.aceCount} {t('game.aces', 'Aces')}. {t('game.bidsSoFar', 'Bids so far')}: {smartHint.bidsSoFar}/{cardsPerPlayer}
+            </Text>
+          </View>
+        )}
+
         {/* Bet chips — poker style (show all, disabled = gray) */}
         {isMyTurn && !myPlayer?.bet && (
           <View style={[styles.betButtonsContainer, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
@@ -313,6 +333,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             {allowedBets.length === 0 && (
               <Text style={[styles.noBetsText, { color: colors.error }]}>
                 No valid bets available
+              </Text>
+            )}
+
+            {/* Blocked bets explanation */}
+            {blockedBets.length > 0 && blockedBets.length < allBets.length && (
+              <Text style={[styles.blockedText, { color: colors.error }]}>
+                {blockedBets.map(b => `Bid ${b}`).join(', ')} blocked — total bids can't equal {cardsPerPlayer}
               </Text>
             )}
           </View>
@@ -580,6 +607,45 @@ const styles = StyleSheet.create({
   betChipText: {
     fontSize: 22,
     fontWeight: '700',
+  },
+  // Players — horizontal compact cards
+  playersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  playerCard: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  playerCardName: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  playerCardBet: {
+    fontSize: 11,
+  },
+  // Smart hint
+  smartHint: {
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  smartHintText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Blocked bets
+  blockedText: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
   },
   noBetsText: {
     ...TextStyles.caption,
