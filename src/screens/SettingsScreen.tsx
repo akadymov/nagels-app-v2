@@ -1,0 +1,235 @@
+/**
+ * Nägels Online - Settings Screen
+ * Theme, deck style, and language preferences.
+ */
+
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
+import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n/config';
+
+export interface SettingsScreenProps {
+  onBack: () => void;
+}
+
+/** Pill selector for 2-3 options */
+const OptionPills: React.FC<{
+  options: { key: string; label: string }[];
+  selected: string;
+  onSelect: (key: string) => void;
+  accentColor: string;
+  textColor: string;
+  bgColor: string;
+}> = ({ options, selected, onSelect, accentColor, textColor, bgColor }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[pillStyles.container, { backgroundColor: bgColor, borderColor: colors.glassLight }]}>
+      {options.map((opt) => {
+        const isActive = opt.key === selected;
+        return (
+          <Pressable
+            key={opt.key}
+            style={[
+              pillStyles.pill,
+              isActive && { backgroundColor: accentColor },
+            ]}
+            onPress={() => onSelect(opt.key)}
+          >
+            <Text
+              style={[
+                pillStyles.pillText,
+                { color: textColor },
+                isActive && { color: '#ffffff', fontWeight: '700' },
+              ]}
+            >
+              {opt.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+};
+
+const pillStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    padding: 3,
+  },
+  pill: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+  },
+  pillText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});
+
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
+  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const { themePreference, fourColorDeck, setThemePreference, setFourColorDeck } = useSettingsStore();
+
+  const currentLang = i18n.language;
+
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
+        <Pressable onPress={onBack} hitSlop={12}>
+          <Text style={[styles.backButton, { color: colors.accent }]}>←</Text>
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          {t('settings.title', 'Settings')}
+        </Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* THEME */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('settings.theme', 'Theme')}
+          </Text>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            {t('settings.themeDesc', 'Choose light, dark, or match your device settings.')}
+          </Text>
+          <OptionPills
+            options={[
+              { key: 'system', label: t('settings.system', 'System') },
+              { key: 'light', label: t('settings.light', 'Light') },
+              { key: 'dark', label: t('settings.dark', 'Dark') },
+            ]}
+            selected={themePreference}
+            onSelect={(key) => setThemePreference(key as ThemePreference)}
+            accentColor={colors.accent}
+            textColor={colors.textSecondary}
+            bgColor={colors.surfaceSecondary}
+          />
+        </View>
+
+        {/* DECK STYLE */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('settings.deckStyle', 'Deck Colors')}
+          </Text>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            {t('settings.deckDesc', 'Classic uses red/black. Four-color gives each suit a unique color.')}
+          </Text>
+          <OptionPills
+            options={[
+              { key: 'classic', label: t('settings.classic', 'Classic') },
+              { key: 'fourColor', label: t('settings.fourColor', '4-Color') },
+            ]}
+            selected={fourColorDeck ? 'fourColor' : 'classic'}
+            onSelect={(key) => setFourColorDeck(key === 'fourColor')}
+            accentColor={colors.accent}
+            textColor={colors.textSecondary}
+            bgColor={colors.surfaceSecondary}
+          />
+          {/* Preview */}
+          <View style={styles.deckPreview}>
+            <Text style={[styles.previewSuit, { color: '#1a1a1a' }]}>♠</Text>
+            <Text style={[styles.previewSuit, { color: '#BE1931' }]}>♥</Text>
+            <Text style={[styles.previewSuit, { color: fourColorDeck ? '#0094FF' : '#BE1931' }]}>♦</Text>
+            <Text style={[styles.previewSuit, { color: fourColorDeck ? '#308552' : '#1a1a1a' }]}>♣</Text>
+          </View>
+        </View>
+
+        {/* LANGUAGE */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('settings.language', 'Language')}
+          </Text>
+          <OptionPills
+            options={[
+              { key: 'en', label: 'English' },
+              { key: 'ru', label: 'Русский' },
+              { key: 'es', label: 'Español' },
+            ]}
+            selected={currentLang}
+            onSelect={handleLanguageChange}
+            accentColor={colors.accent}
+            textColor={colors.textSecondary}
+            bgColor={colors.surfaceSecondary}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    fontSize: 22,
+    fontWeight: '700',
+    width: 36,
+  },
+  headerTitle: {
+    ...TextStyles.h3,
+    fontWeight: '600',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  section: {
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+  },
+  sectionTitle: {
+    ...TextStyles.h3,
+    marginBottom: Spacing.xs,
+  },
+  sectionDesc: {
+    ...TextStyles.caption,
+    marginBottom: Spacing.md,
+    lineHeight: 20,
+  },
+  deckPreview: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  previewSuit: {
+    fontSize: 28,
+    fontWeight: '700',
+  },
+});
+
+export default SettingsScreen;

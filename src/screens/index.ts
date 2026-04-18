@@ -15,3 +15,6 @@ export type { ScoreboardModalProps, PlayerScore } from './ScoreboardModal';
 export type { WaitingRoomScreenProps } from './WaitingRoomScreen';
 export type { CreateRoomScreenProps } from './CreateRoomScreen';
 export type { JoinRoomScreenProps } from './JoinRoomScreen';
+
+export { SettingsScreen } from './SettingsScreen';
+export type { SettingsScreenProps } from './SettingsScreen';

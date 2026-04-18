@@ -36,6 +36,7 @@ export interface LobbyScreenProps {
   onQuickMatch?: (difficulty: BotDifficulty, botCount: number, playerName: string) => void;
   onRoomCreated: () => void;
   onRoomJoined: () => void;
+  onSettings?: () => void;
 }
 
 const ACTION_BAR_HEIGHT = 44;
@@ -44,6 +45,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onQuickMatch,
   onRoomCreated,
   onRoomJoined,
+  onSettings,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -274,6 +276,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           onPress={() => setShowLanguageModal(true)}
         >
           <Text style={styles.barLabel}>{t('game.language')}</Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.barButton}
+          hitSlop={12}
+          onPress={onSettings}
+        >
+          <Text style={styles.barLabel}>⚙ {t('settings.title', 'Settings')}</Text>
         </Pressable>
 
         <Pressable
