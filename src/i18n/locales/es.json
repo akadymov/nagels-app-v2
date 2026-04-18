@@ -21,19 +21,19 @@
     "swipeHint": "Desliza izquierda o derecha para navegar",
     "screen1": {
       "title": "Cómo funciona",
-      "visual": "A > K > Q > J\n10 → 1 → 10",
+      "visual": "10 → 1 → 10",
       "description": "Todos juegan una carta. El que juega la más alta se lleva el montón — eso es una baza. Las manos van de 10 cartas bajando hasta 1 y luego vuelven a 10.",
       "button": "¡Entendido!"
     },
     "screen2": {
-      "title": "Predice antes de jugar",
+      "title": "El triunfo gana",
       "visual": "El palo triunfo\nvence a todos",
       "description": "Antes de cada mano, di cuántas bazas vas a ganar. ¿Aciertas exactamente? → ¡+10 de bonificación! Un palo es «triunfo» — esas cartas ganan a todas las demás.",
       "button": "Tiene sentido"
     },
     "screen3": {
       "title": "La precisión gana",
-      "visual": "Apuesta 3 → Gana 3\n= +10 bonus",
+      "visual": "Adivina tus bazas\nexacto = +10 bonus",
       "description": "¿Más o menos bazas de las que predijiste? Sin bonus. ¿Aciertas el número exacto? Sumas puntos. Gana quien tenga más puntos al final.",
       "button": "¡Juguemos!"
     }

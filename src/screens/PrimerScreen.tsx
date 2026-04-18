@@ -190,7 +190,17 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
               blurAmount={10}
             >
               <Text style={[styles.visualText, { color: colors.textPrimary }]}>{t(visualKey)}</Text>
-              {/* Suit symbols on screen 2 */}
+              {/* Screen 1: suit order icons */}
+              {currentIndex === 0 && (
+                <View style={styles.suitIcons}>
+                  <Text style={[styles.suitIcon, { color: colors.spades }]}>{SuitSymbols.spades}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.hearts }]}>{SuitSymbols.hearts}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.diamonds }]}>{SuitSymbols.diamonds}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.clubs }]}>{SuitSymbols.clubs}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.textMuted }]}>NT</Text>
+                </View>
+              )}
+              {/* Screen 2: trump beats others */}
               {currentIndex === 1 && (
                 <View style={styles.suitIcons}>
                   <Text style={[styles.suitIcon, { color: colors.hearts }]}>{SuitSymbols.hearts}</Text>
