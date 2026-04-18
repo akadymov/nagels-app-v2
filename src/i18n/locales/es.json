@@ -88,7 +88,8 @@
     "trumpsCount": "{{count}} triunfos",
     "acesCount": "{{count}} Ases",
     "bidsSoFar": "Apuestas hasta ahora",
-    "bidBlocked": "Apuesta {{bid}} bloqueada — total no puede ser {{total}}"
+    "bidBlocked": "Apuesta {{bid}} bloqueada — total no puede ser {{total}}",
+    "yourCards": "Tus cartas en esta ronda"
   },
   "trumps": {
     "diamonds": "Diamantes",

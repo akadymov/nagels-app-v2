@@ -88,7 +88,8 @@
     "trumpsCount": "{{count}} козырей",
     "acesCount": "{{count}} тузов",
     "bidsSoFar": "Ставки",
-    "bidBlocked": "Ставка {{bid}} заблокирована — сумма не может равняться {{total}}"
+    "bidBlocked": "Ставка {{bid}} заблокирована — сумма не может равняться {{total}}",
+    "yourCards": "Ваши карты в этом раунде"
   },
   "trumps": {
     "diamonds": "Бубны",
