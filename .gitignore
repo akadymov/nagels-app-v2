@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.yarn/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.ipa
+*.apk
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Dev screenshots & recordings in project root
+/*.jpg
+/*.png
+/*.mov
+/*.mp4
+/reference_UI_screenshots/
+/telegram-cloud-photo-*

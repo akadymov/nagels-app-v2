@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo start:*)",
+      "Bash(pkill:*)",
+      "Bash(npx expo install:*)",
+      "Bash(brew install:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(find /Users/akadymov/nigels-app-v2/src -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.svelte -o -name *.vue \\\\\\))",
+      "Bash(node -e \":*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(find /Users/akadymov/nigels-app-v2 -name *legacy* -o -name *design* -o -name *README*)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(find /Users/akadymov/nigels-app-v2 -name *.css -type f)",
+      "Bash(grep -n \"playerName\\\\|myPlayerName\\\\|getPlayerName\\\\|PLAYER_NAME\\\\|playerName\" /Users/akadymov/nigels-app-v2/src/lib/multiplayer/*.ts)",
+      "Bash(grep -n \"getTotalHands\\\\|getHandCards\" /Users/akadymov/nigels-app-v2/src/game/*.ts)",
+      "WebSearch",
+      "Bash(gh auth:*)",
+      "Bash(gh config:*)",
+      "Bash(git remote:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
