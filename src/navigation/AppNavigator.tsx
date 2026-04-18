@@ -15,6 +15,7 @@ import {
   WaitingRoomScreen,
   CreateRoomScreen,
   JoinRoomScreen,
+  SettingsScreen,
 } from '../screens';
 import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
@@ -46,6 +47,7 @@ export type RootStackParamList = {
     playerName?: string;
     onExit?: () => void;
   };
+  Settings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -261,6 +263,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   }}
                   onRoomCreated={() => (props.navigation as any).navigate('WaitingRoom')}
                   onRoomJoined={() => (props.navigation as any).navigate('WaitingRoom')}
+                  onSettings={() => (props.navigation as any).navigate('Settings')}
                 />
               )}
             </Stack.Screen>
@@ -306,6 +309,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   botCount={props.route?.params?.botCount}
                   playerName={props.route?.params?.playerName}
                   onExit={() => (props.navigation as any).goBack()}
+                />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="Settings">
+              {(props) => (
+                <SettingsScreen
+                  onBack={() => (props.navigation as any).goBack()}
                 />
               )}
             </Stack.Screen>
