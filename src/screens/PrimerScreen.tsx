@@ -18,6 +18,7 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { GlassCard } from '../components/glass';
 import { GlassButton } from '../components/buttons';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -86,6 +87,7 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
   navigation,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   // Animated value for swipe feedback
@@ -184,9 +186,9 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
   const btnKey = `primer.${currentScreen.i18nKey}.button` as const;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <LinearGradient
-        colors={Colors.deepRich}
+        colors={colors.deepRich as any}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.3, y: 1 }}
@@ -247,7 +249,7 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
           onPress={handleNext}
           size="medium"
           variant="primary"
-          accentColor={Colors.highlight}
+          accentColor={colors.highlight}
           style={styles.nextButton}
           testID={`primer-button-${currentIndex}`}
         />
