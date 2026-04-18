@@ -29,50 +29,10 @@ export interface PrimerScreenProps {
   navigation?: any;
 }
 
-// Colored suit symbol components for the bidding screen
-const SuitSpan = ({ suit, symbol }: { suit: keyof typeof Colors; symbol: string }) => (
-  <Text style={{ color: suit === 'spades' ? Colors.textPrimary : Colors[suit] as string }}>
-    {symbol}
-  </Text>
-);
-
-const BiddingVisual = () => {
-  const { colors } = useTheme();
-  return (
-  <Text style={[TextStyles.h2, { textAlign: 'center', color: colors.textPrimary }]}>
-    {'Trump '}
-    <SuitSpan suit="hearts" symbol={SuitSymbols.hearts} />
-    {' beats\n'}
-    <SuitSpan suit="spades" symbol={SuitSymbols.spades} />
-    {' '}
-    <SuitSpan suit="diamonds" symbol={SuitSymbols.diamonds} />
-    {' '}
-    <SuitSpan suit="clubs" symbol={SuitSymbols.clubs} />
-  </Text>
-  );
-};
-
-const SCREENS: Array<{
-  key: string;
-  i18nKey: string;
-  visual?: string;
-  visualNode?: React.ReactNode;
-}> = [
-  {
-    key: 'basics',
-    i18nKey: 'screen1',
-    visual: `A > K > Q > J\n10 → 1 → 10`,
-  },
-  {
-    key: 'bidding',
-    i18nKey: 'screen2',
-    visualNode: <BiddingVisual />,
-  },
-  {
-    key: 'winning',
-    i18nKey: 'screen3',
-    visual: `Bet 3 → Win 3\n= +10 bonus`,
-  },
+const SCREENS = [
+  { key: 'basics', i18nKey: 'screen1' },
+  { key: 'bidding', i18nKey: 'screen2' },
+  { key: 'winning', i18nKey: 'screen3' },
 ];
 
 /**
@@ -186,6 +146,7 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
 
   const currentScreen = SCREENS[currentIndex];
   const titleKey = `primer.${currentScreen.i18nKey}.title` as const;
+  const visualKey = `primer.${currentScreen.i18nKey}.visual` as const;
   const descKey = `primer.${currentScreen.i18nKey}.description` as const;
   const btnKey = `primer.${currentScreen.i18nKey}.button` as const;
 
@@ -228,8 +189,16 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
               style={styles.visualCard}
               blurAmount={10}
             >
-              {currentScreen.visualNode ?? (
-                <Text style={[styles.visualText, { color: colors.textPrimary }]}>{currentScreen.visual}</Text>
+              <Text style={[styles.visualText, { color: colors.textPrimary }]}>{t(visualKey)}</Text>
+              {/* Suit symbols on screen 2 */}
+              {currentIndex === 1 && (
+                <View style={styles.suitIcons}>
+                  <Text style={[styles.suitIcon, { color: colors.hearts }]}>{SuitSymbols.hearts}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.textMuted }]}>{'>'}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.spades }]}>{SuitSymbols.spades}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.diamonds }]}>{SuitSymbols.diamonds}</Text>
+                  <Text style={[styles.suitIcon, { color: colors.clubs }]}>{SuitSymbols.clubs}</Text>
+                </View>
               )}
             </GlassCard>
 
@@ -313,6 +282,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     minWidth: 200,
     alignItems: 'center',
+  },
+  suitIcons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    alignItems: 'center',
+  },
+  suitIcon: {
+    fontSize: 28,
+    fontWeight: '700',
   },
   visualText: {
     ...TextStyles.h2,
