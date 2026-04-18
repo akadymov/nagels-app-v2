@@ -89,12 +89,15 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const sizeConfig = getSizeConfig();
 
-  const cardBorderStyle = selected
-    ? { borderColor: colors.selectedCardBorder, borderWidth: 3 }
+  // Always same borderWidth to prevent layout jump when selecting
+  const borderWidth = 2;
+  const borderColor = selected
+    ? colors.selectedCardBorder
     : playable
-      ? { borderColor: colors.success, borderWidth: 2 }
-      : { borderColor: colors.cardBorder, borderWidth: 1.5 };
+      ? colors.success
+      : colors.cardBorder;
 
+  const cardBorderStyle = { borderColor, borderWidth };
   const cardOpacity = disabled ? 0.4 : 1;
 
   const renderFaceUp = () => (

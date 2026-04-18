@@ -108,7 +108,7 @@ export const CardHand: React.FC<CardHandProps> = ({
           rank={card.rank}
           faceDown={card.faceDown}
           selected={isSelected}
-          playable={isPlayable}
+          playable={false}
           size={size}
           onPress={() => onCardPress?.(card.id)}
           testID={`card-${card.suit}-${card.rank}`}
