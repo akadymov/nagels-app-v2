@@ -84,7 +84,11 @@
     "bettingOrder": "Orden de apuestas",
     "chat": "Chat",
     "chatEmpty": "Di algo...",
-    "chatPlaceholder": "Mensaje..."
+    "chatPlaceholder": "Mensaje...",
+    "trumpsCount": "{{count}} triunfos",
+    "acesCount": "{{count}} Ases",
+    "bidsSoFar": "Apuestas hasta ahora",
+    "bidBlocked": "Apuesta {{bid}} bloqueada — total no puede ser {{total}}"
   },
   "trumps": {
     "diamonds": "Diamantes",
