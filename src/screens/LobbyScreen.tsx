@@ -175,6 +175,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             >
               <Text style={[
                 styles.countOptionText,
+                { color: colors.textSecondary },
                 playerCount === n && styles.countOptionTextSelected,
               ]}>
                 {n}
@@ -198,6 +199,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             >
               <Text style={[
                 styles.difficultyPillText,
+                { color: colors.textSecondary },
                 selectedDifficulty === d && styles.difficultyPillTextSelected,
               ]}>
                 {t(`lobby.difficulty.${d}`)}

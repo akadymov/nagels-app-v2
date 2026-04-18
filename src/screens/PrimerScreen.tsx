@@ -310,9 +310,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     minWidth: 200,
     alignItems: 'center',
-    backgroundColor: Colors.glassDark,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
   },
   visualText: {
     ...TextStyles.h2,
