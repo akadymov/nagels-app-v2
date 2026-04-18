@@ -1,110 +1,123 @@
 /**
  * Nägels Online - Welcome Screen
- * First screen users see with Quick Start entry point
- * Light theme matching legacy app aesthetic
+ * Logo, Learn to Play, Play as Guest, Sign In
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
   Pressable,
-  Platform,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GlassButton } from '../components/buttons';
-import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
+import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import i18n from '../i18n/config';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SW, height: SH } = Dimensions.get('window');
 
 export interface WelcomeScreenProps {
   onQuickStart: () => void;
   onAlreadyPlay?: () => void;
+  onSignIn?: () => void;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onQuickStart,
   onAlreadyPlay,
+  onSignIn,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const buttonOpacity = useRef(new Animated.Value(0)).current;
-
+  const fadeIn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(logoOpacity, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start(() => {
-      Animated.timing(taglineOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => {
-        Animated.timing(buttonOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      });
-    });
+    Animated.timing(fadeIn, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   }, []);
 
+  const currentLang = i18n.language;
+  const handleLang = (lang: string) => i18n.changeLanguage(lang);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <View style={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <Animated.View style={[styles.content, { opacity: fadeIn }]}>
 
-        {/* Logo block */}
-        <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
-          <View style={[styles.logoCard, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-            <Text style={[styles.logoTitle, { color: colors.accent }]}>{t('welcome.title')}</Text>
-            <View style={styles.suitRow}>
-              <Text style={[styles.suit, { color: Colors.spades }]}>{SuitSymbols.spades}</Text>
-              <Text style={[styles.suit, { color: Colors.hearts }]}>{SuitSymbols.hearts}</Text>
-              <Text style={[styles.suit, { color: Colors.clubs }]}>{SuitSymbols.clubs}</Text>
-              <Text style={[styles.suit, { color: Colors.diamonds }]}>{SuitSymbols.diamonds}</Text>
-            </View>
-          </View>
-        </Animated.View>
+        {/* Akula logo */}
+        <View style={[styles.logoCircle, { backgroundColor: colors.accent }]}>
+          <Text style={styles.logoEmoji}>🦈</Text>
+        </View>
 
-        {/* Tagline */}
-        <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>
-          <Text style={[styles.tagline, { color: colors.textSecondary }]}>{t('welcome.tagline')}</Text>
-        </Animated.View>
+        {/* Title */}
+        <Text style={[styles.title, { color: colors.accent }]}>Nägels Online</Text>
+        <Text style={[styles.tagline, { color: colors.textMuted }]}>
+          {t('welcome.tagline')}
+        </Text>
 
-        {/* Spacer to push button toward thumb zone */}
+        {/* Suit symbols */}
+        <Text style={[styles.suits, { color: colors.accent, opacity: 0.3 }]}>
+          ♠  ♥  ♦  ♣
+        </Text>
+
         <View style={styles.spacer} />
 
-        {/* Quick Start Button */}
-        <Animated.View style={[styles.buttonContainer, { opacity: buttonOpacity }]}>
-          <GlassButton
-            title={t('welcome.quickStart')}
-            onPress={onQuickStart}
-            size="large"
-            variant="primary"
-            accentColor={colors.accent}
-            style={styles.quickStartButton}
-            testID="btn-learn-to-play"
-          />
-        </Animated.View>
+        {/* Learn to Play (primary) */}
+        <Pressable
+          style={[styles.btnPrimary, { backgroundColor: colors.accent }]}
+          onPress={onQuickStart}
+          testID="btn-learn-to-play"
+        >
+          <Text style={styles.btnPrimaryText}>{t('welcome.quickStart')}</Text>
+        </Pressable>
 
-        {/* "I already play" link */}
-        <Animated.View style={[styles.alreadyPlayContainer, { opacity: buttonOpacity }]}>
-          <Pressable onPress={onAlreadyPlay} hitSlop={12} testID="btn-skip-to-lobby">
-            <Text style={[styles.alreadyPlayText, { color: colors.accent }]}>
-              {t('welcome.alreadyPlay')}
-            </Text>
-          </Pressable>
-        </Animated.View>
-      </View>
+        {/* Play as Guest (secondary) */}
+        <Pressable
+          style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
+          onPress={onAlreadyPlay}
+          testID="btn-skip-to-lobby"
+        >
+          <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
+            {t('welcome.alreadyPlay', 'Play as Guest')}
+          </Text>
+        </Pressable>
+
+        {/* Sign In / Register (secondary) */}
+        <Pressable
+          style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+          onPress={onSignIn || onAlreadyPlay}
+        >
+          <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
+            {t('auth.signIn')} / {t('auth.signUp', 'Register')}
+          </Text>
+        </Pressable>
+
+        {/* Language switcher */}
+        <View style={[styles.langRow, { backgroundColor: colors.surface }]}>
+          {['en', 'ru', 'es'].map((lang) => (
+            <Pressable
+              key={lang}
+              style={[
+                styles.langPill,
+                { backgroundColor: currentLang === lang ? colors.accent : colors.surfaceSecondary },
+              ]}
+              onPress={() => handleLang(lang)}
+            >
+              <Text style={[
+                styles.langText,
+                { color: currentLang === lang ? '#ffffff' : colors.textMuted },
+              ]}>
+                {lang.toUpperCase()}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Credit */}
+        <Text style={[styles.credit, { color: colors.textMuted }]}>Made by Akula 🦈</Text>
+      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -112,82 +125,99 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
+    alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: SCREEN_HEIGHT * 0.12,
-    paddingBottom: Spacing.xl,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
+    paddingTop: SH * 0.08,
   },
-  logoContainer: {
-    marginBottom: Spacing.lg,
-    width: '100%',
-    alignItems: 'center',
-  },
-  logoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    paddingVertical: Spacing.xl * 1.5,
-    paddingHorizontal: Spacing.xxl,
+  logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: Spacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
-    width: '100%',
+    elevation: 6,
   },
-  logoTitle: {
-    fontSize: 36,
-    fontWeight: '700' as const,
-    color: Colors.accent,
-    marginBottom: Spacing.md,
-    letterSpacing: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    textAlign: 'center',
+  logoEmoji: {
+    fontSize: 48,
   },
-  suitRow: {
-    flexDirection: 'row',
-    gap: Spacing.lg,
-  },
-  suit: {
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  taglineContainer: {
-    marginTop: Spacing.md,
-    marginBottom: Spacing.md,
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: Spacing.xs,
   },
   tagline: {
-    ...TextStyles.body,
-    color: Colors.textSecondary,
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: Spacing.sm,
+  },
+  suits: {
+    fontSize: 22,
+    letterSpacing: 4,
+    marginBottom: Spacing.md,
   },
   spacer: {
     flex: 1,
+    minHeight: Spacing.xl,
   },
-  buttonContainer: {
-    width: '100%',
+  btnPrimary: {
+    width: Math.min(SW - 64, 340),
+    height: 56,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  btnPrimaryText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  btnSecondary: {
+    width: Math.min(SW - 64, 340),
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  btnSecondaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  langRow: {
+    flexDirection: 'row',
+    borderRadius: 22,
+    padding: 4,
+    marginTop: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  quickStartButton: {
-    width: Math.min(SCREEN_WIDTH * 0.8, 340),
+  langPill: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 18,
   },
-  alreadyPlayContainer: {
-    marginBottom: Spacing.xl,
+  langText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  alreadyPlayText: {
-    ...TextStyles.caption,
-    color: Colors.accent,
-    textAlign: 'center',
-    textDecorationLine: 'underline',
+  credit: {
+    fontSize: 11,
+    marginBottom: Spacing.md,
   },
 });
 

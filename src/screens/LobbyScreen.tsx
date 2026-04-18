@@ -1,7 +1,7 @@
 /**
  * Nägels Online - Lobby Screen
- * Single unified screen: nickname + player count + all game entry points
- * Light theme matching legacy app aesthetic
+ * Tab-based: Create Room / Join Room / Play vs Bots
+ * Matches Figma design system
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -15,23 +15,19 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Platform,
-  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassButton } from '../components/buttons';
-import { GameLogo } from '../components/GameLogo';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { BotDifficulties, type BotDifficulty } from '../lib/bot/botAI';
-import { useGameStore, useAuthStore } from '../store';
+import { useGameStore } from '../store';
 import { useMultiplayer } from '../hooks/useMultiplayer';
-import { AuthModal } from '../components/AuthModal';
 import type { GameConfig } from '../lib/supabase/types';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SW } = Dimensions.get('window');
+
+type LobbyTab = 'create' | 'join' | 'bots';
 
 export interface LobbyScreenProps {
   onQuickMatch?: (difficulty: BotDifficulty, botCount: number, playerName: string) => void;
@@ -39,8 +35,6 @@ export interface LobbyScreenProps {
   onRoomJoined: () => void;
   onSettings?: () => void;
 }
-
-const ACTION_BAR_HEIGHT = 44;
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onQuickMatch,
@@ -54,22 +48,19 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const setBotDifficulty = useGameStore(state => state.setBotDifficulty);
   const { playerName, setPlayerName, createRoom, joinRoom } = useMultiplayer();
 
+  const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
   const [nameInput, setNameInput] = useState(playerName || 'Guest');
   const [playerCount, setPlayerCount] = useState(4);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
+  const [joinCode, setJoinCode] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     if (playerName && playerName !== 'Guest') {
       setNameInput(prev => (prev === 'Guest' || prev === '') ? playerName : prev);
     }
   }, [playerName]);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('medium');
-  const [joinCode, setJoinCode] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-
-  const { isGuest, displayName: authDisplayName, user } = useAuthStore();
 
   const saveName = useCallback(async () => {
     const trimmed = nameInput.trim();
@@ -86,11 +77,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     await saveName();
     setIsCreating(true);
     try {
-      const config: Partial<GameConfig> = {
-        playerCount,
-        maxCards: 10,
-        autoStart: false,
-      };
+      const config: Partial<GameConfig> = { playerCount, maxCards: 10, autoStart: false };
       await createRoom(config);
       onRoomCreated();
     } catch (error: unknown) {
@@ -126,416 +113,304 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     }
   }, [joinCode, saveName, joinRoom, onRoomJoined, t]);
 
-  // Total bottom clearance = action bar + device safe area
-  const bottomClearance = ACTION_BAR_HEIGHT + insets.bottom;
+  const TabButton: React.FC<{ tab: LobbyTab; label: string; accent?: boolean }> = ({ tab, label, accent }) => {
+    const isActive = activeTab === tab;
+    return (
+      <Pressable
+        style={[
+          styles.tabBtn,
+          { backgroundColor: isActive ? (accent ? colors.success : colors.accent) : colors.surface, borderColor: colors.glassLight },
+          isActive && { borderColor: 'transparent' },
+        ]}
+        onPress={() => setActiveTab(tab)}
+      >
+        <Text style={[styles.tabBtnText, { color: isActive ? '#ffffff' : colors.accent }]}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Logo — always centered at the top */}
-      <View style={styles.logoHeader}>
-        <GameLogo />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.glassLight }]}>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('lobby.welcome', 'Game Lobby')}</Text>
+        {onSettings && (
+          <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn}>
+            <Text style={{ fontSize: 20 }}>⚙</Text>
+          </Pressable>
+        )}
       </View>
 
-      {/* Scrollable content — paddingBottom keeps content above the pinned bar */}
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomClearance + Spacing.md }]}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        alwaysBounceVertical={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Nickname */}
-        <Text style={styles.label}>{t('multiplayer.yourName')}</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.glassLight }]}
-          value={nameInput}
-          onChangeText={setNameInput}
-          placeholder="Guest"
-          placeholderTextColor={colors.textMuted}
-          maxLength={20}
-          autoCapitalize="words"
-          testID="input-player-name"
-        />
-
-        {/* Player Count */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {t('lobby.playerCount', { count: playerCount })}
-        </Text>
-        <View style={styles.playerCountRow}>
-          {[2, 3, 4, 5, 6].map((n) => (
-            <Pressable
-              key={n}
-              onPress={() => setPlayerCount(n)}
-              testID={`player-count-${n}`}
-              style={[
-                styles.countOption,
-                { backgroundColor: colors.surface, borderColor: colors.glassLight },
-                playerCount === n && styles.countOptionSelected,
-              ]}
-            >
-              <Text style={[
-                styles.countOptionText,
-                { color: colors.textSecondary },
-                playerCount === n && styles.countOptionTextSelected,
-              ]}>
-                {n}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Difficulty */}
-        <Text style={styles.label}>{t('lobby.selectDifficulty')}</Text>
-        <View style={styles.difficultyRow}>
-          {(Object.keys(BotDifficulties) as BotDifficulty[]).map((d) => (
-            <Pressable
-              key={d}
-              onPress={() => setSelectedDifficulty(d)}
-              style={[
-                styles.difficultyPill,
-                { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 },
-                selectedDifficulty === d && styles.difficultyPillSelected,
-              ]}
-            >
-              <Text style={[
-                styles.difficultyPillText,
-                { color: colors.textSecondary },
-                selectedDifficulty === d && styles.difficultyPillTextSelected,
-              ]}>
-                {t(`lobby.difficulty.${d}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Quick Match */}
-        <GlassButton
-          title={t('lobby.quickMatch')}
-          onPress={handleQuickMatch}
-          size="large"
-          variant="primary"
-          accentColor={Colors.accent}
-          style={styles.actionButton}
-          testID="btn-quick-match"
-        />
-
-        <Divider label={t('lobby.or')} />
-
-        {/* Create Room */}
-        {isCreating ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={Colors.accent} />
-            <Text style={styles.loadingText}>{t('multiplayer.creatingRoom')}</Text>
-          </View>
-        ) : (
-          <GlassButton
-            title={t('lobby.createRoom')}
-            onPress={handleCreateRoom}
-            size="large"
-            variant="secondary"
-            accentColor={Colors.accent}
-            style={styles.actionButton}
-            testID="btn-create-room"
+        <View style={[styles.nicknameRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.nicknameIcon, { color: colors.textMuted }]}>🦈</Text>
+          <TextInput
+            style={[styles.nicknameInput, { color: colors.textPrimary }]}
+            value={nameInput}
+            onChangeText={setNameInput}
+            placeholder="Guest"
+            placeholderTextColor={colors.textMuted}
+            maxLength={20}
+            autoCapitalize="words"
+            testID="input-player-name"
           />
+        </View>
+
+        {/* Tab buttons */}
+        <View style={styles.tabRow}>
+          <TabButton tab="create" label={t('lobby.createRoom')} />
+          <TabButton tab="join" label={t('multiplayer.joinRoom')} />
+          <TabButton tab="bots" label={t('lobby.playVsBots', 'Play vs Bots')} accent />
+        </View>
+
+        {/* Tab content */}
+        {activeTab === 'bots' && (
+          <View style={styles.tabContent}>
+            {/* Player count */}
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              {t('lobby.playerCount', { count: playerCount })}
+            </Text>
+            <View style={styles.chipRow}>
+              {[2, 3, 4, 5, 6].map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => setPlayerCount(n)}
+                  testID={`player-count-${n}`}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.surface, borderColor: colors.glassLight },
+                    playerCount === n && { backgroundColor: colors.success, borderColor: colors.success },
+                  ]}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    { color: colors.textSecondary },
+                    playerCount === n && { color: '#ffffff' },
+                  ]}>
+                    {n}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Difficulty */}
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              {t('lobby.selectDifficulty')}
+            </Text>
+            <View style={styles.chipRow}>
+              {(Object.keys(BotDifficulties) as BotDifficulty[]).map((d) => (
+                <Pressable
+                  key={d}
+                  onPress={() => setSelectedDifficulty(d)}
+                  style={[
+                    styles.diffChip,
+                    { backgroundColor: colors.surface, borderColor: colors.glassLight },
+                    selectedDifficulty === d && { backgroundColor: colors.accent, borderColor: colors.accent },
+                  ]}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    { color: colors.textSecondary },
+                    selectedDifficulty === d && { color: '#ffffff' },
+                  ]}>
+                    {t(`lobby.difficulty.${d}`)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            {/* Start */}
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.accentMuted }]}
+              onPress={handleQuickMatch}
+              testID="btn-quick-match"
+            >
+              <Text style={styles.actionBtnText}>
+                {t('lobby.quickMatch', 'Start Quick Match')}
+              </Text>
+            </Pressable>
+          </View>
         )}
 
-        <Divider label={t('lobby.or')} />
-
-        {/* Join Room */}
-        <View style={[styles.joinCard, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={styles.joinLabel}>{t('multiplayer.enterRoomCode')}</Text>
-          <TextInput
-            style={[styles.joinInput, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight }]}
-            value={joinCode}
-            onChangeText={(t) => setJoinCode(t.toUpperCase().substring(0, 6))}
-            placeholder="ABC123"
-            placeholderTextColor={colors.textMuted}
-            maxLength={6}
-            autoCapitalize="characters"
-            textAlign="center"
-            testID="input-join-code"
-          />
-          {isJoining ? (
-            <View style={styles.joinSpinnerRow}>
-              <ActivityIndicator size="small" color={Colors.accent} />
-            </View>
-          ) : (
-            <GlassButton
-              title={t('multiplayer.joinRoom')}
-              onPress={handleJoinRoom}
-              size="large"
-              variant="primary"
-              accentColor={Colors.accent}
-              disabled={joinCode.trim().length !== 6}
-              style={styles.joinButton}
-              testID="btn-join-room"
+        {activeTab === 'join' && (
+          <View style={styles.tabContent}>
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              {t('multiplayer.enterRoomCode')}
+            </Text>
+            <TextInput
+              style={[styles.codeInput, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.glassLight }]}
+              value={joinCode}
+              onChangeText={(v) => setJoinCode(v.toUpperCase().substring(0, 6))}
+              placeholder="A B C 1 2 3"
+              placeholderTextColor={colors.textMuted}
+              maxLength={6}
+              autoCapitalize="characters"
+              textAlign="center"
+              testID="input-join-code"
             />
-          )}
-        </View>
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.accentMuted, opacity: joinCode.trim().length === 6 ? 1 : 0.5 }]}
+              onPress={handleJoinRoom}
+              disabled={joinCode.trim().length !== 6}
+              testID="btn-join-room"
+            >
+              {isJoining ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.actionBtnText}>{t('multiplayer.joinRoom')}</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+
+        {activeTab === 'create' && (
+          <View style={styles.tabContent}>
+            <Pressable
+              style={[styles.actionBtn, { backgroundColor: colors.accent }]}
+              onPress={handleCreateRoom}
+              testID="btn-create-room"
+            >
+              {isCreating ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.actionBtnText}>{t('lobby.createRoom')}</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
-
-      {/* Bottom action bar — absolutely pinned, same style as in-game bar */}
-      <View style={[styles.actionBar, { bottom: insets.bottom, backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
-        <Pressable
-          style={styles.barButton}
-          hitSlop={12}
-          onPress={() => setShowLanguageModal(true)}
-        >
-          <Text style={styles.barLabel}>{t('game.language')}</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.barButton}
-          hitSlop={12}
-          onPress={onSettings}
-        >
-          <Text style={styles.barLabel}>⚙ {t('settings.title', 'Settings')}</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.barButton}
-          hitSlop={12}
-          onPress={() => setShowAuthModal(true)}
-          testID="btn-auth"
-        >
-          <Text style={styles.barLabel} numberOfLines={1}>
-            {isGuest
-              ? t('auth.signIn')
-              : (user?.email?.split('@')[0] ?? authDisplayName).substring(0, 14)}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Language modal */}
-      <Modal
-        visible={showLanguageModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLanguageModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLanguageModal(false)}>
-          <Pressable onPress={() => {}}>
-            <LanguageSwitcher />
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Auth modal */}
-      <AuthModal visible={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </SafeAreaView>
   );
 };
 
-const Divider: React.FC<{ label: string }> = ({ label }) => (
-  <View style={styles.dividerContainer}>
-    <View style={styles.dividerLine} />
-    <Text style={styles.dividerText}>{label}</Text>
-    <View style={styles.dividerLine} />
-  </View>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: undefined, // set via inline style from useTheme
-    ...(Platform.OS === 'web' ? { height: SCREEN_HEIGHT } : {}),
   },
-
-  // Centered logo header — not part of scroll
-  logoHeader: {
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.sm,
-    backgroundColor: undefined, // set via inline style from useTheme
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
   },
-
-  scrollView: {
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  settingsBtn: {
+    padding: Spacing.xs,
+  },
+  scroll: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
-    paddingBottom: Platform.OS === 'web' ? 100 : Spacing.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
-
-  label: {
-    ...TextStyles.body,
-    color: Colors.textSecondary,
-    fontWeight: '600' as const,
-    marginBottom: Spacing.sm,
-  },
-  input: {
-    ...TextStyles.body,
-    backgroundColor: undefined, // themed via inline
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
-  },
-  playerCountRow: {
+  // Nickname
+  nicknameRow: {
     flexDirection: 'row',
-    gap: Spacing.xs,
-    marginBottom: Spacing.lg,
-  },
-  countOption: {
-    flex: 1,
-    height: 48,
-    borderRadius: Radius.md,
-    backgroundColor: undefined, // themed via inline
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.md,
+    height: 52,
   },
-  countOptionSelected: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-    borderWidth: 2,
+  nicknameIcon: {
+    fontSize: 18,
+    marginRight: Spacing.sm,
   },
-  countOptionText: {
-    ...TextStyles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '700' as const,
+  nicknameInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
   },
-  countOptionTextSelected: {
-    color: '#ffffff',
-  },
-  difficultyRow: {
+  // Tabs
+  tabRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginBottom: Spacing.lg,
   },
-  difficultyPill: {
+  tabBtn: {
     flex: 1,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.full,
-    backgroundColor: undefined, // themed via inline
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    alignItems: 'center',
-  },
-  difficultyPillSelected: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-    borderWidth: 2,
-  },
-  difficultyPillText: {
-    ...TextStyles.body,
-    color: Colors.textSecondary,
-    fontWeight: '600' as const,
-  },
-  difficultyPillTextSelected: {
-    color: '#ffffff',
-  },
-  actionButton: {
-    width: '100%',
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-  },
-  loadingText: {
-    ...TextStyles.body,
-    color: Colors.textMuted,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: Spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.glassLight,
-  },
-  dividerText: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
-    marginHorizontal: Spacing.md,
-  },
-  joinCard: {
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: undefined, // themed via inline
+    height: 52,
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Tab content
+  tabContent: {
+    gap: Spacing.md,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  chip: {
+    flex: 1,
+    height: 52,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diffChip: {
+    flex: 1,
+    height: 52,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Code input
+  codeInput: {
+    height: 56,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: 8,
+    paddingHorizontal: Spacing.lg,
+  },
+  // Action button
+  actionBtn: {
+    height: 56,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
-    gap: Spacing.sm,
+    elevation: 3,
   },
-  joinLabel: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  joinInput: {
-    ...TextStyles.h3,
-    color: Colors.textPrimary,
-    letterSpacing: 4,
-    backgroundColor: undefined, // set via inline style from useTheme
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    textAlign: 'center',
-  },
-  joinButton: {
-    width: '100%',
-  },
-  joinSpinnerRow: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Bottom action bar — absolutely pinned; style identical to GameTableScreen actionBar
-  actionBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    // bottom is set inline with insets.bottom
-    height: ACTION_BAR_HEIGHT,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    backgroundColor: undefined, // themed via inline
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassLight,
-  },
-  barButton: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: Radius.sm,
-  },
-  barLabel: {
-    ...TextStyles.caption,
-    color: Colors.accent,
-    fontSize: 11,
-    fontWeight: '600' as const,
-  },
-
-  // Language modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
+  actionBtnText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });
 
