@@ -1,6 +1,7 @@
 /**
  * Nägels Online - Playing Card Component
- * Individual playing card with suit, rank, and visual styling
+ * Individual playing card with suit, rank, and visual styling.
+ * Theme-aware: works in both light and dark modes.
  */
 
 import React from 'react';
@@ -9,10 +10,9 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  DimensionValue,
 } from 'react-native';
-import { GlassCard } from '../glass';
-import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../../constants';
+import { Radius, SuitSymbols } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { cardSelectHaptic } from '../../utils/haptics';
 
 export type Suit = 'diamonds' | 'hearts' | 'clubs' | 'spades';
@@ -31,54 +31,19 @@ export interface PlayingCardProps {
   testID?: string;
 }
 
-/**
- * Get display label for rank
- */
 const getRankLabel = (rank: Rank): string => {
   if (typeof rank === 'number') return rank.toString();
   return rank;
 };
 
-/**
- * Get color for suit
- */
-const getSuitColor = (suit: Suit): string => {
-  return Colors[suit];
-};
-
-/**
- * Get numeric value for rank (for sorting/comparison)
- */
 export const getRankValue = (rank: Rank): number => {
   const rankOrder: Record<Rank, number> = {
-    2: 0,
-    3: 1,
-    4: 2,
-    5: 3,
-    6: 4,
-    7: 5,
-    8: 6,
-    9: 7,
-    10: 8,
-    J: 9,
-    Q: 10,
-    K: 11,
-    A: 12,
+    2: 0, 3: 1, 4: 2, 5: 3, 6: 4, 7: 5, 8: 6, 9: 7, 10: 8,
+    J: 9, Q: 10, K: 11, A: 12,
   };
   return rankOrder[rank];
 };
 
-/**
- * PlayingCard - Individual card component
- *
- * Features:
- * - Glassmorphic card design
- * - Red/Black suit colors
- * - Multiple sizes (small/medium/large)
- * - Face-down state
- * - Selected/playable states
- * - Press handling with visual feedback
- */
 export const PlayingCard: React.FC<PlayingCardProps> = ({
   suit,
   rank,
@@ -91,7 +56,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   style,
   testID,
 }) => {
-  const suitColor = getSuitColor(suit);
+  const { colors } = useTheme();
+  const suitColor = colors[suit];
   const suitSymbol = SuitSymbols[suit];
   const rankLabel = getRankLabel(rank);
 
@@ -100,10 +66,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       case 'small':
         return {
           width: 60,
-          height: 84,
+          height: 82,
           cornerSize: 12,
           centerSuitSize: 24,
-          padding: 5,
         };
       case 'large':
         return {
@@ -111,7 +76,6 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           height: 140,
           cornerSize: 18,
           centerSuitSize: 40,
-          padding: 10,
         };
       default: // medium
         return {
@@ -119,46 +83,42 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           height: 112,
           cornerSize: 14,
           centerSuitSize: 32,
-          padding: 7,
         };
     }
   };
 
   const sizeConfig = getSizeConfig();
 
+  const cardBorderStyle = selected
+    ? { borderColor: colors.selectedCardBorder, borderWidth: 3 }
+    : playable
+      ? { borderColor: colors.success, borderWidth: 2 }
+      : { borderColor: colors.cardBorder, borderWidth: 1.5 };
+
+  const cardOpacity = disabled ? 0.4 : 1;
+
   const renderFaceUp = () => (
     <View
       style={[
         styles.cardContent,
-        {
-          width: sizeConfig.width,
-          height: sizeConfig.height,
-        },
+        { width: sizeConfig.width, height: sizeConfig.height },
       ]}
     >
-      {/* Top corner - Rank and Suit side-by-side */}
+      {/* Top corner — Rank + Suit */}
       <View style={[styles.corner, styles.topCorner]}>
         <Text style={[
           styles.cornerText,
-          {
-            color: suitColor,
-            fontSize: sizeConfig.cornerSize,
-            lineHeight: sizeConfig.cornerSize * 1.2,
-          },
+          { color: suitColor, fontSize: sizeConfig.cornerSize, lineHeight: sizeConfig.cornerSize * 1.2 },
         ]}>
           {rankLabel}{suitSymbol}
         </Text>
       </View>
 
-      {/* Center - ONLY Suit (large) */}
+      {/* Center suit */}
       <View style={styles.centerContainer}>
         <Text style={[
           styles.centerSuit,
-          {
-            color: suitColor,
-            fontSize: sizeConfig.centerSuitSize,
-            lineHeight: sizeConfig.centerSuitSize * 1.1,
-          },
+          { color: suitColor, fontSize: sizeConfig.centerSuitSize, lineHeight: sizeConfig.centerSuitSize * 1.1 },
         ]}>
           {suitSymbol}
         </Text>
@@ -168,11 +128,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       <View style={[styles.corner, styles.bottomCorner]}>
         <Text style={[
           styles.cornerText,
-          {
-            color: suitColor,
-            fontSize: sizeConfig.cornerSize,
-            lineHeight: sizeConfig.cornerSize * 1.2,
-          },
+          { color: suitColor, fontSize: sizeConfig.cornerSize, lineHeight: sizeConfig.cornerSize * 1.2 },
         ]}>
           {rankLabel}{suitSymbol}
         </Text>
@@ -184,10 +140,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     <View
       style={[
         styles.cardBack,
-        {
-          width: sizeConfig.width,
-          height: sizeConfig.height,
-        },
+        { width: sizeConfig.width, height: sizeConfig.height, backgroundColor: colors.accent },
       ]}
     >
       <View style={styles.cardBackPattern}>
@@ -200,11 +153,13 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   );
 
   const cardContent = faceDown ? renderFaceDown() : renderFaceUp();
+  const cardBackgroundColor = faceDown ? colors.accent : colors.card;
 
-  // Get solid background color based on suit
-  const cardBackgroundColor = faceDown
-    ? Colors.accent  // Blue card back (matching legacy blue theme)
-    : '#FFFFFF';
+  const solidCardStyle = [
+    styles.solidCard,
+    cardBorderStyle,
+    { backgroundColor: cardBackgroundColor, opacity: cardOpacity },
+  ];
 
   if (onPress && !disabled) {
     const handlePress = () => {
@@ -219,20 +174,11 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         style={({ pressed }) => [
           styles.pressableContainer,
           pressed && styles.pressed,
-          selected && styles.selectedContainer,
-          playable && styles.playableContainer,
           style,
         ]}
         testID={testID}
       >
-        <View
-          style={[
-            styles.solidCard,
-            selected && styles.selectedCard,
-            playable && styles.playableCard,
-            { backgroundColor: cardBackgroundColor },
-          ]}
-        >
+        <View style={solidCardStyle}>
           {cardContent}
         </View>
       </Pressable>
@@ -240,23 +186,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   }
 
   return (
-    <View
-      style={[
-        styles.container,
-        selected && styles.selectedContainer,
-        playable && styles.playableContainer,
-        style,
-      ]}
-      testID={testID}
-    >
-      <View
-        style={[
-          styles.solidCard,
-          selected && styles.selectedCard,
-          playable && styles.playableCard,
-          { backgroundColor: cardBackgroundColor },
-        ]}
-      >
+    <View style={[styles.container, style]} testID={testID}>
+      <View style={solidCardStyle}>
         {cardContent}
       </View>
     </View>
@@ -272,29 +203,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     transform: [{ scale: 0.95 }],
-  },
-  selectedContainer: {
-    transform: [{ translateY: -8 }],
-  },
-  playableContainer: {
-    transform: [{ translateY: -4 }],
-  },
-  glassCard: {
-    overflow: 'hidden',
-  },
-  selectedCard: {
-    shadowColor: Colors.highlight,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  playableCard: {
-    shadowColor: Colors.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
   },
   cardContent: {
     position: 'relative',
@@ -331,7 +239,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent,
   },
   cardBackPattern: {
     flexDirection: 'row',
@@ -348,8 +255,6 @@ const styles = StyleSheet.create({
   },
   solidCard: {
     borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.15)',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
