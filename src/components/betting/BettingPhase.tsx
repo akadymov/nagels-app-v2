@@ -250,11 +250,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
-            {isMultiplayer && (
-              <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8}>
-                <Text style={styles.iconBtnEmoji}>💬</Text>
-              </Pressable>
-            )}
+            <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8}>
+              <Text style={styles.iconBtnEmoji}>💬</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -298,21 +296,17 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         </View>
 
         {/* Bids summary */}
-        <View style={[styles.betsSummary, { backgroundColor: colors.surfaceSecondary }]}>
-          <Text style={[styles.betsSummaryLabel, { color: colors.textSecondary }]}>{t('game.totalBets')}:</Text>
+        <View style={[styles.betsSummary, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
           <Text style={[styles.betsSummaryValue, { color: colors.textPrimary }]}>
-            {players.reduce((sum, p) => sum + (p.bet ?? 0), 0)} / {cardsPerPlayer}
+            {t('game.totalBets')}: {players.reduce((sum, p) => sum + (p.bet ?? 0), 0)} / {cardsPerPlayer}
           </Text>
         </View>
 
-        {/* Spacer to push cards to bottom (thumb zone) */}
-        <View style={styles.spacer} />
-
-        {/* Your Cards - In thumb zone (bottom 60% of screen) */}
+        {/* Your Cards */}
         {myPlayer && myPlayer.hand.length > 0 && (
-          <View style={[styles.handPreview, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
-            <Text style={styles.handLabel}>
-              {isMyTurn ? t('game.yourTurn') : `${t('game.waiting')}...`}
+          <View style={[styles.handPreview, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.handLabel, { color: colors.textSecondary }]}>
+              {t('game.yourCards', 'Your cards this round')}:
             </Text>
             <CardHand
               cards={myPlayer.hand.map(c => ({
@@ -330,7 +324,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         {/* Smart hint */}
         {isMyTurn && smartHint && !myPlayer?.bet && (
           <View style={[styles.smartHint, { backgroundColor: isDark ? 'rgba(93,194,252,0.1)' : 'rgba(19,66,143,0.07)' }]}>
-            <Text style={[styles.smartHintText, { color: colors.accent }]}>
+            <Text style={[styles.smartHintText, { color: isDark ? colors.textPrimary : colors.accent }]}>
               💡 {t('game.trumpsCount', { count: smartHint.trumpCount })} ({getTrumpSymbol(trumpSuit)}), {t('game.acesCount', { count: smartHint.aceCount })}. {t('game.bidsSoFar')}: {smartHint.bidsSoFar}/{cardsPerPlayer}
             </Text>
           </View>
@@ -339,8 +333,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         {/* Bet chips — poker style (show all, disabled = gray) */}
         {isMyTurn && !myPlayer?.bet && (
           <View style={[styles.betButtonsContainer, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-            <Text style={[styles.betPrompt, { color: colors.textSecondary }]}>
-              {t('game.bet')} ({t('game.outOf')} {cardsPerPlayer}):
+            <Text style={[styles.betPrompt, { color: colors.textPrimary }]}>
+              {t('game.bet')}:
             </Text>
 
             <View style={styles.betButtons}>
@@ -453,32 +447,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         </KeyboardAvoidingView>
       )}
 
-      {/* Action bar — same style as in-game bar */}
-      <View style={[styles.actionBar, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
-        <Pressable style={styles.actionButton} hitSlop={12} onPress={onShowScore}>
-          <Text style={[styles.actionLabel, !onShowScore && styles.actionLabelDisabled]}>
-            {t('game.score')}
-          </Text>
-        </Pressable>
-        {isMultiplayer && (
-          <Pressable
-            style={styles.actionButton}
-            hitSlop={12}
-            onPress={() => setShowChat(v => !v)}
-          >
-            <Text style={[styles.actionLabel, showChat && styles.actionLabelActive]}>
-              {t('game.chat') || 'Chat'}
-            </Text>
-          </Pressable>
-        )}
-        <Pressable
-          style={styles.actionButton}
-          hitSlop={12}
-          onPress={() => setShowLanguageModal(true)}
-        >
-          <Text style={styles.actionLabel}>{t('game.language')}</Text>
-        </Pressable>
-      </View>
+      {/* Bottom action bar removed — all buttons are in top bar icons */}
 
       {/* Language modal */}
       <Modal
@@ -596,11 +565,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   handLabel: {
-    ...TextStyles.h3,
-    color: Colors.accent,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '500',
     marginBottom: Spacing.xs,
-    textAlign: 'center',
   },
   betButtonsContainer: {
     marginTop: Spacing.sm,
@@ -616,8 +583,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   betPrompt: {
-    ...TextStyles.body,
-    color: Colors.textSecondary,
+    fontSize: 18,
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: Spacing.md,
   },
@@ -625,12 +592,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   betChip: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
@@ -641,7 +608,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   betChipText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
   },
   // Players grid — 3 per row for 5-6, 2 per row for 2-4
@@ -817,21 +784,19 @@ const styles = StyleSheet.create({
     color: Colors.success,
   },
   betsSummary: {
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.xs,
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassMedium,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
   },
   betsSummaryLabel: {
     ...TextStyles.small,
     color: Colors.textSecondary,
   },
   betsSummaryValue: {
-    ...TextStyles.body,
-    color: Colors.highlight,
+    fontSize: 14,
     fontWeight: '700',
   },
 
