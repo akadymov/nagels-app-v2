@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, Radius } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 
 export interface GlassCardProps {
   children: React.ReactNode;
@@ -36,15 +37,17 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   style,
   blurAmount: _blurAmount,
   opacity: _opacity,
-  borderColor = Colors.glassLight,
+  borderColor,
   borderWidth = 1,
   shadow = true,
   dark = false,
   testID,
 }) => {
+  const { colors, isDark } = useTheme();
+  const resolvedBorderColor = borderColor ?? colors.glassLight;
   const backgroundColor = dark
-    ? 'rgba(19, 66, 143, 0.08)'   // very light blue tint for "active" states
-    : '#ffffff';                   // clean white for normal cards
+    ? (isDark ? 'rgba(93, 194, 252, 0.08)' : 'rgba(19, 66, 143, 0.08)')
+    : colors.surface;
 
   return (
     <View
@@ -52,7 +55,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
         styles.card,
         {
           backgroundColor,
-          borderColor,
+          borderColor: resolvedBorderColor,
           borderWidth,
         },
         shadow && (Platform.OS === 'web' ? styles.shadowWeb : styles.shadow),

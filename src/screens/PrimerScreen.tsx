@@ -174,7 +174,8 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
         key={index}
         style={[
           styles.dot,
-          isActive && styles.dotActive,
+          { backgroundColor: colors.glassLight },
+          isActive && [styles.dotActive, { backgroundColor: colors.highlight }],
         ]}
       />
     );
@@ -197,9 +198,9 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
       {/* Header with Skip and Progress */}
       <View style={styles.header}>
         <Pressable onPress={handleSkip} hitSlop={12}>
-          <Text style={styles.skipText}>{t('common.skip')}</Text>
+          <Text style={[styles.skipText, { color: colors.textMuted }]}>{t('common.skip')}</Text>
         </Pressable>
-        <Text style={styles.progress}>
+        <Text style={[styles.progress, { color: colors.textMuted }]}>
           {currentIndex + 1}/{SCREENS.length}
         </Text>
       </View>
@@ -225,12 +226,12 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
               blurAmount={10}
             >
               {currentScreen.visualNode ?? (
-                <Text style={styles.visualText}>{currentScreen.visual}</Text>
+                <Text style={[styles.visualText, { color: colors.textPrimary }]}>{currentScreen.visual}</Text>
               )}
             </GlassCard>
 
             {/* Description */}
-            <Text style={styles.description}>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
               {t(descKey)}
             </Text>
 
@@ -258,7 +259,7 @@ export const PrimerScreen: React.FC<PrimerScreenProps> = ({
       {/* Swipe hint - only show on first screen */}
       {currentIndex === 0 && (
         <View style={styles.swipeHint}>
-          <Text style={styles.swipeHintText}>{t('primer.swipeHint')}</Text>
+          <Text style={[styles.swipeHintText, { color: colors.textMuted }]}>{t('primer.swipeHint')}</Text>
         </View>
       )}
     </SafeAreaView>
