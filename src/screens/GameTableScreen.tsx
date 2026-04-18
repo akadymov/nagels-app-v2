@@ -27,6 +27,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
 import { useMultiplayerStore } from '../store/multiplayerStore';
 import { useTranslation } from 'react-i18next';
@@ -76,6 +77,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   botCount = 3,
 }) => {
   const { t, i18n } = useTranslation();
+  const { colors, isDark } = useTheme();
   const botNames = BOT_NAMES_BY_LANG[i18n.language] ?? BOT_NAMES_BY_LANG.en;
 
   // Multiplayer store for multiplayer mode
@@ -541,13 +543,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   }, [players]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
 
       {/* Connection Status (multiplayer only) */}
       {isMultiplayer && <ConnectionStatus />}
 
       {/* Top Bar — two rows: logo centered, hand info below */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
         {/* Row 1: back button left, logo centered */}
         <View style={styles.topBarRow1}>
           <Pressable onPress={onExit} hitSlop={12} style={styles.topBarBack}>
@@ -573,7 +575,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         <View style={styles.cardTable}>
           <View style={styles.tableEdge} />
           <LinearGradient
-            colors={['#003e00', '#009c00', '#005d00']}
+            colors={isDark ? [colors.tableInner, colors.table, colors.tableInner] : ['#003e00', '#009c00', '#005d00']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={styles.tableFelt}
@@ -643,7 +645,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 dark={isCurrentPlayer}
                 blurAmount={isCurrentPlayer ? 20 : 10}
                 borderWidth={isCurrentPlayer ? 2 : 1}
-                borderColor={isCurrentPlayer ? Colors.highlight : Colors.glassLight}
+                borderColor={isCurrentPlayer ? colors.activePlayerBorder : colors.glassLight}
               >
                 {/* Avatar */}
                 <View style={[styles.avatar, isCurrentPlayer && styles.activeAvatar]}>
@@ -739,9 +741,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
       {/* Your Hand - Fixed at bottom, clearly showing YOU are at the table */}
       {myPlayer && (
-        <View style={styles.handSection}>
+        <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent }]}>
           {/* My avatar badge - shows who I am */}
-          <View style={styles.youBadge}>
+          <View style={[styles.youBadge, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
             <View style={[styles.avatar, styles.myHandAvatar]}>
               <Text style={[styles.avatarInitial, styles.myHandAvatarInitial]}>
                 {myPlayer.name[0].toUpperCase()}
@@ -779,7 +781,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       )}
 
       {/* Action Bar - Fixed height */}
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
         <Pressable
           style={styles.actionButton}
           hitSlop={12}
