@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassButton } from '../components/buttons';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -31,6 +32,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onAlreadyPlay,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const taglineOpacity = useRef(new Animated.Value(0)).current;
@@ -57,13 +59,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.content}>
 
         {/* Logo block */}
         <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
-          <View style={styles.logoCard}>
-            <Text style={styles.logoTitle}>{t('welcome.title')}</Text>
+          <View style={[styles.logoCard, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.logoTitle, { color: colors.accent }]}>{t('welcome.title')}</Text>
             <View style={styles.suitRow}>
               <Text style={[styles.suit, { color: Colors.spades }]}>{SuitSymbols.spades}</Text>
               <Text style={[styles.suit, { color: Colors.hearts }]}>{SuitSymbols.hearts}</Text>
@@ -75,7 +77,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* Tagline */}
         <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>
-          <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>{t('welcome.tagline')}</Text>
         </Animated.View>
 
         {/* Spacer to push button toward thumb zone */}
@@ -88,7 +90,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             onPress={onQuickStart}
             size="large"
             variant="primary"
-            accentColor={Colors.accent}
+            accentColor={colors.accent}
             style={styles.quickStartButton}
             testID="btn-learn-to-play"
           />
@@ -97,7 +99,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
         {/* "I already play" link */}
         <Animated.View style={[styles.alreadyPlayContainer, { opacity: buttonOpacity }]}>
           <Pressable onPress={onAlreadyPlay} hitSlop={12} testID="btn-skip-to-lobby">
-            <Text style={styles.alreadyPlayText}>
+            <Text style={[styles.alreadyPlayText, { color: colors.accent }]}>
               {t('welcome.alreadyPlay')}
             </Text>
           </Pressable>
