@@ -233,12 +233,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
               {t('game.hand')} {handNumber}/{totalHands}
             </Text>
+            <View style={styles.topBarRow1Spacer} />
             <View style={[styles.trumpBadge, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
                 {getTrumpSymbol(trumpSuit)} {t('game.trump')}
               </Text>
             </View>
-            <View style={{ flex: 1 }} />
+            <View style={styles.topBarRow1Spacer} />
           </View>
           <View style={styles.topBarRow2}>
             <Pressable onPress={onClose} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
@@ -506,9 +507,10 @@ const styles = StyleSheet.create({
   topBarRow1: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
     marginBottom: Spacing.md,
+  },
+  topBarRow1Spacer: {
+    flex: 1,
   },
   handInfo: {
     fontSize: 14,
