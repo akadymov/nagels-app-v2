@@ -241,17 +241,17 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <View style={{ flex: 1 }} />
           </View>
           <View style={styles.topBarRow2}>
-            <Pressable onPress={onClose} style={styles.iconBtn} hitSlop={8}>
-              <Text style={[styles.iconBtnText, { color: colors.textSecondary }]}>←</Text>
+            <Pressable onPress={onClose} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
+              <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
             </Pressable>
-            <Pressable onPress={() => setShowLanguageModal(true)} style={styles.iconBtn} hitSlop={8}>
+            <Pressable onPress={() => setShowLanguageModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🌐</Text>
             </Pressable>
-            <Pressable onPress={onShowScore} style={styles.iconBtn} hitSlop={8}>
+            <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
             {isMultiplayer && (
-              <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent }]} hitSlop={8}>
+              <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8}>
                 <Text style={styles.iconBtnEmoji}>💬</Text>
               </Pressable>
             )}
@@ -331,7 +331,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         {isMyTurn && smartHint && !myPlayer?.bet && (
           <View style={[styles.smartHint, { backgroundColor: isDark ? 'rgba(93,194,252,0.1)' : 'rgba(19,66,143,0.07)' }]}>
             <Text style={[styles.smartHintText, { color: colors.accent }]}>
-              💡 {smartHint.trumpCount} {t('game.trumps', 'trumps')} ({getTrumpSymbol(trumpSuit)}), {smartHint.aceCount} {t('game.aces', 'Aces')}. {t('game.bidsSoFar', 'Bids so far')}: {smartHint.bidsSoFar}/{cardsPerPlayer}
+              💡 {t('game.trumpsCount', { count: smartHint.trumpCount })} ({getTrumpSymbol(trumpSuit)}), {t('game.acesCount', { count: smartHint.aceCount })}. {t('game.bidsSoFar')}: {smartHint.bidsSoFar}/{cardsPerPlayer}
             </Text>
           </View>
         )}
@@ -356,7 +356,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             {/* Blocked bets explanation */}
             {blockedBets.length > 0 && blockedBets.length < allBets.length && (
               <Text style={[styles.blockedText, { color: colors.error }]}>
-                {blockedBets.map(b => `Bid ${b}`).join(', ')} blocked — total bids can't equal {cardsPerPlayer}
+                {blockedBets.map(b => t('game.bidBlocked', { bid: b, total: cardsPerPlayer })).join('\n')}
               </Text>
             )}
           </View>
@@ -373,7 +373,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
         {/* Waiting for other players */}
         {!isMyTurn && !hasAllBets && (
-          <View style={styles.waitingContainer}>
+          <View style={[styles.waitingContainer, { backgroundColor: colors.surfaceSecondary }]}>
             <Text style={styles.waitingPlayerText}>
               {(() => {
                 if (!bettingPlayer) return t('game.waiting');
@@ -562,7 +562,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

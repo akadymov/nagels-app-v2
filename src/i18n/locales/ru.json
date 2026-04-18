@@ -84,7 +84,11 @@
     "bettingOrder": "Порядок ставок",
     "chat": "Чат",
     "chatEmpty": "Напишите что-нибудь...",
-    "chatPlaceholder": "Сообщение..."
+    "chatPlaceholder": "Сообщение...",
+    "trumpsCount": "{{count}} козырей",
+    "acesCount": "{{count}} тузов",
+    "bidsSoFar": "Ставки",
+    "bidBlocked": "Ставка {{bid}} заблокирована — сумма не может равняться {{total}}"
   },
   "trumps": {
     "diamonds": "Бубны",

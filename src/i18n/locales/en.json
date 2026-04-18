@@ -84,7 +84,11 @@
     "bettingOrder": "Betting order",
     "chat": "Chat",
     "chatEmpty": "Say something...",
-    "chatPlaceholder": "Message..."
+    "chatPlaceholder": "Message...",
+    "trumpsCount": "{{count}} trumps",
+    "acesCount": "{{count}} Aces",
+    "bidsSoFar": "Bids so far",
+    "bidBlocked": "Bid {{bid}} blocked — total can't equal {{total}}"
   },
   "trumps": {
     "diamonds": "Diamonds",
