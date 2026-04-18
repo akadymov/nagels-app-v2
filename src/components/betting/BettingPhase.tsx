@@ -26,6 +26,7 @@ import { GlassButton } from '../buttons/GlassButton';
 import { PlayingCard, CardHand } from '../cards';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { useGameStore } from '../../store';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
 import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
@@ -60,6 +61,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   onShowScore,
 }) => {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   const {
     players,
     trumpSuit,
@@ -145,39 +147,64 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
   };
 
-  const renderBetButton = (bet: number) => {
+  // All possible bets 0..cardsPerPlayer
+  const allBets = useMemo(() => {
+    return Array.from({ length: cardsPerPlayer + 1 }, (_, i) => i);
+  }, [cardsPerPlayer]);
+
+  const renderBetChip = (bet: number) => {
+    const isAllowed = allowedBets.includes(bet);
     const isSelected = myPlayer?.bet === bet;
-    const isDisabled = !isMyTurn;
+    const isDisabled = !isMyTurn || !isAllowed;
 
     const handleBetPress = () => {
-      if (myPlayerId) {
+      if (myPlayerId && isAllowed) {
         betPlacedHaptic();
         placeBet(myPlayerId, bet);
       }
     };
 
+    const chipBg = isSelected
+      ? colors.success
+      : isDisabled
+        ? colors.bidChipDisabled
+        : colors.accent;
+
+    const chipBorder = isSelected
+      ? '#2AA555'
+      : isDisabled
+        ? 'transparent'
+        : colors.accentSecondary;
+
+    const chipTextColor = isDisabled ? colors.bidChipDisabledText : '#ffffff';
+
     return (
-      <GlassButton
+      <Pressable
         key={bet}
-        title={bet.toString()}
         onPress={handleBetPress}
-        size="small"
-        variant={isSelected ? 'primary' : 'secondary'}
-        accentColor={Colors.highlight}
-        style={[
-          styles.betButton,
-          isDisabled && styles.disabledButton,
-        ]}
         disabled={isDisabled}
         testID={`bet-btn-${bet}`}
-      />
+      >
+        <View style={[
+          styles.betChip,
+          {
+            backgroundColor: chipBg,
+            borderColor: chipBorder,
+            opacity: isDisabled ? 0.5 : 1,
+          },
+        ]}>
+          <Text style={[styles.betChipText, { color: chipTextColor }]}>
+            {bet}
+          </Text>
+        </View>
+      </Pressable>
     );
   };
 
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay}>
+    <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' }]}>
       <View style={styles.gradient} />
 
       <ScrollView
@@ -186,8 +213,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header - Compact */}
-        <View style={styles.compactHeader}>
-          <Text style={styles.headerTitle}>{t('game.bet')}</Text>
+        <View style={[styles.compactHeader, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('game.bet')}</Text>
           <View style={styles.trumpContainer}>
             <Text style={styles.trumpLabel}>{t('game.trump')}:</Text>
             <Text style={[styles.trumpValue, { color: getTrumpColor(trumpSuit) }]}>
@@ -255,7 +282,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
         {/* Your Cards - In thumb zone (bottom 60% of screen) */}
         {myPlayer && myPlayer.hand.length > 0 && (
-          <View style={styles.handPreview}>
+          <View style={[styles.handPreview, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
             <Text style={styles.handLabel}>
               {isMyTurn ? t('game.yourTurn') : `${t('game.waiting')}...`}
             </Text>
@@ -272,19 +299,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
           </View>
         )}
 
-        {/* Bet buttons (only show if it's my turn) */}
+        {/* Bet chips — poker style (show all, disabled = gray) */}
         {isMyTurn && !myPlayer?.bet && (
-          <View style={styles.betButtonsContainer}>
-            <Text style={styles.betPrompt}>
+          <View style={[styles.betButtonsContainer, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.betPrompt, { color: colors.textSecondary }]}>
               {t('game.bet')} ({t('game.outOf')} {cardsPerPlayer}):
             </Text>
 
             <View style={styles.betButtons}>
-              {allowedBets.map(renderBetButton)}
+              {allBets.map(renderBetChip)}
             </View>
 
             {allowedBets.length === 0 && (
-              <Text style={styles.noBetsText}>
+              <Text style={[styles.noBetsText, { color: colors.error }]}>
                 No valid bets available
               </Text>
             )}
@@ -383,7 +410,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       )}
 
       {/* Action bar — same style as in-game bar */}
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
         <Pressable style={styles.actionButton} hitSlop={12} onPress={onShowScore}>
           <Text style={[styles.actionLabel, !onShowScore && styles.actionLabelDisabled]}>
             {t('game.score')}
@@ -537,11 +564,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
   },
-  betButton: {
-    minWidth: 50,
+  betChip: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  disabledButton: {
-    opacity: 0.5,
+  betChipText: {
+    fontSize: 22,
+    fontWeight: '700',
   },
   noBetsText: {
     ...TextStyles.caption,
