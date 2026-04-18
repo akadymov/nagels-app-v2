@@ -1,97 +1,100 @@
-# PROJECT STATUS — Nägels Online
+# PROJECT STATUS — Nagels Online
 _Last updated: 2026-03-29_
 
 ---
 
-## Общее состояние
+## Current State
 
-**Стадия:** MVP готов. Работает, можно публиковать и давать тестировать.
-Прошли первые живые тесты с реальными пользователями (друзья).
+**Stage:** MVP ready. Functional, can be published and tested.
+First live tests completed with real users (friends).
 
-**Стек:** Expo (React Native) + TypeScript + Supabase + Zustand
-
----
-
-## Что реализовано и работает
-
-| Область | Статус | Детали |
-|---|---|---|
-| Игровые правила | ✅ Готово | Полный движок: 20 рук, козыри, ставки, трики, счёт |
-| Одиночная игра vs боты | ✅ Готово | Easy / Medium / Hard AI |
-| Мультиплеер | ✅ Работает | Комнаты, коды, real-time sync, чат, reconnect |
-| Авторизация | ✅ Реализована | Анонимная + email/password, сессии через AsyncStorage |
-| i18n | ✅ Полная | EN / RU / ES |
-| Мобильный UI | ✅ Готов | Glassmorphic дизайн, haptics, safe areas |
-| Чат | ✅ Работает | Real-time с дедупликацией |
-| Демо-скрипты | ✅ Есть | Playwright: 2-player и 6-player автодемо |
+**Stack:** Expo (React Native) + TypeScript + Supabase + Zustand
 
 ---
 
-## Известные проблемы и слабые места
+## What's Implemented and Working
 
-### Критичные / требуют внимания до публикации
-- **Дизайн** — Есть претензии от ранних пользователей (друзья). Конкретные жалобы пока не зафиксированы, нужно собрать детали.
-- **Сессии пользователей** — Неясно, насколько надёжно сохраняются сессии после авторизации при перезапуске приложения. Надо проверить сценарий: авторизовался → закрыл → открыл снова.
-- **Realtime room subscriptions** — Отключены из-за проблем с форматом payload. Используется polling. TODO в `src/lib/supabase/client.ts:120`.
-- **Скрытые баги** — Вероятно есть, но не зафиксированы. Нужны полноценные тесты.
-
-### AI боты
-- **Боты работают слабо** — Стратегия непредсказуемая/непонятная для игроков. Easy/Medium/Hard реализованы, но Hard-бот не ощущается умным.
-- Логика в `src/lib/bot/botAI.ts` (456 строк).
-
-### Тестирование
-- Есть `gameLoop.test.ts` (базовый тест переходов рук 1-5)
-- Playwright демо-скрипты есть, но это не тесты — это демо
-- **Полного тест-покрытия нет**: edge-cases, multiplayer sync, auth flows не покрыты
+| Area | Status | Details |
+|------|--------|---------|
+| Game rules | Done | Full engine: 20 hands, trumps, bids, tricks, scoring |
+| Single player vs bots | Done | Easy / Medium / Hard AI |
+| Multiplayer | Working | Rooms, codes, real-time sync, chat, reconnect |
+| Auth | Implemented | Anonymous + email/password, sessions via AsyncStorage |
+| i18n | Complete | EN / RU / ES |
+| Mobile UI | Ready | Glassmorphic design, haptics, safe areas |
+| Chat | Working | Real-time with deduplication |
+| Demo scripts | Available | Playwright: 2-player and 6-player auto-demo |
 
 ---
 
-## Следующий этап: До публикации
+## Known Issues
 
-1. **Фиксация дизайн-претензий** — собрать конкретный список от пользователей, устранить
-2. **Проверка сессий** — убедиться, что пользователь не вылетает из игры после перезапуска
-3. **AI ботов** — переработать стратегию, сделать понятнее и сильнее
-4. **Тесты** — написать интеграционные тесты: auth flow, game flow, multiplayer sync
-5. **Realtime fix** — разобраться с room subscriptions и убрать polling-костыль
-6. **Деплой** — выбрать и настроить платформу для публикации
+### Critical / Pre-launch
 
----
+- **Design** — Early users (friends) had complaints. Specific feedback not yet collected.
+- **Session persistence** — Unclear how reliably sessions survive app restart. Need to test: login -> close -> reopen.
+- **Realtime room subscriptions** — Disabled due to payload format issues. Using polling. TODO in `src/lib/supabase/client.ts:120`.
+- **Hidden bugs** — Likely exist but not documented. Need proper tests.
 
-## Следующий этап: После публикации (Backlog)
+### AI Bots
 
-- **Голосовой чат** — не реализован, планируется
-- **Видеозвонки** — не реализован, планируется (атмосфера "домашней игры")
-- **Лидерборд** — не реализован
-- **Ставки на очки** — каждое очко = условная сумма, добавляет азарт (не деньги, а внутреигровые ставки)
-- **Кастомизация партий** — например, пропустить руки с 1 картой, играть раунды 2+ карт 4 раза вместо одного
-- **Кастомизация столов / скинов** — визуальные темы
-- **Push-уведомления** — "твой ход", "партия началась"
-- **Статистика игрока** — история партий, процент точных ставок
+- **Bots feel weak** — Strategy is unpredictable/confusing rather than challenging. Easy/Medium/Hard implemented, but Hard bot doesn't feel smart.
+- Logic in `src/lib/bot/botAI.ts` (456 lines).
+
+### Testing
+
+- `gameLoop.test.ts` exists (basic hand transition test, hands 1-5)
+- Playwright demo scripts exist but are demos, not tests
+- **No comprehensive test coverage**: edge cases, multiplayer sync, auth flows not covered
 
 ---
 
-## Техническая карта
+## Next Steps: Pre-launch
+
+1. **Collect design feedback** — gather specific complaints from users, fix them
+2. **Verify sessions** — ensure users don't get kicked after app restart
+3. **Improve AI bots** — rework strategy to be smarter and more predictable
+4. **Tests** — write integration tests: auth flow, game flow, multiplayer sync
+5. **Fix realtime** — resolve room subscription issues, remove polling workaround
+6. **Deploy** — choose and configure deployment platform
+
+---
+
+## Backlog: Post-launch
+
+- **Voice chat** — not implemented, planned
+- **Video calls** — not implemented, planned ("home game" atmosphere)
+- **Leaderboard** — not implemented
+- **Point stakes** — each point = virtual amount, adds excitement (no real money)
+- **Custom games** — skip 1-card hands, play 2+ card rounds multiple times
+- **Table/skin customization** — visual themes
+- **Push notifications** — "your turn", "game started"
+- **Player stats** — game history, exact bid percentage
+
+---
+
+## Technical Map
 
 ```
 src/
-├── game/rules.ts          — Движок игры (20 KB, иммутабельная логика)
-├── screens/               — 8 экранов, главный GameTableScreen.tsx (1479 строк)
-├── lib/bot/botAI.ts       — AI боты (456 строк, 3 уровня)
+├── game/rules.ts          — Game engine (20 KB, immutable logic)
+├── screens/               — 8 screens, main: GameTableScreen.tsx (1479 lines)
+├── lib/bot/botAI.ts       — AI bots (456 lines, 3 levels)
 ├── lib/supabase/          — Auth, sync, room management
 ├── store/                 — Zustand: gameStore (38KB), authStore, multiplayerStore
-├── i18n/locales/          — EN / RU / ES переводы
+├── i18n/locales/          — EN / RU / ES translations
 └── components/            — Cards, BettingPhase, AuthModal, ChatPanel
 ```
 
-**Envs:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_URL`
+**Env vars:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_URL`
 
 ---
 
-## Как запустить
+## How to Run
 
 ```bash
 npx expo start --port 8081   # Dev server
-npm run tunnel               # ngrok туннель (нужен для тестирования на устройстве)
-npm run demo                 # 2-player Playwright демо
-npm run demo:6players        # 6-player демо
+npm run tunnel               # ngrok tunnel (device testing)
+npm run demo                 # 2-player Playwright demo
+npm run demo:6players        # 6-player demo
 ```
