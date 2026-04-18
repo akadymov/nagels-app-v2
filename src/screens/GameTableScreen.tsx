@@ -564,7 +564,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         {/* Row 2: hand / trump info centered */}
         <View style={styles.topBarRow2}>
           <Text style={[styles.handInfo, { color: getTrumpColor(trumpSuit) }]}>
-            {getTrumpSymbol(trumpSuit)} {t('game.hand')} {handNumber}/{totalHands} ({cardsPerPlayer})
+            {getTrumpSymbol(trumpSuit)} {t('game.hand')} {handNumber}/{totalHands}
           </Text>
         </View>
       </View>
@@ -818,8 +818,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             />
           </Pressable>
         ) : (
-          <Pressable style={styles.actionButton} hitSlop={12} disabled>
-            <Text style={[styles.actionLabel, styles.actionLabelDisabled]}>Chat</Text>
+          <Pressable style={[styles.actionButton, { opacity: 0.3 }]} hitSlop={12} disabled>
+            <Text style={styles.actionLabel}>💬</Text>
           </Pressable>
         )}
         <Pressable
@@ -857,6 +857,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       <BettingPhase
         visible={phase === 'betting'}
         isMultiplayer={isMultiplayer}
+        onClose={onExit}
         onShowScore={() => {
           setIsViewingScores(true);
           setShowScoreboard(true);
