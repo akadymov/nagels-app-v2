@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useMultiplayerStore } from '../store/multiplayerStore';
 import { multiplayerSendChat } from '../lib/multiplayer/gameActions';
 import type { ChatMessage } from '../store/multiplayerStore';
@@ -36,6 +37,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   myPlayerId,
   myPlayerName,
 }) => {
+  const { colors } = useTheme();
   const chatMessages = useMultiplayerStore((s) => s.chatMessages);
   const clearUnreadCount = useMultiplayerStore((s) => s.clearUnreadCount);
 
@@ -135,7 +137,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.panel}
+          style={[styles.panel, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -171,7 +173,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               value={inputText}
               onChangeText={setInputText}
               placeholder="Сообщение..."
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               onSubmitEditing={handleSend}
               returnKeyType="send"
               maxLength={200}
@@ -184,7 +186,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               disabled={!inputText.trim() || isSending}
             >
               {isSending ? (
-                <ActivityIndicator size="small" color={Colors.textPrimary} />
+                <ActivityIndicator size="small" color={colors.textPrimary} />
               ) : (
                 <Text style={styles.sendText}>↑</Text>
               )}
