@@ -23,6 +23,7 @@ import { GlassButton } from '../components/buttons';
 import { GameLogo } from '../components/GameLogo';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { BotDifficulties, type BotDifficulty } from '../lib/bot/botAI';
 import { useGameStore, useAuthStore } from '../store';
@@ -48,6 +49,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onSettings,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const setBotDifficulty = useGameStore(state => state.setBotDifficulty);
   const { playerName, setPlayerName, createRoom, joinRoom } = useMultiplayer();
@@ -128,7 +130,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const bottomClearance = ACTION_BAR_HEIGHT + insets.bottom;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Logo — always centered at the top */}
       <View style={styles.logoHeader}>
         <GameLogo />
@@ -269,7 +271,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       </ScrollView>
 
       {/* Bottom action bar — absolutely pinned, same style as in-game bar */}
-      <View style={[styles.actionBar, { bottom: insets.bottom }]}>
+      <View style={[styles.actionBar, { bottom: insets.bottom, backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
         <Pressable
           style={styles.barButton}
           hitSlop={12}
@@ -331,7 +333,7 @@ const Divider: React.FC<{ label: string }> = ({ label }) => (
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: undefined, // set via inline style from useTheme
     ...(Platform.OS === 'web' ? { height: SCREEN_HEIGHT } : {}),
   },
 
@@ -341,7 +343,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
-    backgroundColor: Colors.background,
+    backgroundColor: undefined, // set via inline style from useTheme
   },
 
   scrollView: {
@@ -478,7 +480,7 @@ const styles = StyleSheet.create({
     ...TextStyles.h3,
     color: Colors.textPrimary,
     letterSpacing: 4,
-    backgroundColor: Colors.background,
+    backgroundColor: undefined, // set via inline style from useTheme
     borderWidth: 1,
     borderColor: Colors.glassLight,
     borderRadius: Radius.md,

@@ -170,7 +170,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const renderBetChip = (bet: number) => {
     const isAllowed = allowedBets.includes(bet);
     const isSelected = myPlayer?.bet === bet;
-    const isDisabled = !isMyTurn || !isAllowed;
+    const isDisabled = !isSelected && (!isMyTurn || !isAllowed);
 
     const handleBetPress = () => {
       if (myPlayerId && isAllowed) {
@@ -191,7 +191,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         ? 'transparent'
         : colors.accentSecondary;
 
-    const chipTextColor = isDisabled ? colors.bidChipDisabledText : '#ffffff';
+    const chipTextColor = isSelected ? '#ffffff' : isDisabled ? colors.bidChipDisabledText : '#ffffff';
 
     return (
       <Pressable
@@ -506,8 +506,9 @@ const styles = StyleSheet.create({
   topBarRow1: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.sm,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   handInfo: {
     fontSize: 14,
@@ -540,6 +541,8 @@ const styles = StyleSheet.create({
   },
   iconBtnEmoji: {
     fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   bettingTitle: {
     fontSize: 20,
