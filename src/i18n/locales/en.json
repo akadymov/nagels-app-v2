@@ -21,16 +21,19 @@
     "swipeHint": "Swipe left or right to navigate",
     "screen1": {
       "title": "How it works",
+      "visual": "A > K > Q > J\n10 → 1 → 10",
       "description": "Everyone plays one card at a time. The highest card wins the pile — that's a trick. All tricks in one deal = one hand. Hands go 10 cards → 1 card → 10 cards.",
       "button": "Got it!"
     },
     "screen2": {
       "title": "Predict before you play",
+      "visual": "Trump suit\nbeats all others",
       "description": "Before each hand, say how many tricks you'll win. Hit your number exactly → +10 bonus points! One suit is «trump» — those cards beat every other suit.",
       "button": "Makes sense"
     },
     "screen3": {
       "title": "Nail the number, win the game",
+      "visual": "Bet 3 → Win 3\n= +10 bonus",
       "description": "Win too many tricks or too few — no bonus. Win exactly what you predicted — score big. The player with the most points at the end wins.",
       "button": "Let's Play!"
     }
