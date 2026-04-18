@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../PycharmProjects/wallarm-risk-scoring-prototype"
+		},
+		{
+			"path": "../claude-projects/auto-variability-configuration-engine"
+		},
+		{
+			"path": "../claude-projects/dance-match-v2"
+		},
+		{
+			"path": "../claude-projects/prototypes/apid-config-v2-prototype"
+		},
+		{
+			"path": "../claude-projects/driving-license-helper-concept"
+		},
+		{
+			"path": "../claude-projects/carreer-consultant"
+		}
+	],
+	"settings": {}
+}
