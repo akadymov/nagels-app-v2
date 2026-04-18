@@ -227,25 +227,42 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header - Compact */}
-        <View style={[styles.compactHeader, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('game.bet')}</Text>
-          <View style={styles.trumpContainer}>
-            <Text style={styles.trumpLabel}>{t('game.trump')}:</Text>
-            <Text style={[styles.trumpValue, { color: getTrumpColor(trumpSuit) }]}>
-              {getTrumpSymbol(trumpSuit)}
+        {/* Header — matches Figma: Hand info left, Trump badge center, icons right */}
+        <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
+          <View style={styles.topBarRow1}>
+            <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
+              {t('game.hand')} {handNumber}/{totalHands}
             </Text>
+            <View style={[styles.trumpBadge, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
+              <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
+                {getTrumpSymbol(trumpSuit)} {t('game.trump')}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }} />
           </View>
-          <Text style={styles.cardsInfo}>
-            {t('game.hand')} {handNumber}/{totalHands}
-          </Text>
+          <View style={styles.topBarRow2}>
+            <Pressable onPress={onClose} style={styles.iconBtn} hitSlop={8}>
+              <Text style={[styles.iconBtnText, { color: colors.textSecondary }]}>←</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowLanguageModal(true)} style={styles.iconBtn} hitSlop={8}>
+              <Text style={styles.iconBtnEmoji}>🌐</Text>
+            </Pressable>
+            <Pressable onPress={onShowScore} style={styles.iconBtn} hitSlop={8}>
+              <Text style={styles.iconBtnEmoji}>🏆</Text>
+            </Pressable>
+            {isMultiplayer && (
+              <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent }]} hitSlop={8}>
+                <Text style={styles.iconBtnEmoji}>💬</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
-        {/* Subtitle */}
-        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>{t('game.placeBets')}</Text>
+        {/* Title */}
+        <Text style={[styles.bettingTitle, { color: colors.accent }]}>{t('game.placeBets')}</Text>
 
-        {/* Players — compact horizontal cards */}
-        <View style={styles.playersRow}>
+        {/* Players grid — adaptive layout */}
+        <View style={styles.playersGrid}>
           {players.map((player, index) => {
             const isBetting = index === bettingPlayerIndex;
             const hasBet = player.bet !== null && player.bet !== undefined;
@@ -273,7 +290,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   styles.playerCardBet,
                   { color: hasBet ? colors.success : colors.textMuted },
                 ]}>
-                  {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') : '...'}
+                  {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') + '...' : '...'}
                 </Text>
               </View>
             );
@@ -505,42 +522,62 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     paddingBottom: Spacing.lg,
   },
-  compactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+  // Top bar — 2 rows matching Figma
+  topBar: {
+    borderBottomWidth: 1,
     borderRadius: Radius.md,
     padding: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
+    marginBottom: Spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 2,
   },
-  headerTitle: {
-    ...TextStyles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-  },
-  trumpContainer: {
+  topBarRow1: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
-  trumpLabel: {
-    ...TextStyles.caption,
-    color: Colors.textSecondary,
+  handInfo: {
+    fontSize: 14,
+    fontWeight: '600',
   },
-  trumpValue: {
-    ...TextStyles.h3,
+  trumpBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
+  trumpBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  topBarRow2: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  iconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnText: {
+    fontSize: 18,
     fontWeight: '700',
   },
-  cardsInfo: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
+  iconBtnEmoji: {
+    fontSize: 14,
+  },
+  bettingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
   },
   spacer: {
     height: Spacing.sm,
@@ -608,28 +645,31 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
-  // Players — horizontal compact cards
-  playersRow: {
+  // Players grid — 3 per row for 5-6, 2 per row for 2-4
+  playersGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    justifyContent: 'center',
+    gap: Spacing.sm,
     marginBottom: Spacing.sm,
   },
   playerCard: {
+    width: '30%',
+    minWidth: 95,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
     borderRadius: Radius.md,
     borderWidth: 1,
-    minWidth: 80,
     alignItems: 'center',
   },
   playerCardName: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   playerCardBet: {
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '500',
   },
   // Smart hint
   smartHint: {
