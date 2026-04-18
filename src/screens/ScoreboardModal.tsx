@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { GlassCard, GlassButton } from '../components';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -68,6 +69,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
 
   // State to control closing animation
   const [isClosing, setIsClosing] = useState(false);
@@ -164,7 +166,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         <Text style={styles.breakdownLabel}>{t('scoreboard.lastHand')}:</Text>
         <Text style={[
           styles.breakdownValue,
-          { color: player.madeBet ? Colors.success : Colors.error }
+          { color: player.madeBet ? colors.success : colors.error }
         ]}>
           {player.lastPoints > 0 ? '+' : ''}{player.lastPoints}
           {' '}({player.lastTricks}/{player.lastBet})
@@ -226,10 +228,10 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
             {/* Gradient background */}
             {Platform.OS === 'web' ? (
-              <View style={[styles.gradient, { backgroundColor: Colors.background }]} />
+              <View style={[styles.gradient, { backgroundColor: colors.background }]} />
             ) : (
               <LinearGradient
-                colors={Colors.deepRich}
+                colors={colors.deepRich as any}
                 style={styles.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0.3, y: 1 }}
@@ -252,7 +254,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 onPress={isGameOver && onPlayAgain ? onPlayAgain : onContinue}
                 size="large"
                 variant="primary"
-                accentColor={Colors.highlight}
+                accentColor={colors.highlight}
                 style={styles.continueButton}
               />
             </View>
