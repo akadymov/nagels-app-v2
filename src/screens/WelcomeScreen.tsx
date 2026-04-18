@@ -57,12 +57,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           {t('welcome.tagline')}
         </Text>
 
-        {/* Suit symbols */}
-        <Text style={[styles.suits, { color: colors.accent, opacity: 0.3 }]}>
-          ♠  ♥  ♦  ♣
-        </Text>
+        {/* Suit symbols — faded but colored */}
+        <View style={styles.suitsRow}>
+          <Text style={[styles.suitChar, { color: '#888888' }]}>♠</Text>
+          <Text style={[styles.suitChar, { color: '#E8A0A0' }]}>♥</Text>
+          <Text style={[styles.suitChar, { color: '#A0C8F0' }]}>♦</Text>
+          <Text style={[styles.suitChar, { color: '#90C8A0' }]}>♣</Text>
+        </View>
 
-        <View style={styles.spacer} />
+        <View style={{ height: Spacing.xl }} />
 
         {/* Learn to Play (primary) */}
         <Pressable
@@ -80,13 +83,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           testID="btn-skip-to-lobby"
         >
           <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
-            {t('welcome.alreadyPlay', 'Play as Guest')}
+            {t('welcome.alreadyPlay', 'Skip to Menu')}
           </Text>
         </Pressable>
 
-        {/* Sign In / Register (secondary) */}
+        {/* Sign In / Register (secondary) — same border style */}
         <Pressable
-          style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+          style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
           onPress={onSignIn || onAlreadyPlay}
         >
           <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
@@ -129,8 +132,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: SH * 0.08,
   },
   logoCircle: {
     width: 100,
@@ -159,14 +162,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: Spacing.sm,
   },
-  suits: {
-    fontSize: 22,
-    letterSpacing: 4,
+  suitsRow: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
     marginBottom: Spacing.md,
   },
-  spacer: {
-    flex: 1,
-    minHeight: Spacing.xl,
+  suitChar: {
+    fontSize: 22,
   },
   btnPrimary: {
     width: Math.min(SW - 64, 340),
@@ -203,8 +205,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 22,
     padding: 4,
+    gap: Spacing.xs,
     marginTop: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.sm,
   },
   langPill: {
     paddingHorizontal: 20,
