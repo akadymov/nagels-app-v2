@@ -1,9 +1,10 @@
 /**
  * Nägels Online - Scoreboard Modal
- * End-of-hand results display with swipe-to-close
+ * Table layout with score history per round.
+ * Two modes: compact (mid-game) and full (end-of-round).
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,16 +13,12 @@ import {
   Pressable,
   Modal,
   Dimensions,
-  Platform,
-  Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { GlassCard, GlassButton } from '../components';
-import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import type { HandResult } from '../store/gameStore';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -42,219 +39,182 @@ export interface ScoreboardModalProps {
   handNumber: number;
   totalHands: number;
   players: PlayerScore[];
+  scoreHistory?: HandResult[];
+  startingPlayerIndex?: number;
   isGameOver?: boolean;
+  isMidGame?: boolean;
   onContinue: () => void;
   onPlayAgain?: () => void;
   onClose?: () => void;
 }
 
-/**
- * ScoreboardModal - End of hand results
- *
- * Shows:
- * - Hand number (e.g., "Hand 3/20")
- * - Player rankings with scores
- * - Last hand breakdown (bet + tricks + bonus)
- * - "Continue Playing" button
- * - Swipe down from handle/header to close
- */
 export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   visible,
   handNumber,
   totalHands,
   players,
+  scoreHistory = [],
+  startingPlayerIndex,
   isGameOver = false,
+  isMidGame = false,
   onContinue,
   onPlayAgain,
   onClose,
 }) => {
   const { t } = useTranslation();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
+  const [showFull, setShowFull] = useState(!isMidGame);
 
-  // State to control closing animation
-  const [isClosing, setIsClosing] = useState(false);
-
-  // Animated value for swipe gesture
-  const translateY = useRef(new Animated.Value(0)).current;
-
-  // Sort players by score (highest first)
+  // Sort players by score
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
+  const leader = sortedPlayers[0];
 
-  // Close modal with animation
-  const closeModal = () => {
-    if (isClosing) return;
-    setIsClosing(true);
+  if (!visible) return null;
 
-    Animated.timing(translateY, {
-      toValue: SCREEN_HEIGHT,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      translateY.setValue(0);
-      setIsClosing(false);
-      onClose?.();
-    });
-  };
+  const renderCompact = () => (
+    <View style={styles.compactContainer}>
+      {/* Header */}
+      <Text style={[styles.title, { color: colors.accent }]}>
+        {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
+      </Text>
 
-  // Handle gesture for swipe-to-close
-  const gestureHandler = useRef(
-    Animated.event(
-      [{ nativeEvent: { translationY: translateY } }],
-      { useNativeDriver: true }
-    )
-  ).current;
+      {/* Rankings */}
+      {sortedPlayers.map((p, i) => (
+        <View key={p.id} style={[styles.compactRow, { backgroundColor: colors.surface, borderColor: i === 0 ? colors.accent : colors.glassLight }]}>
+          <Text style={[styles.compactRank, { color: colors.textMuted }]}>{i + 1}</Text>
+          <Text style={[styles.compactName, { color: colors.textPrimary }]} numberOfLines={1}>{p.name}</Text>
+          <Text style={[styles.compactScore, { color: colors.accent }]}>{p.totalScore}</Text>
+          <View style={[styles.compactLastHand, { backgroundColor: p.madeBet ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' }]}>
+            <Text style={{ color: p.madeBet ? colors.success : colors.error, fontWeight: '700', fontSize: 12 }}>
+              {p.lastPoints > 0 ? '+' : ''}{p.lastPoints}
+            </Text>
+          </View>
+        </View>
+      ))}
 
-  const handleGestureStateChange = (_event: any) => {
-    const event = _event.nativeEvent;
+      {/* Show History toggle */}
+      {scoreHistory.length > 0 && (
+        <Pressable onPress={() => setShowFull(true)} style={[styles.toggleBtn, { borderColor: colors.accent }]}>
+          <Text style={[styles.toggleText, { color: colors.accent }]}>{t('scoreboard.showHistory', 'Show History')}</Text>
+        </Pressable>
+      )}
+    </View>
+  );
 
-    if (event.state === State.END) {
-      const { translationY } = event;
+  const renderFullTable = () => {
+    // Column width calculation
+    const playerCount = players.length;
+    const roundColW = 32;
+    const playerColW = Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
 
-      // If swiped down far enough, close the modal
-      if (translationY > 80) {
-        closeModal();
-      } else {
-        // Snap back to position
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 0,
-        }).start();
-      }
-    }
-  };
-
-  const renderPlayerRow = (player: PlayerScore) => {
-    const isBonus = player.madeBet && player.lastBonus > 0;
     return (
-      <View
-        key={player.id}
-        style={[
-          styles.playerRow,
-          { backgroundColor: colors.surface, borderColor: colors.glassLight },
-          player.rank === 1 && { borderColor: colors.accent, borderWidth: 2 },
-        ]}
-      >
-        <View style={styles.playerRowTop}>
-          {/* Rank */}
-          <View style={[styles.rankBadge, { backgroundColor: colors.surfaceSecondary }]}>
-            <Text style={[styles.rankNumber, { color: colors.textPrimary }]}>{player.rank}</Text>
-          </View>
-          {/* Name */}
-          <Text style={[styles.playerName, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
-            {player.name}
-          </Text>
-          {/* Score */}
-          <Text style={[styles.totalScore, { color: colors.accent }]}>{player.totalScore}</Text>
-        </View>
+      <View style={styles.fullContainer}>
+        {/* Header */}
+        <Text style={[styles.title, { color: colors.accent }]}>
+          {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
+        </Text>
 
-        {/* Last hand result */}
-        <View style={styles.playerRowBottom}>
-          <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>
-            {t('scoreboard.lastHand')}:
-          </Text>
-          <View style={[
-            styles.lastHandBadge,
-            { backgroundColor: isBonus ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' },
-          ]}>
-            {isBonus && <Text style={{ fontSize: 12 }}>⭐</Text>}
-            <Text style={{ color: isBonus ? colors.success : colors.error, fontWeight: '700', fontSize: 13 }}>
-              {player.lastPoints > 0 ? '+' : ''}{player.lastPoints}
-            </Text>
-            <Text style={[styles.breakdownDetail, { color: colors.textMuted }]}>
-              ({player.lastTricks}/{player.lastBet})
-            </Text>
+        {isMidGame && (
+          <Pressable onPress={() => setShowFull(false)} style={[styles.toggleBtn, { borderColor: colors.accent, marginBottom: Spacing.sm }]}>
+            <Text style={[styles.toggleText, { color: colors.accent }]}>{t('scoreboard.hideHistory', 'Hide History')}</Text>
+          </Pressable>
+        )}
+
+        {/* Table */}
+        <ScrollView style={styles.tableScroll} showsVerticalScrollIndicator={false}>
+          {/* Column headers */}
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCell, { width: roundColW }]}>
+              <Text style={[styles.headerText, { color: colors.textMuted }]}>#</Text>
+            </View>
+            {sortedPlayers.map((p) => (
+              <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
+                <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={1}>{p.name}</Text>
+              </View>
+            ))}
           </View>
-        </View>
+
+          {/* Divider */}
+          <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
+
+          {/* Round rows */}
+          {scoreHistory.map((hand) => (
+            <View key={hand.handNumber} style={styles.tableRow}>
+              <View style={[styles.tableCell, { width: roundColW }]}>
+                <Text style={[styles.roundNum, { color: colors.textMuted }]}>{hand.handNumber}</Text>
+              </View>
+              {sortedPlayers.map((player) => {
+                const result = hand.results.find(r => r.playerId === player.id);
+                if (!result) return <View key={player.id} style={[styles.tableCell, { width: playerColW }]} />;
+                const isBonus = result.bonus > 0;
+                const isFirst = hand.startingPlayerIndex === players.findIndex(p => p.id === player.id);
+                return (
+                  <View key={player.id} style={[styles.tableCell, { width: playerColW }]}>
+                    {isFirst && <Text style={styles.firstBadge}>▶</Text>}
+                    {isBonus ? (
+                      <View style={[styles.bonusCircle, { borderColor: colors.success }]}>
+                        <Text style={[styles.scoreText, { color: colors.success }]}>{result.points}</Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.scoreText, { color: colors.error }]}>{result.points}</Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+
+          {/* Total row */}
+          <View style={[styles.divider, { backgroundColor: colors.accent, height: 2 }]} />
+          <View style={styles.tableRow}>
+            <View style={[styles.tableCell, { width: roundColW }]}>
+              <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Σ</Text>
+            </View>
+            {sortedPlayers.map((p) => (
+              <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
+                <Text style={[styles.totalScore, { color: p.id === leader?.id ? colors.accent : colors.textPrimary }]}>
+                  {p.totalScore}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Leader */}
+          {leader && (
+            <Text style={[styles.leaderText, { color: colors.success }]}>
+              🏆 {leader.name} {isGameOver ? t('scoreboard.winner', 'wins!') : t('scoreboard.leading', 'leading')}
+            </Text>
+          )}
+        </ScrollView>
       </View>
     );
   };
 
-  if (isClosing && !visible) {
-    return null;
-  }
-
   return (
-    <Modal
-      visible={visible}
-      animationType={Platform.OS === 'web' ? 'slide' : 'none'}
-      transparent
-      statusBarTranslucent
-      onRequestClose={closeModal}
-    >
-      {/* Background overlay - tap outside closes modal */}
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.modalWrapper}>
-          <Animated.View
-            style={[
-              styles.modalContainer,
-              {
-                backgroundColor: colors.background,
-                transform: [{ translateY }],
-              },
-            ]}
-          >
-            {/* Swipe-to-close gesture handler - covers handle + header */}
-            <PanGestureHandler
-              onGestureEvent={gestureHandler}
-              onHandlerStateChange={handleGestureStateChange}
-              activeOffsetY={[-10, 10]}
-            >
-              <View style={styles.swipeArea}>
-                {/* Swipe indicator - draggable handle */}
-                <View style={styles.swipeIndicator}>
-                  <View style={styles.swipeHandle} />
-                </View>
+        <View style={[styles.modal, { backgroundColor: colors.background }]}>
+          <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+            {/* Close button */}
+            <Pressable onPress={onClose || onContinue} style={styles.closeBtn} hitSlop={12}>
+              <Text style={[styles.closeText, { color: colors.textMuted }]}>✕</Text>
+            </Pressable>
 
-                {/* Header - also swipeable */}
-                <View style={styles.header}>
-                  <GlassCard style={styles.headerCard} blurAmount={25}>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-                      {isGameOver ? t('scoreboard.gameOver') : `${t('scoreboard.hand')} ${handNumber} ${t('scoreboard.of')} ${totalHands}`}
-                    </Text>
-                    {isGameOver && (
-                      <Text style={styles.gameOverSubtitle}>
-                        🏆 {sortedPlayers[0]?.name} wins!
-                      </Text>
-                    )}
-                  </GlassCard>
-                </View>
-              </View>
-            </PanGestureHandler>
+            {/* Content */}
+            {showFull && scoreHistory.length > 0 ? renderFullTable() : renderCompact()}
 
-            {/* Gradient background */}
-            {Platform.OS === 'web' ? (
-              <View style={[styles.gradient, { backgroundColor: colors.background }]} />
-            ) : (
-              <LinearGradient
-                colors={colors.deepRich as any}
-                style={styles.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0.3, y: 1 }}
-              />
-            )}
-
-            {/* Scores List - NOT pressable, scrolling works inside */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {sortedPlayers.map(renderPlayerRow)}
-            </ScrollView>
-
-            {/* Continue Button */}
+            {/* Continue / Play Again button */}
             <View style={styles.footer}>
-              <GlassButton
-                title={t('scoreboard.continue')}
+              <Pressable
+                style={[styles.continueBtn, { backgroundColor: colors.accent }]}
                 onPress={isGameOver && onPlayAgain ? onPlayAgain : onContinue}
-                size="large"
-                variant="primary"
-                accentColor={colors.highlight}
-                style={styles.continueButton}
-              />
+              >
+                <Text style={styles.continueBtnText}>
+                  {isGameOver ? t('scoreboard.playAgain') : t('scoreboard.continue')}
+                </Text>
+              </Pressable>
             </View>
-          </Animated.View>
+          </SafeAreaView>
         </View>
       </View>
     </Modal>
@@ -264,202 +224,156 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  modalWrapper: {
-    width: '100%',
-    maxHeight: '85%',
-  },
-  modalContainer: {
-    width: '100%',
-    height: '85%',
-    backgroundColor: Colors.background,
+  modal: {
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    overflow: 'hidden',
-  },
-  swipeArea: {
-    // This area (handle + header) is swipeable
-    backgroundColor: 'transparent',
-  },
-  swipeIndicator: {
-    alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingTop: Spacing.md,
-  },
-  swipeHandle: {
-    width: 48,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: Colors.textMuted,
-    opacity: 0.4,
-  },
-  header: {
-    paddingTop: Spacing.xs,
+    maxHeight: SCREEN_HEIGHT * 0.85,
+    minHeight: 300,
+    paddingTop: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
   },
-  headerCard: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.glassLight,
-  },
-  headerTitle: {
-    ...TextStyles.h2,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  gameOverSubtitle: {
-    ...TextStyles.body,
-    color: Colors.highlight,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-    fontWeight: '600',
-  },
-  gradient: {
+  closeBtn: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: -1,
+    top: Spacing.md,
+    right: Spacing.md,
+    zIndex: 10,
   },
-  scrollView: {
+  closeText: {
+    fontSize: 22,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  // Compact mode
+  compactContainer: {
+    gap: Spacing.xs,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    gap: Spacing.sm,
+  },
+  compactRank: {
+    fontSize: 14,
+    fontWeight: '700',
+    width: 20,
+    textAlign: 'center',
+  },
+  compactName: {
+    fontSize: 14,
+    fontWeight: '600',
     flex: 1,
   },
-  scrollContent: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-    gap: Spacing.sm,
+  compactScore: {
+    fontSize: 16,
+    fontWeight: '700',
   },
-  playerRow: {
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: Radius.md,
-  },
-  playerRowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  playerRowBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  lastHandBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
+  compactLastHand: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radius.sm,
   },
-  breakdownDetail: {
-    fontSize: 11,
-  },
-  playerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  rankBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.background,
-    borderWidth: 2,
-    borderColor: Colors.glassLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  rankNumber: {
-    ...TextStyles.h3,
-    color: Colors.textPrimary,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  nameContainer: {
+  // Full table mode
+  fullContainer: {
     flex: 1,
   },
-  playerName: {
-    ...TextStyles.h3,
-    color: Colors.textPrimary,
+  tableScroll: {
+    flex: 1,
   },
-  winnerLabel: {
-    ...TextStyles.caption,
-    color: Colors.highlight,
-    marginTop: 2,
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
   },
-  scoreContainer: {
-    alignItems: 'flex-end',
-    marginBottom: Spacing.sm,
+  tableCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 4,
+  },
+  roundNum: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  scoreText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  bonusCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  firstBadge: {
+    position: 'absolute',
+    top: -2,
+    left: 0,
+    fontSize: 6,
+    color: '#308552',
+  },
+  totalLabel: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   totalScore: {
-    ...TextStyles.h2,
-    color: Colors.highlight,
+    fontSize: 14,
     fontWeight: '700',
   },
-  pointsLabel: {
-    ...TextStyles.small,
-    color: Colors.textMuted,
-  },
-  breakdownContainer: {
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassMedium,
-  },
-  breakdownLabel: {
-    ...TextStyles.small,
-    color: Colors.textMuted,
-    marginBottom: 2,
-  },
-  breakdownValue: {
-    ...TextStyles.body,
+  leaderText: {
+    fontSize: 13,
     fontWeight: '600',
-  },
-  bonusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(19, 66, 143, 0.07)',
-    borderWidth: 2,
-    borderColor: Colors.accent,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
+    textAlign: 'center',
+    marginTop: Spacing.md,
     marginBottom: Spacing.sm,
   },
-  bonusEmoji: {
-    fontSize: 32,
-    marginRight: Spacing.sm,
+  // Toggle button
+  toggleBtn: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    marginTop: Spacing.md,
   },
-  bonusContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  bonusTitle: {
-    ...TextStyles.body,
-    color: Colors.accent,
+  toggleText: {
+    fontSize: 13,
     fontWeight: '600',
   },
-  bonusAmount: {
-    ...TextStyles.h3,
-    color: Colors.accent,
-    fontWeight: '700',
-  },
+  // Footer
   footer: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xl,
-    paddingTop: Spacing.sm,
+    paddingVertical: Spacing.md,
   },
-  continueButton: {
-    width: '100%',
+  continueBtn: {
+    height: 52,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  continueBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

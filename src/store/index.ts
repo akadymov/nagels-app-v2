@@ -4,7 +4,7 @@
  */
 
 export { useGameStore } from './gameStore';
-export type { GameStore, GamePlayer, Trick } from './gameStore';
+export type { GameStore, GamePlayer, Trick, HandResult } from './gameStore';
 
 export { useAuthStore } from './authStore';
 export type { AuthStore } from './authStore';

@@ -828,7 +828,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         handNumber={handNumber}
         totalHands={totalHands}
         players={scoreboardPlayers}
+        scoreHistory={useGameStore.getState().scoreHistory}
+        startingPlayerIndex={startingPlayerIndex}
         isGameOver={handNumber >= totalHands}
+        isMidGame={isViewingScores}
         onContinue={handleScoreboardContinue}
         onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
       />

@@ -59,6 +59,18 @@ export interface Trick {
   leadSuit: Exclude<Suit, 'notrump'>;
 }
 
+export interface HandResult {
+  handNumber: number;
+  startingPlayerIndex: number;
+  results: {
+    playerId: string;
+    bet: number;
+    tricksWon: number;
+    points: number;
+    bonus: number;
+  }[];
+}
+
 export interface GameStore {
   // Game info
   phase: GamePhase;
@@ -86,6 +98,9 @@ export interface GameStore {
   // Playing
   currentTrick: Trick | null;
   tricks: Trick[];
+
+  // Score history (per round)
+  scoreHistory: HandResult[];
 
   // Multiplayer mode
   isMultiplayer: boolean;
@@ -164,6 +179,7 @@ const initialState = {
 
   currentTrick: null,
   tricks: [],
+  scoreHistory: [],
 
   isMultiplayer: false,
 
@@ -615,9 +631,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
     });
 
+    // Record hand result for score history
+    const handResult: HandResult = {
+      handNumber: state.handNumber,
+      startingPlayerIndex: state.startingPlayerIndex,
+      results: state.players.map(p => {
+        const { points, bonus } = calculateHandScore({
+          playerId: p.id,
+          bet: p.bet || 0,
+          tricksWon: p.tricksWon,
+        });
+        return {
+          playerId: p.id,
+          bet: p.bet || 0,
+          tricksWon: p.tricksWon,
+          points,
+          bonus,
+        };
+      }),
+    };
+
     set({
       phase: 'scoring',
       players: updatedPlayers,
+      scoreHistory: [...state.scoreHistory, handResult],
     });
   },
 
