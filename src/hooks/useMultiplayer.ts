@@ -68,7 +68,7 @@ export interface UseMultiplayerReturn {
  * Main multiplayer hook
  */
 export function useMultiplayer(): UseMultiplayerReturn {
-  const [playerName, setPlayerNameState] = useState<string>('Shark');
+  const [playerName, setPlayerNameState] = useState<string>(() => `Shark_${Math.floor(1000 + Math.random() * 9000)}`);
 
   const guestSession = useMultiplayerStore((s) => s.guestSession);
   const currentRoom = useMultiplayerStore((s) => s.currentRoom);

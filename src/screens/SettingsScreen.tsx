@@ -160,6 +160,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('settings.language', 'Language')}
           </Text>
+          <View style={{ height: Spacing.md }} />
           <OptionPills
             options={[
               { key: 'en', label: 'English' },

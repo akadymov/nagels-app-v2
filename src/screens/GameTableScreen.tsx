@@ -869,6 +869,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                       return (
                         <View key={index} style={[
                           styles.lastTrickCard,
+                          { backgroundColor: colors.surfaceSecondary },
                           !useLarge && styles.lastTrickCardCompact,
                           isWinner && styles.winnerCard,
                         ]}>

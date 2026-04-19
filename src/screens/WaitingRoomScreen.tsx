@@ -172,7 +172,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               onPress={handleShare}
               hitSlop={8}
             >
-              <Text style={styles.shareButtonText}>
+              <Text style={[styles.shareButtonText, { color: colors.textPrimary }]}>
                 📤 {t('multiplayer.shareCode')}
               </Text>
             </Pressable>
