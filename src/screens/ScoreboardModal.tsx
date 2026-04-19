@@ -136,18 +136,18 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       {/* Rank and Name */}
       <View style={styles.playerInfo}>
         {/* Simple white rank number instead of medals */}
-        <View style={styles.rankBadge}>
-          <Text style={styles.rankNumber}>{player.rank}</Text>
+        <View style={[styles.rankBadge, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
+          <Text style={[styles.rankNumber, { color: colors.textPrimary }]}>{player.rank}</Text>
         </View>
         <View style={styles.nameContainer}>
-          <Text style={styles.playerName}>{player.name}</Text>
+          <Text style={[styles.playerName, { color: colors.textPrimary }]}>{player.name}</Text>
         </View>
       </View>
 
       {/* Total Score */}
       <View style={styles.scoreContainer}>
-        <Text style={styles.totalScore}>{player.totalScore}</Text>
-        <Text style={styles.pointsLabel}>{t('game.score')}</Text>
+        <Text style={[styles.totalScore, { color: colors.highlight }]}>{player.totalScore}</Text>
+        <Text style={[styles.pointsLabel, { color: colors.textMuted }]}>{t('game.score')}</Text>
       </View>
 
       {/* Bonus - Show prominently if player made their bet */}
@@ -194,6 +194,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             style={[
               styles.modalContainer,
               {
+                backgroundColor: colors.background,
                 transform: [{ translateY }],
               },
             ]}
@@ -213,7 +214,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 {/* Header - also swipeable */}
                 <View style={styles.header}>
                   <GlassCard style={styles.headerCard} blurAmount={25}>
-                    <Text style={styles.headerTitle}>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
                       {isGameOver ? t('scoreboard.gameOver') : `${t('scoreboard.hand')} ${handNumber} ${t('scoreboard.of')} ${totalHands}`}
                     </Text>
                     {isGameOver && (
