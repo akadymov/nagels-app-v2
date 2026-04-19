@@ -65,10 +65,10 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     switch (size) {
       case 'small':
         return {
-          width: 60,
-          height: 82,
-          cornerSize: 12,
-          centerSuitSize: 24,
+          width: 88,
+          height: 122,
+          cornerSize: 14,
+          centerSuitSize: 30,
         };
       case 'large':
         return {
@@ -89,15 +89,15 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const sizeConfig = getSizeConfig();
 
-  // Always same borderWidth to prevent layout jump when selecting
-  const borderWidth = 2;
+  // Always reserve space for max border to prevent layout jump
+  const borderWidth = selected ? 4 : 2;
   const borderColor = selected
     ? colors.selectedCardBorder
     : playable
       ? colors.success
       : colors.cardBorder;
 
-  const cardBorderStyle = { borderColor, borderWidth };
+  const cardBorderStyle = { borderColor, borderWidth, margin: selected ? 0 : 2 };
   const cardOpacity = disabled ? 0.4 : 1;
 
   const renderFaceUp = () => (

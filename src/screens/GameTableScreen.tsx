@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.xs,
     backgroundColor: '#ffffff',
-    maxHeight: SCREEN_HEIGHT * 0.26,
+    maxHeight: SCREEN_HEIGHT * 0.34,
   },
   youBadge: {
     flexDirection: 'row',
