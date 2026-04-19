@@ -25,7 +25,7 @@ export interface PlayingCardProps {
   selected?: boolean;
   playable?: boolean;
   disabled?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'tiny' | 'small' | 'medium' | 'large';
   onPress?: () => void;
   style?: any;
   testID?: string;
@@ -63,6 +63,13 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const getSizeConfig = () => {
     switch (size) {
+      case 'tiny':
+        return {
+          width: 60,
+          height: 84,
+          cornerSize: 12,
+          centerSuitSize: 24,
+        };
       case 'small':
         return {
           width: 88,

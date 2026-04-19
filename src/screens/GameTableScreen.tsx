@@ -716,7 +716,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     <PlayingCard
                       suit={played.card.suit}
                       rank={played.card.rank}
-                      size="small"
+                      size="tiny"
                     />
                   </View>
                 );
@@ -852,7 +852,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                           <PlayingCard
                             suit={played.card.suit}
                             rank={played.card.rank}
-                            size={useLarge ? 'medium' : 'small'}
+                            size={useLarge ? 'small' : 'tiny'}
                           />
                           <Text style={styles.lastTrickPlayerName} numberOfLines={1}>
                             {player?.name || '?'}
