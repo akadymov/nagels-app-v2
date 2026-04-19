@@ -761,26 +761,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       {/* Your Hand - Fixed at bottom, clearly showing YOU are at the table */}
       {myPlayer && (
         <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent }]}>
-          {/* My avatar badge - shows who I am */}
-          <View style={[styles.youBadge, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
-            <View style={[styles.avatar, styles.myHandAvatar]}>
-              <Text style={[styles.avatarInitial, styles.myHandAvatarInitial]}>
-                {myPlayer.name[0].toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.youStats}>
-              <Text style={styles.youStat}>
-                {t('game.bet')}: <Text style={styles.statValue}>{myPlayer.bet ?? '-'}</Text>
-              </Text>
-              <Text style={styles.youStat}>
-                {t('game.won')}: <Text style={styles.statValue}>{myPlayer.tricksWon}</Text>
-              </Text>
-              <Text style={styles.youStat}>
-                {t('game.score')}: <Text style={styles.statValue}>{myPlayer.score}</Text>
-              </Text>
-            </View>
-          </View>
-
           {/* Your cards */}
           <View testID="my-hand">
             <CardHand
@@ -1015,11 +995,11 @@ const styles = StyleSheet.create({
   // Card Table - oval green felt table (legacy-style)
   cardTable: {
     position: 'absolute',
-    top: '52%',
+    top: '50%',
     left: '50%',
     transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
-    width: '85%',
-    height: '55%',
+    width: '88%',
+    height: '68%',
     zIndex: 1,
   },
   tableEdge: {
