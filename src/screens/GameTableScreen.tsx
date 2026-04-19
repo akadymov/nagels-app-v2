@@ -1069,13 +1069,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   yourTurnBadge: {
-    backgroundColor: 'rgba(48, 133, 82, 0.85)',
+    backgroundColor: 'rgba(230, 191, 51, 0.9)',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   yourTurnText: {
-    color: '#ffffff',
+    color: '#1a1a1a',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
   // Trick Area - Centered on the table
   playArea: {
     position: 'absolute',
-    top: '50%',
+    top: '58%',
     left: '50%',
     transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
     alignItems: 'center',
