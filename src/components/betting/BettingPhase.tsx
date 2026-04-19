@@ -315,7 +315,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 suit: c.suit,
                 rank: c.rank,
               }))}
-              size="small"
+              size="tiny"
               horizontal
               cardOverlap={myPlayer.hand.length}
             />
