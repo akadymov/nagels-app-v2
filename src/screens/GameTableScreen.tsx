@@ -442,10 +442,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   const clockToScreen = (clockPosition: number) => {
     const angle = (clockPosition * 30 - 90) * (Math.PI / 180);
-    const radius = 42; // percentage from center
+    const radius = 38;
 
-    const top = 50 + radius * Math.sin(angle);
-    const left = 50 + radius * Math.cos(angle);
+    let top = 50 + radius * Math.sin(angle);
+    let left = 50 + radius * Math.cos(angle);
+
+    // Clamp so profile doesn't overflow screen edges
+    // Convert % to consider profile size relative to screen
+    const halfWPct = (PROFILE_W / 2 / SCREEN_WIDTH) * 100;
+    const halfHPct = (PROFILE_H / 2 / SCREEN_HEIGHT) * 100;
+    left = Math.max(halfWPct + 1, Math.min(100 - halfWPct - 1, left));
+    top = Math.max(halfHPct, Math.min(100 - halfHPct, top));
 
     return {
       top: `${top}%`,
