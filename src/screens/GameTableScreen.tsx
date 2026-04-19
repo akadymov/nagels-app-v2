@@ -819,9 +819,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         <View style={styles.modalOverlay}>
           <GlassCard style={styles.lastTrickModal}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('game.lastTrick')}</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('game.lastTrick')}</Text>
               <Pressable onPress={() => setShowLastTrick(false)} hitSlop={12}>
-                <Text style={styles.modalClose}>✕</Text>
+                <Text style={[styles.modalClose, { color: colors.textMuted }]}>✕</Text>
               </Pressable>
             </View>
 
@@ -853,7 +853,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                             rank={played.card.rank}
                             size={useLarge ? 'small' : 'tiny'}
                           />
-                          <Text style={styles.lastTrickPlayerName} numberOfLines={1}>
+                          <Text style={[styles.lastTrickPlayerName, { color: colors.textSecondary }]} numberOfLines={1}>
                             {player?.name || '?'}
                             {isWinner && ' 👑'}
                           </Text>
@@ -994,8 +994,8 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
-    width: '88%',
-    height: '68%',
+    width: '92%',
+    height: '82%',
     zIndex: 1,
   },
   tableEdge: {
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
   // Compact row of 4 suit symbols at the top of the felt
   suitRow: {
     position: 'absolute',
-    top: '10%',
+    top: '22%',
     left: '30%',
     right: '30%',
     flexDirection: 'row',
@@ -1089,39 +1089,39 @@ const styles = StyleSheet.create({
   },
   // Figma-style profile card — dark semi-transparent, fixed size
   profileCard: {
-    width: 90,
-    height: 78,
+    width: 110,
+    height: 90,
     borderRadius: Radius.lg,
     backgroundColor: 'rgba(8, 10, 14, 0.75)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 5,
     overflow: 'visible',
   },
   profileAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 3,
   },
   profileAvatarText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
   },
   profileName: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: '#ffffff',
     textAlign: 'center',
-    maxWidth: 84,
+    maxWidth: 104,
   },
   profileStats: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#C0C0C7',
     textAlign: 'center',
   },
@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 3,
     left: 3,
-    fontSize: 10,
+    fontSize: 12,
     color: '#308552',
   },
   profileCheckBadge: {
