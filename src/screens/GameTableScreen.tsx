@@ -610,7 +610,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         <View style={styles.cardTable}>
           <View style={[styles.tableEdge, { backgroundColor: isDark ? colors.table : '#33734D', borderColor: isDark ? colors.tableBorder : '#4D8C63' }]} />
           <LinearGradient
-            colors={isDark ? [colors.tableInner, colors.table, colors.tableInner] : ['#003e00', '#009c00', '#005d00']}
+            colors={isDark ? ['#3a3f4d', '#525868', '#3a3f4d'] : ['#003e00', '#009c00', '#005d00']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={styles.tableFelt}
