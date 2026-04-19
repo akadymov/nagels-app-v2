@@ -629,16 +629,27 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </LinearGradient>
         </View>
 
-        {/* My avatar at bottom edge of table - opposite top player */}
-        {myPlayer && (
-          <View style={styles.youLabelAtTable}>
-            <View style={[styles.avatar, styles.myTableAvatar]}>
-              <Text style={[styles.avatarInitial, styles.myTableAvatarInitial]}>
-                {myPlayer.name[0].toUpperCase()}
-              </Text>
+        {/* My profile at bottom edge of table — same style as opponents */}
+        {myPlayer && (() => {
+          const isMyTurnNow = currentPlayer?.id === myPlayer.id;
+          const isFirstPlayer = startingPlayerIndex === players.indexOf(myPlayer);
+          return (
+            <View style={styles.youLabelAtTable}>
+              <View style={[
+                styles.profileCard,
+                isMyTurnNow && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                !isMyTurnNow && { borderColor: colors.accent, borderWidth: 1.5 },
+              ]}>
+                {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                <View style={[styles.profileAvatar, { backgroundColor: colors.accent }]}>
+                  <Text style={styles.profileAvatarText}>{myPlayer.name[0]}</Text>
+                </View>
+                <Text style={styles.profileName} numberOfLines={1}>{myPlayer.name}</Text>
+                <Text style={styles.profileStats}>Bet:{myPlayer.bet ?? '-'} Won:{myPlayer.tricksWon}</Text>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Turn order indicator - bottom-right corner */}
         <View style={styles.turnOrderIndicator}>
@@ -646,14 +657,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           <Text style={styles.turnOrderLabel}>{t('game.turnOrder')}</Text>
         </View>
 
-        {/* Opponents arranged around the table */}
+        {/* Opponents arranged around the table — Figma style profiles */}
         {opponents.map((player, i) => {
           const relativeIndex = getPlayerPosition(players.indexOf(player), playerCount);
           const clockPosition = getOpponentClockPosition(relativeIndex, playerCount);
           const positionStyle = clockToScreen(clockPosition);
-          const playerNumber = getPlayerNumber(relativeIndex);
           const isCurrentPlayer = currentPlayer?.id === player.id;
+          const isFirstPlayer = startingPlayerIndex === players.indexOf(player);
           const hasPlayedThisTrick = currentTrick?.cards.some(c => c.playerId === player.id);
+          // Assign avatar colors based on player index
+          const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
+          const avatarBg = avatarColors[i % avatarColors.length];
 
           return (
             <View
@@ -663,47 +677,25 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 { top: positionStyle.top, left: positionStyle.left } as any,
               ]}
             >
-              <GlassCard
+              <View
                 style={[
-                  styles.opponentCard,
+                  styles.profileCard,
                   { marginTop: positionStyle.marginTop, marginLeft: positionStyle.marginLeft },
-                  isCurrentPlayer && styles.activePlayer,
+                  isCurrentPlayer && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
                 ]}
-                dark={isCurrentPlayer}
-                blurAmount={isCurrentPlayer ? 20 : 10}
-                borderWidth={isCurrentPlayer ? 2 : 1}
-                borderColor={isCurrentPlayer ? colors.activePlayerBorder : colors.glassLight}
               >
-                {/* Avatar */}
-                <View style={[styles.avatar, isCurrentPlayer && styles.activeAvatar]}>
-                  <Text style={styles.avatarInitial}>{player.name[0]}</Text>
+                {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
+                  <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
                 </View>
-
-                {/* Name */}
-                <Text style={[styles.opponentName, { color: colors.textPrimary }]}>{player.name}</Text>
-
-                {/* Stats - compact */}
-                <View style={styles.opponentStats}>
-                  <Text style={[styles.opponentStat, { color: colors.textSecondary }]}>
-                    {t('game.bet')}: <Text style={[styles.statValue, { color: colors.accent }]}>{player.bet ?? '-'}</Text>
-                  </Text>
-                  <Text style={[styles.opponentStat, { color: colors.textSecondary }]}>
-                    {t('game.won')}: <Text style={[styles.statValue, { color: colors.accent }]}>{player.tricksWon}</Text>
-                  </Text>
-                </View>
-
-                {/* Play Status */}
-                {isCurrentPlayer && (
-                  <View style={styles.turnIndicator}>
-                    <Text style={styles.turnDot}>●</Text>
-                  </View>
-                )}
                 {hasPlayedThisTrick && !isCurrentPlayer && (
-                  <View style={styles.playedBadge}>
-                    <Text style={styles.playedText}>✓</Text>
+                  <View style={styles.profileCheckBadge}>
+                    <Text style={styles.profileCheckText}>✓</Text>
                   </View>
                 )}
-              </GlassCard>
+                <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
+                <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
+              </View>
             </View>
           );
         })}
@@ -1118,6 +1110,67 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 20,
     alignItems: 'center',
+  },
+  // Figma-style profile card — dark semi-transparent, fixed size
+  profileCard: {
+    width: 68,
+    height: 62,
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(8, 10, 14, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 3,
+    overflow: 'visible',
+  },
+  profileAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  profileAvatarText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  profileName: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#ffffff',
+    textAlign: 'center',
+    maxWidth: 62,
+  },
+  profileStats: {
+    fontSize: 7,
+    color: '#C0C0C7',
+    textAlign: 'center',
+  },
+  firstPlayerBadge: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    fontSize: 8,
+    color: '#13428f',
+  },
+  profileCheckBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#308552',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileCheckText: {
+    fontSize: 8,
+    color: '#ffffff',
+    fontWeight: '700',
   },
   positionBadge: {
     backgroundColor: Colors.highlight,
