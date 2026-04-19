@@ -124,56 +124,51 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     }
   };
 
-  const renderPlayerRow = (player: PlayerScore) => (
-    <GlassCard
-      key={player.id}
-      style={[
-        styles.playerRow,
-        player.rank === 1 && styles.winnerRow,
-      ]}
-      dark
-    >
-      {/* Rank and Name */}
-      <View style={styles.playerInfo}>
-        {/* Simple white rank number instead of medals */}
-        <View style={[styles.rankBadge, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
-          <Text style={[styles.rankNumber, { color: colors.textPrimary }]}>{player.rank}</Text>
+  const renderPlayerRow = (player: PlayerScore) => {
+    const isBonus = player.madeBet && player.lastBonus > 0;
+    return (
+      <View
+        key={player.id}
+        style={[
+          styles.playerRow,
+          { backgroundColor: colors.surface, borderColor: colors.glassLight },
+          player.rank === 1 && { borderColor: colors.accent, borderWidth: 2 },
+        ]}
+      >
+        <View style={styles.playerRowTop}>
+          {/* Rank */}
+          <View style={[styles.rankBadge, { backgroundColor: colors.surfaceSecondary }]}>
+            <Text style={[styles.rankNumber, { color: colors.textPrimary }]}>{player.rank}</Text>
+          </View>
+          {/* Name */}
+          <Text style={[styles.playerName, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+            {player.name}
+          </Text>
+          {/* Score */}
+          <Text style={[styles.totalScore, { color: colors.accent }]}>{player.totalScore}</Text>
         </View>
-        <View style={styles.nameContainer}>
-          <Text style={[styles.playerName, { color: colors.textPrimary }]}>{player.name}</Text>
-        </View>
-      </View>
 
-      {/* Total Score */}
-      <View style={styles.scoreContainer}>
-        <Text style={[styles.totalScore, { color: colors.highlight }]}>{player.totalScore}</Text>
-        <Text style={[styles.pointsLabel, { color: colors.textMuted }]}>{t('game.score')}</Text>
-      </View>
-
-      {/* Bonus - Show prominently if player made their bet */}
-      {player.madeBet && player.lastBonus > 0 && (
-        <View style={styles.bonusContainer}>
-          <Text style={styles.bonusEmoji}>⭐</Text>
-          <View style={styles.bonusContent}>
-            <Text style={styles.bonusTitle}>{t('scoreboard.bonusAchieved')}</Text>
-            <Text style={styles.bonusAmount}>+{player.lastBonus}</Text>
+        {/* Last hand result */}
+        <View style={styles.playerRowBottom}>
+          <Text style={[styles.breakdownLabel, { color: colors.textMuted }]}>
+            {t('scoreboard.lastHand')}:
+          </Text>
+          <View style={[
+            styles.lastHandBadge,
+            { backgroundColor: isBonus ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' },
+          ]}>
+            {isBonus && <Text style={{ fontSize: 12 }}>⭐</Text>}
+            <Text style={{ color: isBonus ? colors.success : colors.error, fontWeight: '700', fontSize: 13 }}>
+              {player.lastPoints > 0 ? '+' : ''}{player.lastPoints}
+            </Text>
+            <Text style={[styles.breakdownDetail, { color: colors.textMuted }]}>
+              ({player.lastTricks}/{player.lastBet})
+            </Text>
           </View>
         </View>
-      )}
-
-      {/* Last Hand Breakdown */}
-      <View style={styles.breakdownContainer}>
-        <Text style={styles.breakdownLabel}>{t('scoreboard.lastHand')}:</Text>
-        <Text style={[
-          styles.breakdownValue,
-          { color: player.madeBet ? colors.success : colors.error }
-        ]}>
-          {player.lastPoints > 0 ? '+' : ''}{player.lastPoints}
-          {' '}({player.lastTricks}/{player.lastBet})
-        </Text>
       </View>
-    </GlassCard>
-  );
+    );
+  };
 
   if (isClosing && !visible) {
     return null;
@@ -342,12 +337,30 @@ const styles = StyleSheet.create({
   },
   playerRow: {
     padding: Spacing.sm,
-    borderWidth: 2,
-    borderColor: Colors.glassLight,
+    borderWidth: 1,
+    borderRadius: Radius.md,
   },
-  winnerRow: {
-    borderColor: Colors.accent,
-    borderWidth: 2,
+  playerRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  playerRowBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  lastHandBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+  },
+  breakdownDetail: {
+    fontSize: 11,
   },
   playerInfo: {
     flexDirection: 'row',
