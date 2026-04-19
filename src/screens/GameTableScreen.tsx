@@ -769,8 +769,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               playableCards={playableCards.map(c => c.id)}
               onCardPress={handleCardPress}
               size="small"
-              horizontal={myPlayer.hand.length <= 5}
-              cardOverlap={myPlayer.hand.length}
+              horizontal={false}
             />
           </View>
         </View>
