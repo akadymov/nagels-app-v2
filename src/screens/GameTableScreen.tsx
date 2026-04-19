@@ -1431,7 +1431,6 @@ const styles = StyleSheet.create({
   betBannerModal: {
     width: '78%',
     borderRadius: Radius.lg,
-    borderWidth: 2,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.lg,
     paddingHorizontal: Spacing.xl,
@@ -1439,11 +1438,9 @@ const styles = StyleSheet.create({
   },
   betBannerFight: {
     backgroundColor: '#fff0f0',
-    borderColor: Colors.error,
   },
   betBannerGive: {
     backgroundColor: '#f0f5ff',
-    borderColor: Colors.accent,
   },
   betBannerCloseBtn: {
     position: 'absolute',
