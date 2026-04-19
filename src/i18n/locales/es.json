@@ -93,7 +93,8 @@
     "acesCount": "{{count}} Ases",
     "bidsSoFar": "Apuestas hasta ahora",
     "bidBlocked": "Apuesta {{bid}} bloqueada — total no puede ser {{total}}",
-    "yourCards": "Tus cartas en esta ronda"
+    "yourCards": "Tus cartas en esta ronda",
+    "mustFollow": "Sigue el palo"
   },
   "trumps": {
     "diamonds": "Diamantes",

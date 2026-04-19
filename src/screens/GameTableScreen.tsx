@@ -478,7 +478,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
    * card's rank+suit corner stays visible even at top and bottom seats.
    */
   const getPlayerCardOffset = (playerId: string): { dx: number; dy: number } => {
-    const RADIUS = 26;
+    const RADIUS = 40;
 
     const playerIdx = players.findIndex(p => p.id === playerId);
     const myIndex   = players.findIndex(p => p.id === myPlayerId);
@@ -511,7 +511,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       // Equal vertical spacing: 4 levels with 26 px gaps
       // Indexed by CCW-from-top position: 0=top, 1=upper-left, 2=lower-left,
       //   3=bottom, 4=lower-right, 5=upper-right
-      const S = 13;
+      const S = 18;
       const equalDY = [-3 * S, -S, S, 3 * S, S, -S];
       const ccwPos = ((12 - clockPos) / 2 + 6) % 6;
       dy = equalDY[ccwPos];
@@ -634,6 +634,22 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 );
               })}
             </View>
+
+            {/* Turn info — centered on table, below suits */}
+            {phase === 'playing' && (
+              <View style={styles.tableInfoArea}>
+                {currentPlayer?.id === myPlayerId && (
+                  <View style={styles.yourTurnBadge}>
+                    <Text style={styles.yourTurnText}>▶ {t('game.yourTurn')}</Text>
+                  </View>
+                )}
+                {currentTrick && currentTrick.cards.length > 0 && (
+                  <Text style={styles.mustFollowText}>
+                    {t('game.mustFollow', 'Must follow')} {SuitSymbols[currentTrick.cards[0].card.suit]}
+                  </Text>
+                )}
+              </View>
+            )}
           </LinearGradient>
         </View>
 
@@ -1042,11 +1058,36 @@ const styles = StyleSheet.create({
   tableSuitSymbol: {
     fontSize: 18,
   },
+  tableInfoArea: {
+    position: 'absolute',
+    top: '32%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 10,
+  },
+  yourTurnBadge: {
+    backgroundColor: 'rgba(48, 133, 82, 0.85)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  yourTurnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  mustFollowText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    fontWeight: '500',
+  },
 
   // My avatar at bottom edge of table
   youLabelAtTable: {
     position: 'absolute',
-    bottom: '16%',
+    bottom: '6%',
     left: '50%',
     transform: [{ translateX: '-50%' }],
     alignItems: 'center',

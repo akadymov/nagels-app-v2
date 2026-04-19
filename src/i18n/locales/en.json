@@ -93,7 +93,8 @@
     "acesCount": "{{count}} Aces",
     "bidsSoFar": "Bids so far",
     "bidBlocked": "Bid {{bid}} blocked — total can't equal {{total}}",
-    "yourCards": "Your cards this round"
+    "yourCards": "Your cards this round",
+    "mustFollow": "Must follow"
   },
   "trumps": {
     "diamonds": "Diamonds",
