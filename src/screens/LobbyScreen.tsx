@@ -19,6 +19,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+import { GameLogo } from '../components/GameLogo';
 import { useTranslation } from 'react-i18next';
 import { BotDifficulties, type BotDifficulty } from '../lib/bot/botAI';
 import { useGameStore } from '../store';
@@ -135,9 +136,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surfaceSecondary, borderBottomColor: colors.glassLight }]}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Game Lobby</Text>
+      {/* Logo */}
+      <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
+        <GameLogo size="sm" />
         {onSettings && (
           <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn}>
             <Text style={{ fontSize: 20, color: colors.textPrimary }}>⚙</Text>
@@ -298,19 +299,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
+  logoHeader: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    position: 'relative',
   },
   settingsBtn: {
+    position: 'absolute',
+    right: Spacing.lg,
+    top: Spacing.sm,
     padding: Spacing.xs,
   },
   scroll: {

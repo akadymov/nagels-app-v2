@@ -1,36 +1,39 @@
 /**
- * Nägels Online - Compact Game Logo
- * Used in screen headers to identify the app across all screens
+ * Nägels Online - Game Logo
+ * Shark icon + NÄGELS wordmark + suit symbols
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors, SuitSymbols } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 
 interface GameLogoProps {
   size?: 'sm' | 'md';
 }
 
 export const GameLogo: React.FC<GameLogoProps> = ({ size = 'md' }) => {
+  const { colors } = useTheme();
   const isSm = size === 'sm';
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.wordmark, isSm && styles.wordmarkSm]}>
+      <Text style={[styles.shark, isSm && styles.sharkSm]}>🦈</Text>
+      <Text style={[styles.wordmark, isSm && styles.wordmarkSm, { color: colors.accent }]}>
         NÄGELS
       </Text>
       <View style={styles.suits}>
-        <Text style={[styles.suit, styles.diamonds, isSm && styles.suitSm]}>
-          {SuitSymbols.diamonds}
+        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.spades }]}>
+          {SuitSymbols.spades}
         </Text>
-        <Text style={[styles.suit, styles.hearts, isSm && styles.suitSm]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.hearts }]}>
           {SuitSymbols.hearts}
         </Text>
-        <Text style={[styles.suit, styles.clubs, isSm && styles.suitSm]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.clubs }]}>
           {SuitSymbols.clubs}
         </Text>
-        <Text style={[styles.suit, styles.spades, isSm && styles.suitSm]}>
-          {SuitSymbols.spades}
+        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.diamonds }]}>
+          {SuitSymbols.diamonds}
         </Text>
       </View>
     </View>
@@ -42,11 +45,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  shark: {
+    fontSize: 28,
+    marginBottom: 2,
+  },
+  sharkSm: {
+    fontSize: 18,
+    marginBottom: 0,
+  },
   wordmark: {
     fontSize: 20,
     fontWeight: '800',
     letterSpacing: 3,
-    color: Colors.accent,
   },
   wordmarkSm: {
     fontSize: 16,
@@ -63,8 +73,4 @@ const styles = StyleSheet.create({
   suitSm: {
     fontSize: 9,
   },
-  diamonds: { color: Colors.diamonds },
-  hearts: { color: Colors.hearts },
-  clubs: { color: Colors.clubs },
-  spades: { color: Colors.spades },
 });
