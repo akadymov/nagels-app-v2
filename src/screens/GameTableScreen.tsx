@@ -688,11 +688,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
                   <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
                 </View>
-                {hasPlayedThisTrick && !isCurrentPlayer && (
-                  <View style={styles.profileCheckBadge}>
-                    <Text style={styles.profileCheckText}>✓</Text>
-                  </View>
-                )}
+                {/* Check badges removed — distracting */}
                 <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
                 <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
               </View>
@@ -773,7 +769,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               playableCards={playableCards.map(c => c.id)}
               onCardPress={handleCardPress}
               size="small"
-              horizontal
+              horizontal={myPlayer.hand.length <= 5}
+              cardOverlap={myPlayer.hand.length}
             />
           </View>
         </View>
@@ -1134,7 +1131,7 @@ const styles = StyleSheet.create({
     top: 2,
     left: 2,
     fontSize: 8,
-    color: '#13428f',
+    color: '#308552',
   },
   profileCheckBadge: {
     position: 'absolute',
