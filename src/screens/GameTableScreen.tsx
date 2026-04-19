@@ -550,22 +550,49 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
       {/* Top Bar — two rows: logo centered, hand info below */}
       <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
-        {/* Row 1: back button left, logo centered */}
+        {/* Row 1: logo centered */}
         <View style={styles.topBarRow1}>
-          <Pressable onPress={onExit} hitSlop={12} style={styles.topBarBack}>
-            <Text style={styles.backButton}>←</Text>
-          </Pressable>
-          <View style={styles.topBarLogoWrap}>
-            <GameLogo size="xs" />
-          </View>
-          {/* Equal-width spacer keeps logo perfectly centered */}
-          <View style={styles.topBarBack} />
+          <GameLogo size="xs" />
         </View>
-        {/* Row 2: hand / trump info centered */}
+        {/* Row 2: hand info + trump */}
         <View style={styles.topBarRow2}>
-          <Text style={[styles.handInfo, { color: getTrumpColor(trumpSuit) }]}>
-            {getTrumpSymbol(trumpSuit)} {t('game.hand')} {handNumber}/{totalHands}
+          <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
+            {t('game.hand')} {handNumber}/{totalHands}
           </Text>
+          <View style={[styles.trumpBadgeGame, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
+            <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
+              {getTrumpSymbol(trumpSuit)} {t('game.trump')}
+            </Text>
+          </View>
+        </View>
+        {/* Row 3: icon buttons */}
+        <View style={styles.topBarRow3}>
+          <Pressable onPress={onExit} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
+            <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
+          </Pressable>
+          <Pressable onPress={() => setShowLanguageModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
+            <Text style={styles.iconBtnEmoji}>🌐</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { if (tricks.length > 0) setShowLastTrick(true); }}
+            disabled={tricks.length === 0}
+            style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: tricks.length === 0 ? 0.3 : 1 }]}
+          >
+            <Text style={styles.iconBtnEmoji}>↩</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { setIsViewingScores(true); setShowScoreboard(true); }}
+            style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+          >
+            <Text style={styles.iconBtnEmoji}>🏆</Text>
+          </Pressable>
+          <Pressable
+            onPress={isMultiplayer ? () => setShowChat(true) : undefined}
+            disabled={!isMultiplayer}
+            style={[styles.iconBtn, { backgroundColor: isMultiplayer ? colors.accent : colors.iconButtonBg, borderColor: isMultiplayer ? colors.accent : colors.glassLight, opacity: isMultiplayer ? 1 : 0.3 }]}
+          >
+            <Text style={styles.iconBtnEmoji}>💬</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -573,7 +600,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       <View style={styles.gameArea}>
         {/* Card Table - oval green felt table */}
         <View style={styles.cardTable}>
-          <View style={styles.tableEdge} />
+          <View style={[styles.tableEdge, { backgroundColor: isDark ? colors.table : '#33734D', borderColor: isDark ? colors.tableBorder : '#4D8C63' }]} />
           <LinearGradient
             colors={isDark ? [colors.tableInner, colors.table, colors.tableInner] : ['#003e00', '#009c00', '#005d00']}
             start={{ x: 0, y: 0.5 }}
@@ -653,15 +680,15 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
 
                 {/* Name */}
-                <Text style={styles.opponentName}>{player.name}</Text>
+                <Text style={[styles.opponentName, { color: colors.textPrimary }]}>{player.name}</Text>
 
                 {/* Stats - compact */}
                 <View style={styles.opponentStats}>
-                  <Text style={styles.opponentStat}>
-                    {t('game.bet')}: <Text style={styles.statValue}>{player.bet ?? '-'}</Text>
+                  <Text style={[styles.opponentStat, { color: colors.textSecondary }]}>
+                    {t('game.bet')}: <Text style={[styles.statValue, { color: colors.accent }]}>{player.bet ?? '-'}</Text>
                   </Text>
-                  <Text style={styles.opponentStat}>
-                    {t('game.won')}: <Text style={styles.statValue}>{player.tricksWon}</Text>
+                  <Text style={[styles.opponentStat, { color: colors.textSecondary }]}>
+                    {t('game.won')}: <Text style={[styles.statValue, { color: colors.accent }]}>{player.tricksWon}</Text>
                   </Text>
                 </View>
 
@@ -780,68 +807,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         </View>
       )}
 
-      {/* Action Bar - Fixed height */}
-      <View style={[styles.actionBar, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}>
-        <Pressable
-          style={styles.actionButton}
-          hitSlop={12}
-          onPress={() => {
-            setIsViewingScores(true);
-            setShowScoreboard(true);
-          }}
-        >
-          <Text style={styles.actionLabel}>{t('game.score')}</Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionButton}
-          hitSlop={12}
-          onPress={() => {
-            if (tricks.length > 0) {
-              setShowLastTrick(true);
-            }
-          }}
-          disabled={tricks.length === 0}
-        >
-          <Text style={[styles.actionLabel, tricks.length === 0 && styles.actionLabelDisabled]}>
-            {t('game.lastTrick')}
-          </Text>
-        </Pressable>
-        {isMultiplayer ? (
-          <Pressable
-            style={styles.actionButton}
-            hitSlop={12}
-            onPress={() => setShowChat(true)}
-          >
-            <ChatButton
-              onPress={() => setShowChat(true)}
-              unreadCount={unreadChatCount}
-            />
-          </Pressable>
-        ) : (
-          <Pressable style={[styles.actionButton, { opacity: 0.3 }]} hitSlop={12} disabled>
-            <Text style={styles.actionLabel}>💬</Text>
-          </Pressable>
-        )}
-        <Pressable
-          style={styles.actionButton}
-          hitSlop={12}
-          onPress={() => setShowLanguageModal(true)}
-        >
-          <Text style={styles.actionLabel}>{t('game.language')}</Text>
-        </Pressable>
-        {isMultiplayer && (
-          <Pressable
-            style={styles.actionButton}
-            hitSlop={12}
-            onPress={handleSync}
-            disabled={isSyncing}
-          >
-            <Text style={[styles.actionLabel, isSyncing && styles.actionLabelDisabled]}>
-              {isSyncing ? t('game.syncing') : t('game.sync')}
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      {/* Action bar removed — icons are in top bar row 2 */}
 
       {/* Chat Panel (multiplayer only) */}
       {isMultiplayer && myPlayer && (
@@ -979,9 +945,8 @@ const styles = StyleSheet.create({
     paddingBottom: 3,
   },
   topBarRow1: {
-    flexDirection: 'row',
     alignItems: 'center',
-    height: SCREEN_HEIGHT * 0.042,
+    paddingVertical: 2,
   },
   topBarBack: {
     width: 36,
@@ -994,8 +959,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topBarRow2: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
     paddingBottom: 2,
+  },
+  trumpBadgeGame: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+  },
+  trumpBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  topBarRow3: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+  },
+  iconBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  iconBtnEmoji: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   backButton: {
     ...TextStyles.h3,
@@ -1031,23 +1032,21 @@ const styles = StyleSheet.create({
   },
   tableEdge: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 200,           // Large radius → oval shape
-    backgroundColor: '#4a3a28', // Dark wood-like border
+    borderRadius: 200,
     borderWidth: 4,
-    borderColor: '#6b5232',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
   },
   tableFelt: {
     position: 'absolute',
-    top: 7,
-    left: 7,
-    right: 7,
-    bottom: 7,
-    borderRadius: 193,           // Slightly smaller to stay inside edge
+    top: 6,
+    left: 6,
+    right: 6,
+    bottom: 6,
+    borderRadius: 194,
     overflow: 'hidden',
   },
   tableCenterDecor: {
