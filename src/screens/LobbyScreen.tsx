@@ -50,7 +50,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const { playerName, setPlayerName, createRoom, joinRoom } = useMultiplayer();
 
   const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
-  const [nameInput, setNameInput] = useState(playerName || 'Shark');
+  const [nameInput, setNameInput] = useState(playerName || playerName);
   const [playerCount, setPlayerCount] = useState<number | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty | null>(null);
   const [joinCode, setJoinCode] = useState('');
@@ -74,7 +74,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     if (!canStartMatch) return;
     await saveName();
     setBotDifficulty(selectedDifficulty!);
-    onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || 'Shark');
+    onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || playerName);
   }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
 
   const handleCreateRoom = useCallback(async () => {
