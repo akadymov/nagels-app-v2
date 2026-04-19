@@ -955,18 +955,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.lg,
     paddingBottom: 2,
   },
   trumpBadgeGame: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 4,
     borderRadius: Radius.lg,
     borderWidth: 1,
   },
   trumpBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   topBarRow3: {
     flexDirection: 'row',
@@ -998,11 +998,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   handInfo: {
-    ...TextStyles.small,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700' as const,
-    color: Colors.textSecondary,
   },
 
   // Game Area - Circular table layout
