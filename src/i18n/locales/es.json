@@ -53,7 +53,8 @@
       "hard": "Difícil"
     },
     "playerCount": "{{count}} jugadores",
-    "players": "jugadores"
+    "players": "jugadores",
+    "playVsBots": "Jugar vs Bots"
   },
   "game": {
     "hand": "Mano",
@@ -189,5 +190,18 @@
     "playerLeft": "{{name}} se fue",
     "notConfigured": "Multijugador no configurado",
     "configureFirst": "Primero configura Supabase"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "theme": "Tema",
+    "themeDesc": "Elige claro, oscuro o según la configuración del dispositivo.",
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "deckStyle": "Colores de baraja",
+    "deckDesc": "Clásica: rojo/negro. Cuatro colores: cada palo con su color.",
+    "classic": "Clásica",
+    "fourColor": "4 colores",
+    "language": "Idioma"
   }
 }
