@@ -27,6 +27,7 @@ import { PlayingCard, CardHand } from '../cards';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
+import { GameLogo } from '../GameLogo';
 import { useGameStore } from '../../store';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
 import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
@@ -229,17 +230,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       >
         {/* Header — matches Figma: Hand info left, Trump badge center, icons right */}
         <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
+          <View style={{ alignItems: 'center', paddingVertical: 2 }}>
+            <GameLogo size="xs" />
+          </View>
           <View style={styles.topBarRow1}>
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
               {t('game.hand')} {handNumber}/{totalHands}
             </Text>
-            <View style={styles.topBarRow1Spacer} />
             <View style={[styles.trumpBadge, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
                 {getTrumpSymbol(trumpSuit)} {t('game.trump')}
               </Text>
             </View>
-            <View style={styles.topBarRow1Spacer} />
           </View>
           <View style={styles.topBarRow2}>
             <Pressable onPress={onClose} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
@@ -507,24 +509,23 @@ const styles = StyleSheet.create({
   topBarRow1: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  topBarRow1Spacer: {
-    flex: 1,
+    justifyContent: 'center',
+    gap: Spacing.lg,
+    marginBottom: Spacing.xs,
   },
   handInfo: {
     fontSize: 14,
     fontWeight: '600',
   },
   trumpBadge: {
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.md,
     paddingVertical: 4,
     borderRadius: Radius.lg,
     borderWidth: 1,
   },
   trumpBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   topBarRow2: {
     flexDirection: 'row',
