@@ -436,12 +436,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   };
 
   // Convert clock position (0-11) to screen coordinates
+  // Profile card dimensions for centering
+  const PROFILE_W = 110;
+  const PROFILE_H = 90;
+
   const clockToScreen = (clockPosition: number) => {
-    // Clock: 0=12 o'clock, 3=3 o'clock, 6=6 o'clock (YOU), 9=9 o'clock
-    // Screen: angle in degrees, 0=right, 90=down, 180=left, 270=up
-    // Convert clock to screen angle: clock * 30 - 90
     const angle = (clockPosition * 30 - 90) * (Math.PI / 180);
-    const radius = 38; // percentage from center
+    const radius = 42; // percentage from center
 
     const top = 50 + radius * Math.sin(angle);
     const left = 50 + radius * Math.cos(angle);
@@ -449,8 +450,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     return {
       top: `${top}%`,
       left: `${left}%`,
-      marginTop: -20,
-      marginLeft: -35,
+      marginTop: -(PROFILE_H / 2),
+      marginLeft: -(PROFILE_W / 2),
     };
   };
 
