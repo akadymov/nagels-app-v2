@@ -42,7 +42,7 @@ export interface CardHandProps extends ScrollViewProps {
 const getCardWidth = (size: 'tiny' | 'small' | 'medium' | 'large'): number => {
   switch (size) {
     case 'tiny': return 60;
-    case 'small': return 88;
+    case 'small': return 66;
     case 'large': return 100;
     default: return 80;
   }
@@ -118,50 +118,50 @@ export const CardHand: React.FC<CardHandProps> = ({
     );
   };
 
-  // For horizontal scrolling, we need explicit width on content
-  const contentStyle = horizontal
-    ? [
-        styles.contentContainer,
-        {
-          width: totalContentWidth + paddingHorizontal * 2,
-          paddingHorizontal,
-          height: maxHeight || undefined,
-        },
-        contentContainerStyle,
-      ]
-    : [
-        styles.contentContainer,
-        {
-          paddingVertical: Spacing.md,
-          alignItems: 'center' as const,
-          flexWrap: 'wrap' as const,
-        },
-        contentContainerStyle,
-      ];
+  // Grid mode: 2 rows of 5 cards (for 6+ cards)
+  const useGrid = !horizontal && cards.length > 5;
 
-  const content = (
-    <View style={contentStyle}>
-      {cards.map((card, index) => renderCard(card, index))}
-    </View>
-  );
+  if (useGrid) {
+    const perRow = 5;
+    const rows: Card[][] = [];
+    for (let i = 0; i < cards.length; i += perRow) {
+      rows.push(cards.slice(i, i + perRow));
+    }
+    return (
+      <View style={[styles.gridContainer, style]}>
+        {rows.map((row, rowIdx) => (
+          <View key={rowIdx} style={styles.gridRow}>
+            {row.map((card) => renderCard(card, 0))}
+          </View>
+        ))}
+      </View>
+    );
+  }
 
-  // Always use ScrollView when horizontal - allows natural scrolling
+  // Horizontal scrolling mode (overlap)
+  const contentStyle = [
+    styles.contentContainer,
+    {
+      width: totalContentWidth + paddingHorizontal * 2,
+      paddingHorizontal,
+      height: maxHeight || undefined,
+    },
+    contentContainerStyle,
+  ];
+
   return (
     <ScrollView
-      horizontal={horizontal}
+      horizontal
       showsHorizontalScrollIndicator={false}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={
-        horizontal
-          ? styles.scrollContent
-          : styles.verticalScrollContent
-      }
+      contentContainerStyle={styles.scrollContent}
       style={[styles.scrollView, style]}
       decelerationRate="fast"
       snapToInterval={effectiveCardWidth}
       {...scrollViewProps}
     >
-      {content}
+      <View style={contentStyle}>
+        {cards.map((card, index) => renderCard(card, index))}
+      </View>
     </ScrollView>
   );
 };
@@ -185,7 +185,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardWrapper: {
-    marginRight: -25, // Overlap cards - less overlap for better visibility
+    marginRight: -25, // Overlap cards in horizontal mode
+  },
+  gridContainer: {
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.xs,
   },
 });
 

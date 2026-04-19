@@ -72,10 +72,10 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         };
       case 'small':
         return {
-          width: 88,
-          height: 122,
-          cornerSize: 14,
-          centerSuitSize: 30,
+          width: 66,
+          height: 92,
+          cornerSize: 13,
+          centerSuitSize: 26,
         };
       case 'large':
         return {
