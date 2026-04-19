@@ -199,7 +199,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                 <Text style={styles.seatNumber}>{index + 1}</Text>
               </View>
               <View style={styles.playerInfo}>
-                <Text style={styles.playerName}>
+                <Text style={[styles.playerName, { color: colors.textPrimary }]}>
                   {player.playerName}
                   {isDuplicate && (
                     <Text style={styles.seatSuffix}> #{index + 1}</Text>
