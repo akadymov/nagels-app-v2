@@ -93,7 +93,8 @@
     "acesCount": "{{count}} тузов",
     "bidsSoFar": "Ставки",
     "bidBlocked": "Ставка {{bid}} заблокирована — сумма не может равняться {{total}}",
-    "yourCards": "Ваши карты в этом раунде"
+    "yourCards": "Ваши карты в этом раунде",
+    "mustFollow": "Ходи в масть"
   },
   "trumps": {
     "diamonds": "Бубны",
