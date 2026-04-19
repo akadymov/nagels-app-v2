@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../components/glass';
 import { GlassButton } from '../components/buttons';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { useMultiplayer } from '../hooks/useMultiplayer';
@@ -39,6 +40,7 @@ export const CreateRoomScreen: React.FC<CreateRoomScreenProps> = ({
   initialPlayerCount = 4,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const { playerName, setPlayerName, createRoom } = useMultiplayer();
 
   const [playerNameInput, setPlayerNameInput] = useState(playerName);
@@ -93,7 +95,7 @@ export const CreateRoomScreen: React.FC<CreateRoomScreenProps> = ({
   }, [createdRoomCode, t]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.content}>
         {/* Player Name Input */}
         <Text style={styles.label}>{t('multiplayer.yourName')}</Text>

@@ -22,6 +22,7 @@ import { GlassButton } from '../components/buttons';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { GameLogo } from '../components/GameLogo';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useMultiplayer } from '../hooks/useMultiplayer';
 import { onGameStarted, clearGameStartedCallback } from '../lib/multiplayer/eventHandler';
@@ -46,6 +47,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   onLeave,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const {
     roomPlayers,
     currentRoom,
@@ -151,7 +153,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ConnectionStatus />
       <View style={styles.logoHeader}>
         <GameLogo size="sm" />
@@ -163,8 +165,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         {/* Room Code Card */}
         {currentRoom && (
           <GlassCard style={styles.roomCodeCard}>
-            <Text style={styles.roomCodeLabel}>{t('multiplayer.roomCode')}</Text>
-            <Text style={styles.roomCode} testID="room-code">{currentRoom.roomCode}</Text>
+            <Text style={[styles.roomCodeLabel, { color: colors.textSecondary }]}>{t('multiplayer.roomCode')}</Text>
+            <Text style={[styles.roomCode, { color: colors.accent }]} testID="room-code">{currentRoom.roomCode}</Text>
             <Pressable
               style={styles.shareButton}
               onPress={handleShare}
@@ -178,7 +180,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         )}
 
         {/* Players List */}
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {t('multiplayer.playersInRoom', { count: playerCount, max: currentRoom?.maxPlayers ?? '?' })}
         </Text>
 
