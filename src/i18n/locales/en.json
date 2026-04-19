@@ -53,7 +53,8 @@
       "hard": "Hard"
     },
     "playerCount": "{{count}} players",
-    "players": "players"
+    "players": "players",
+    "playVsBots": "Play vs Bots"
   },
   "game": {
     "hand": "Hand",
@@ -189,5 +190,18 @@
     "playerLeft": "{{name}} left",
     "notConfigured": "Multiplayer not configured",
     "configureFirst": "Please configure Supabase first"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "themeDesc": "Choose light, dark, or match your device settings.",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "deckStyle": "Deck Colors",
+    "deckDesc": "Classic uses red/black. Four-color gives each suit a unique color.",
+    "classic": "Classic",
+    "fourColor": "4-Color",
+    "language": "Language"
   }
 }
