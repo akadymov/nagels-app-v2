@@ -9,30 +9,31 @@ import { Colors, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 
 interface GameLogoProps {
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'xs';
 }
 
 export const GameLogo: React.FC<GameLogoProps> = ({ size = 'md' }) => {
   const { colors } = useTheme();
   const isSm = size === 'sm';
+  const isXs = size === 'xs';
 
   return (
-    <View style={styles.container}>
-      <Text style={[styles.shark, isSm && styles.sharkSm]}>🦈</Text>
-      <Text style={[styles.wordmark, isSm && styles.wordmarkSm, { color: colors.accent }]}>
+    <View style={[styles.container, isXs && styles.containerXs]}>
+      {!isXs && <Text style={[styles.shark, isSm && styles.sharkSm]}>🦈</Text>}
+      <Text style={[styles.wordmark, isSm && styles.wordmarkSm, isXs && styles.wordmarkXs, { color: colors.accent }]}>
         NÄGELS
       </Text>
       <View style={styles.suits}>
-        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.spades }]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, isXs && styles.suitXs, { color: colors.spades }]}>
           {SuitSymbols.spades}
         </Text>
-        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.hearts }]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, isXs && styles.suitXs, { color: colors.hearts }]}>
           {SuitSymbols.hearts}
         </Text>
-        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.clubs }]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, isXs && styles.suitXs, { color: colors.clubs }]}>
           {SuitSymbols.clubs}
         </Text>
-        <Text style={[styles.suit, isSm && styles.suitSm, { color: colors.diamonds }]}>
+        <Text style={[styles.suit, isSm && styles.suitSm, isXs && styles.suitXs, { color: colors.diamonds }]}>
           {SuitSymbols.diamonds}
         </Text>
       </View>
@@ -44,6 +45,9 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     gap: 2,
+  },
+  containerXs: {
+    gap: 0,
   },
   shark: {
     fontSize: 28,
@@ -72,5 +76,12 @@ const styles = StyleSheet.create({
   },
   suitSm: {
     fontSize: 9,
+  },
+  wordmarkXs: {
+    fontSize: 13,
+    letterSpacing: 2,
+  },
+  suitXs: {
+    fontSize: 7,
   },
 });

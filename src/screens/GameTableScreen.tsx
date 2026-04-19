@@ -556,7 +556,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             <Text style={styles.backButton}>←</Text>
           </Pressable>
           <View style={styles.topBarLogoWrap}>
-            <GameLogo size="sm" />
+            <GameLogo size="xs" />
           </View>
           {/* Equal-width spacer keeps logo perfectly centered */}
           <View style={styles.topBarBack} />
