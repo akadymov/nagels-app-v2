@@ -31,7 +31,7 @@ export interface CardHandProps extends ScrollViewProps {
    * If undefined, uses default overlap (20px).
    */
   cardOverlap?: number;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'tiny' | 'small' | 'medium' | 'large';
   horizontal?: boolean;
   maxHeight?: number;
 }
@@ -39,9 +39,10 @@ export interface CardHandProps extends ScrollViewProps {
 /**
  * Get card width based on size
  */
-const getCardWidth = (size: 'small' | 'medium' | 'large'): number => {
+const getCardWidth = (size: 'tiny' | 'small' | 'medium' | 'large'): number => {
   switch (size) {
-    case 'small': return 60;
+    case 'tiny': return 60;
+    case 'small': return 88;
     case 'large': return 100;
     default: return 80;
   }
