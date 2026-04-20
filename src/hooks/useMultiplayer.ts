@@ -7,6 +7,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useMultiplayerStore } from '../store/multiplayerStore';
 import type { MultiplayerStore } from '../store/multiplayerStore';
+import { useAuthStore } from '../store/authStore';
 import {
   getGuestSession,
   getPlayerName as getPlayerNameFromStorage,
@@ -68,7 +69,8 @@ export interface UseMultiplayerReturn {
  * Main multiplayer hook
  */
 export function useMultiplayer(): UseMultiplayerReturn {
-  const [playerName, setPlayerNameState] = useState<string>(() => `Shark_${Math.floor(1000 + Math.random() * 9000)}`);
+  const authDisplayName = useAuthStore((s) => s.displayName);
+  const [playerName, setPlayerNameState] = useState<string>(() => authDisplayName || `Shark_${Math.floor(1000 + Math.random() * 9000)}`);
 
   const guestSession = useMultiplayerStore((s) => s.guestSession);
   const currentRoom = useMultiplayerStore((s) => s.currentRoom);
@@ -85,18 +87,28 @@ export function useMultiplayer(): UseMultiplayerReturn {
   const readyCount = useMultiplayerStore((s) => s.getReadyPlayerCount());
   const canStartGame = useMultiplayerStore((s) => s.canStartGame());
 
-  // Initialize guest session on mount
+  // Initialize guest session on mount — auth displayName takes priority
   useEffect(() => {
     const initSession = async () => {
       const session = await getGuestSession();
       if (session) {
         useMultiplayerStore.getState().setGuestSession(session);
-        setPlayerNameState(session.playerName);
+        // Only use guest session name if no auth display name
+        if (!authDisplayName) {
+          setPlayerNameState(session.playerName);
+        }
       }
     };
 
     initSession();
   }, []);
+
+  // Sync auth display name when it changes (login/register)
+  useEffect(() => {
+    if (authDisplayName) {
+      setPlayerNameState(authDisplayName);
+    }
+  }, [authDisplayName]);
 
   // Load player name from storage
   useEffect(() => {
