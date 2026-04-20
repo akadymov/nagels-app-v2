@@ -153,6 +153,26 @@ export async function linkEmailToAnonymous(email: string, password: string): Pro
 }
 
 // ============================================================
+// PASSWORD RESET
+// ============================================================
+
+/**
+ * Send a password reset email.
+ */
+export async function resetPasswordForEmail(email: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${getAppUrl()}/auth/callback`,
+  });
+
+  if (error) {
+    throw new Error(friendlyAuthError(error.message));
+  }
+}
+
+// ============================================================
 // SESSION MANAGEMENT
 // ============================================================
 

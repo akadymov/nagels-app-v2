@@ -146,6 +146,11 @@
     "invalidEmail": "Неверный адрес email",
     "rateLimited": "Слишком много попыток. Подождите немного.",
     "unknownError": "Что-то пошло не так. Попробуйте ещё раз.",
+    "forgotPassword": "Забыли пароль?",
+    "sendResetLink": "Отправить ссылку",
+    "resetSent": "Ссылка отправлена! Проверьте почту.",
+    "backToSignIn": "← Назад к входу",
+    "forgotDesc": "Введите email и мы отправим ссылку для сброса пароля.",
     "sessionRestored": "Сессия восстановлена",
     "rejoining": "Возвращаем вас в игру..."
   },
@@ -195,6 +200,15 @@
     "playerLeft": "{{name}} покинул",
     "notConfigured": "Мультиплеер не настроен",
     "configureFirst": "Сначала настройте Supabase"
+  },
+  "profile": {
+    "title": "Профиль",
+    "editNickname": "Никнейм",
+    "chooseAvatar": "Выберите аватар",
+    "avatarOptional": "Необязательно — по умолчанию показывает инициал",
+    "saved": "Профиль сохранён",
+    "saveProgress": "Сохранить прогресс?",
+    "maybeLater": "Позже"
   },
   "settings": {
     "title": "Настройки",

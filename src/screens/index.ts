@@ -18,3 +18,9 @@ export type { JoinRoomScreenProps } from './JoinRoomScreen';
 
 export { SettingsScreen } from './SettingsScreen';
 export type { SettingsScreenProps } from './SettingsScreen';
+
+export { AuthScreen } from './AuthScreen';
+export type { AuthScreenProps } from './AuthScreen';
+
+export { ProfileScreen } from './ProfileScreen';
+export type { ProfileScreenProps } from './ProfileScreen';
