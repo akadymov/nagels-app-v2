@@ -47,34 +47,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSignIn = async () => {
-    if (!email.trim() || !password.trim()) return;
+    setErrorMsg('');
+    if (!email.trim()) { setErrorMsg(String(t('auth.invalidEmail'))); return; }
+    if (!password.trim()) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
       await signInWithEmail(email.trim(), password);
       onSuccess();
     } catch (err: any) {
-      Alert.alert(String(t('common.error')), String(t(err.message, err.message)));
+      setErrorMsg(String(t(err.message, err.message)));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSignUp = async () => {
-    if (!email.trim() || !password.trim() || !nickname.trim()) return;
+    setErrorMsg('');
+    if (!nickname.trim()) { setErrorMsg(String(t('auth.nicknameRequired', 'Please enter a nickname'))); return; }
+    if (!email.trim()) { setErrorMsg(String(t('auth.invalidEmail'))); return; }
+    if (password.length < 6) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
       if (isGuest) {
-        // Upgrade anonymous session
         await linkEmailToAnonymous(email.trim(), password);
       } else {
         await signUpWithEmail(email.trim(), password, nickname.trim());
       }
-      // Store avatar color in metadata
       onSuccess();
     } catch (err: any) {
-      Alert.alert(String(t('common.error')), String(t(err.message, err.message)));
+      setErrorMsg(String(t(err.message, err.message)));
     } finally {
       setIsLoading(false);
     }
@@ -213,11 +217,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         </Pressable>
       )}
 
+      {/* Error message */}
+      {errorMsg ? (
+        <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
+      ) : null}
+
       {/* Submit */}
       <Pressable
-        style={[styles.primaryBtn, { backgroundColor: colors.accent, opacity: email.trim() && password.trim() ? 1 : 0.5 }]}
+        style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
         onPress={tab === 'signIn' ? handleSignIn : handleSignUp}
-        disabled={!email.trim() || !password.trim() || isLoading}
+        disabled={isLoading}
       >
         {isLoading ? <ActivityIndicator color="#fff" /> : (
           <Text style={styles.primaryBtnText}>
@@ -359,6 +368,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.xl,
     marginBottom: Spacing.lg,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   guestText: {
     fontSize: 14,
