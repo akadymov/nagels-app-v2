@@ -146,6 +146,11 @@
     "invalidEmail": "Invalid email address",
     "rateLimited": "Too many attempts. Please wait a moment.",
     "unknownError": "Something went wrong. Please try again.",
+    "forgotPassword": "Forgot Password?",
+    "sendResetLink": "Send Reset Link",
+    "resetSent": "Reset link sent! Check your email.",
+    "backToSignIn": "← Back to Sign In",
+    "forgotDesc": "Enter your email and we'll send a reset link.",
     "sessionRestored": "Session restored",
     "rejoining": "Returning to your game..."
   },
@@ -195,6 +200,15 @@
     "playerLeft": "{{name}} left",
     "notConfigured": "Multiplayer not configured",
     "configureFirst": "Please configure Supabase first"
+  },
+  "profile": {
+    "title": "Profile",
+    "editNickname": "Nickname",
+    "chooseAvatar": "Choose Avatar",
+    "avatarOptional": "Optional — default shows your initial",
+    "saved": "Profile saved",
+    "saveProgress": "Save your progress?",
+    "maybeLater": "Maybe Later"
   },
   "settings": {
     "title": "Settings",

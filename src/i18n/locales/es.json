@@ -146,6 +146,11 @@
     "invalidEmail": "Dirección de correo inválida",
     "rateLimited": "Demasiados intentos. Espera un momento.",
     "unknownError": "Algo salió mal. Inténtalo de nuevo.",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "sendResetLink": "Enviar enlace",
+    "resetSent": "¡Enlace enviado! Revisa tu correo.",
+    "backToSignIn": "← Volver al inicio de sesión",
+    "forgotDesc": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
     "sessionRestored": "Sesión restaurada",
     "rejoining": "Volviendo a tu partida..."
   },
@@ -195,6 +200,15 @@
     "playerLeft": "{{name}} se fue",
     "notConfigured": "Multijugador no configurado",
     "configureFirst": "Primero configura Supabase"
+  },
+  "profile": {
+    "title": "Perfil",
+    "editNickname": "Apodo",
+    "chooseAvatar": "Elegir avatar",
+    "avatarOptional": "Opcional — por defecto muestra tu inicial",
+    "saved": "Perfil guardado",
+    "saveProgress": "¿Guardar tu progreso?",
+    "maybeLater": "Más tarde"
   },
   "settings": {
     "title": "Ajustes",

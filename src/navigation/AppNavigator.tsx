@@ -16,6 +16,8 @@ import {
   CreateRoomScreen,
   JoinRoomScreen,
   SettingsScreen,
+  AuthScreen,
+  ProfileScreen,
 } from '../screens';
 import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
@@ -48,6 +50,8 @@ export type RootStackParamList = {
     onExit?: () => void;
   };
   Settings: undefined;
+  Auth: undefined;
+  Profile: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -235,6 +239,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   <WelcomeScreen
                     onQuickStart={() => (props.navigation as any).navigate('Primer')}
                     onAlreadyPlay={() => (props.navigation as any).navigate('Lobby')}
+                    onSignIn={() => (props.navigation as any).navigate('Auth')}
                   />
                 </>
               )}
@@ -316,6 +321,24 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
             <Stack.Screen name="Settings">
               {(props) => (
                 <SettingsScreen
+                  onBack={() => (props.navigation as any).goBack()}
+                  onProfile={() => (props.navigation as any).navigate('Profile')}
+                />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="Auth">
+              {(props) => (
+                <AuthScreen
+                  onBack={() => (props.navigation as any).goBack()}
+                  onSuccess={() => (props.navigation as any).navigate('Lobby')}
+                />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="Profile">
+              {(props) => (
+                <ProfileScreen
                   onBack={() => (props.navigation as any).goBack()}
                 />
               )}

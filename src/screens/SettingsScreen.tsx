@@ -20,6 +20,7 @@ import i18n from '../i18n/config';
 
 export interface SettingsScreenProps {
   onBack: () => void;
+  onProfile?: () => void;
 }
 
 /** Pill selector for 2-3 options */
@@ -80,7 +81,7 @@ const pillStyles = StyleSheet.create({
   },
 });
 
-export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
+export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onProfile }) => {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const { themePreference, fourColorDeck, setThemePreference, setFourColorDeck } = useSettingsStore();
@@ -105,6 +106,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {/* PROFILE */}
+        {onProfile && (
+          <Pressable
+            style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+            onPress={onProfile}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+              {t('profile.title', 'Profile')}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: 18 }}>→</Text>
+          </Pressable>
+        )}
+
         {/* THEME */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
