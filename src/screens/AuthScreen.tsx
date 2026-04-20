@@ -39,7 +39,7 @@ const randomColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { isGuest } = useAuthStore();
+  const { isGuest, user } = useAuthStore();
 
   const [tab, setTab] = useState<AuthTab>('signIn');
   const [mode, setMode] = useState<AuthMode>('form');
@@ -71,8 +71,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     if (password.length < 6) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
-      if (isGuest) {
-        await linkEmailToAnonymous(email.trim(), password);
+      // Try linking anonymous session first, fall back to fresh sign-up
+      if (isGuest && user) {
+        try {
+          await linkEmailToAnonymous(email.trim(), password);
+        } catch {
+          // Session invalid — do a fresh sign-up instead
+          await signUpWithEmail(email.trim(), password, nickname.trim());
+        }
       } else {
         await signUpWithEmail(email.trim(), password, nickname.trim());
       }
@@ -171,10 +177,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
       {/* Nickname (sign up only) */}
       {tab === 'signUp' && (
         <>
-          {/* Avatar preview */}
-          <View style={[styles.avatarPreview, { backgroundColor: randomColor() }]}>
-            <Text style={styles.avatarInitial}>{(nickname || 'S')[0].toUpperCase()}</Text>
-          </View>
           <TextInput
             style={[styles.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.glassLight }]}
             value={nickname}
