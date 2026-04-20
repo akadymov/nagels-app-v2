@@ -146,6 +146,7 @@
     "invalidEmail": "Invalid email address",
     "rateLimited": "Too many attempts. Please wait a moment.",
     "unknownError": "Something went wrong. Please try again.",
+    "nicknameRequired": "Please enter a nickname",
     "forgotPassword": "Forgot Password?",
     "sendResetLink": "Send Reset Link",
     "resetSent": "Reset link sent! Check your email.",
