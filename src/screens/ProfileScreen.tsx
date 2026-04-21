@@ -18,7 +18,7 @@ import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
-import { signOut } from '../lib/supabase/authService';
+import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
 
 export interface ProfileScreenProps {
   onBack: () => void;
@@ -36,9 +36,29 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [avatarColor] = useState(() => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]);
 
-  const handleSave = () => {
-    // TODO: save nickname to user_metadata via supabase.auth.updateUser
-    Alert.alert(t('common.done'), t('profile.saved', 'Profile saved'));
+  const handleSave = async () => {
+    if (!nickname.trim()) return;
+    try {
+      await updateUserMetadata({
+        display_name: nickname.trim(),
+        avatar: selectedAvatar,
+        avatar_color: avatarColor,
+      });
+      useAuthStore.getState().setDisplayName(nickname.trim());
+      Alert.alert(String(t('common.done')), String(t('profile.saved', 'Profile saved')));
+    } catch (err: any) {
+      Alert.alert(String(t('common.error')), String(err.message));
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!user?.email) return;
+    try {
+      await resendConfirmationEmail(user.email);
+      Alert.alert(String(t('common.done')), String(t('auth.resetSent', 'Confirmation email sent!')));
+    } catch (err: any) {
+      Alert.alert(String(t('common.error')), String(err.message));
+    }
   };
 
   const handleLogout = async () => {
@@ -75,10 +95,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
               <Text style={styles.avatarInitial}>{initial}</Text>
             )}
           </View>
-          {!isGuest && (
-            <Text style={[styles.emailText, { color: colors.textMuted }]}>
-              {user?.email || ''}
-            </Text>
+          {!isGuest && user?.email && (
+            <>
+              <Text style={[styles.emailText, { color: colors.textMuted }]}>
+                {user.email}
+              </Text>
+              {!user.email_confirmed_at && (
+                <Pressable onPress={handleResendConfirmation} style={[styles.confirmBanner, { backgroundColor: colors.warning + '20', borderColor: colors.warning }]}>
+                  <Text style={[styles.confirmText, { color: colors.warning }]}>
+                    ⚠ {t('auth.emailNotConfirmed', 'Email not confirmed')}
+                  </Text>
+                  <Text style={[styles.resendLink, { color: colors.accent }]}>
+                    {t('auth.resendConfirmation', 'Resend confirmation')}
+                  </Text>
+                </Pressable>
+              )}
+            </>
           )}
           {isGuest && (
             <Text style={[styles.guestBadge, { color: colors.textMuted }]}>
@@ -206,6 +238,23 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 14,
+  },
+  confirmBanner: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    gap: 4,
+    marginTop: Spacing.xs,
+  },
+  confirmText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  resendLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   guestBadge: {
     fontSize: 14,

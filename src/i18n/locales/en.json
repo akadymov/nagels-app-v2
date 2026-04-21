@@ -152,6 +152,9 @@
     "resetSent": "Reset link sent! Check your email.",
     "backToSignIn": "← Back to Sign In",
     "forgotDesc": "Enter your email and we'll send a reset link.",
+    "confirmToPlay": "Please confirm your email to continue playing. Check your inbox.",
+    "confirmToCreate": "Please confirm your email to create rooms.",
+    "resendConfirmation": "Resend confirmation",
     "sessionRestored": "Session restored",
     "rejoining": "Returning to your game..."
   },

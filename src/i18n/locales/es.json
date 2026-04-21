@@ -152,6 +152,9 @@
     "resetSent": "¡Enlace enviado! Revisa tu correo.",
     "backToSignIn": "← Volver al inicio de sesión",
     "forgotDesc": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.",
+    "confirmToPlay": "Confirma tu correo para seguir jugando. Revisa tu bandeja de entrada.",
+    "confirmToCreate": "Confirma tu correo para crear salas.",
+    "resendConfirmation": "Reenviar confirmación",
     "sessionRestored": "Sesión restaurada",
     "rejoining": "Volviendo a tu partida..."
   },

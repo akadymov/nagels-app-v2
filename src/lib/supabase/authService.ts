@@ -157,6 +157,47 @@ export async function linkEmailToAnonymous(email: string, password: string, disp
 }
 
 // ============================================================
+// RESEND CONFIRMATION
+// ============================================================
+
+/**
+ * Resend email confirmation for a user.
+ */
+export async function resendConfirmationEmail(email: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+
+  if (error) {
+    throw new Error(friendlyAuthError(error.message));
+  }
+}
+
+// ============================================================
+// UPDATE USER METADATA
+// ============================================================
+
+/**
+ * Update user metadata (display_name, avatar, avatar_color).
+ */
+export async function updateUserMetadata(data: Record<string, any>): Promise<User> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+
+  const supabase = getSupabaseClient();
+  const { data: result, error } = await supabase.auth.updateUser({ data });
+
+  if (error) {
+    throw new Error(friendlyAuthError(error.message));
+  }
+  if (!result.user) throw new Error('Update failed');
+  return result.user;
+}
+
+// ============================================================
 // PASSWORD RESET
 // ============================================================
 

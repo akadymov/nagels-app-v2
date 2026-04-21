@@ -12,10 +12,13 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export interface SettingsStore {
   themePreference: ThemePreference;
   fourColorDeck: boolean;
+  gamesPlayedUnconfirmed: number;
   _hydrated: boolean;
 
   setThemePreference: (pref: ThemePreference) => void;
   setFourColorDeck: (enabled: boolean) => void;
+  incrementGamesPlayed: () => void;
+  resetGamesPlayed: () => void;
   hydrate: () => Promise<void>;
 }
 
@@ -24,6 +27,7 @@ const STORAGE_KEY = 'nagels_settings';
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   themePreference: 'system',
   fourColorDeck: true,
+  gamesPlayedUnconfirmed: 0,
   _hydrated: false,
 
   setThemePreference: (pref) => {
@@ -36,6 +40,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     persistSettings(get());
   },
 
+  incrementGamesPlayed: () => {
+    set({ gamesPlayedUnconfirmed: get().gamesPlayedUnconfirmed + 1 });
+    persistSettings(get());
+  },
+
+  resetGamesPlayed: () => {
+    set({ gamesPlayedUnconfirmed: 0 });
+    persistSettings(get());
+  },
+
   hydrate: async () => {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -44,6 +58,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         set({
           themePreference: parsed.themePreference ?? 'system',
           fourColorDeck: parsed.fourColorDeck ?? true,
+          gamesPlayedUnconfirmed: parsed.gamesPlayedUnconfirmed ?? 0,
           _hydrated: true,
         });
       } else {
@@ -59,6 +74,7 @@ function persistSettings(state: SettingsStore) {
   const data = {
     themePreference: state.themePreference,
     fourColorDeck: state.fourColorDeck,
+    gamesPlayedUnconfirmed: state.gamesPlayedUnconfirmed,
   };
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
 }
