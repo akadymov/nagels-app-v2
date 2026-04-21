@@ -20,6 +20,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { GameLogo } from '../components/GameLogo';
+import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { useTranslation } from 'react-i18next';
 import { BotDifficulties, type BotDifficulty } from '../lib/bot/botAI';
 import { useGameStore } from '../store';
@@ -69,15 +71,37 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   }, [nameInput, setPlayerName]);
 
   const canStartMatch = playerCount !== null && selectedDifficulty !== null;
+  const user = useAuthStore((s) => s.user);
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const gamesPlayed = useSettingsStore((s) => s.gamesPlayedUnconfirmed);
+  const incrementGamesPlayed = useSettingsStore((s) => s.incrementGamesPlayed);
+
+  // Check if user needs to confirm email before playing
+  const needsEmailConfirmation = !isGuest && user && !user.email_confirmed_at && gamesPlayed >= 1;
 
   const handleQuickMatch = useCallback(async () => {
     if (!canStartMatch) return;
+    if (needsEmailConfirmation) {
+      Alert.alert(
+        t('auth.emailNotConfirmed', 'Email not confirmed'),
+        t('auth.confirmToPlay', 'Please confirm your email to continue playing. Check your inbox.'),
+      );
+      return;
+    }
     await saveName();
     setBotDifficulty(selectedDifficulty!);
+    incrementGamesPlayed();
     onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || playerName);
-  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
+  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch, needsEmailConfirmation]);
 
   const handleCreateRoom = useCallback(async () => {
+    if (needsEmailConfirmation || (!isGuest && user && !user.email_confirmed_at)) {
+      Alert.alert(
+        t('auth.emailNotConfirmed', 'Email not confirmed'),
+        t('auth.confirmToCreate', 'Please confirm your email to create rooms.'),
+      );
+      return;
+    }
     await saveName();
     setIsCreating(true);
     try {
