@@ -55,7 +55,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     if (!password.trim()) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
-      await signInWithEmail(email.trim(), password);
+      const signedInUser = await signInWithEmail(email.trim(), password);
+      // Sync display name from user metadata
+      const metaName = signedInUser.user_metadata?.display_name;
+      if (metaName) {
+        useAuthStore.getState().setDisplayName(metaName);
+      }
       onSuccess();
     } catch (err: any) {
       setErrorMsg(String(t(err.message, err.message)));
@@ -74,14 +79,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
       // Try linking anonymous session first, fall back to fresh sign-up
       if (isGuest && user) {
         try {
-          await linkEmailToAnonymous(email.trim(), password);
+          await linkEmailToAnonymous(email.trim(), password, nickname.trim());
         } catch {
-          // Session invalid — do a fresh sign-up instead
           await signUpWithEmail(email.trim(), password, nickname.trim());
         }
       } else {
         await signUpWithEmail(email.trim(), password, nickname.trim());
       }
+      // Update auth store with the nickname
+      useAuthStore.getState().setDisplayName(nickname.trim());
       onSuccess();
     } catch (err: any) {
       setErrorMsg(String(t(err.message, err.message)));
