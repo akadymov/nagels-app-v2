@@ -137,11 +137,15 @@ export async function signUpWithEmail(
  * NOTE: This uses updateUser which is the correct approach for upgrading
  * an anonymous user in Supabase Auth v2.
  */
-export async function linkEmailToAnonymous(email: string, password: string): Promise<User> {
+export async function linkEmailToAnonymous(email: string, password: string, displayName?: string): Promise<User> {
   if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
 
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase.auth.updateUser({ email, password });
+  const { data, error } = await supabase.auth.updateUser({
+    email,
+    password,
+    data: displayName ? { display_name: displayName } : undefined,
+  });
 
   if (error) {
     throw new Error(friendlyAuthError(error.message));
