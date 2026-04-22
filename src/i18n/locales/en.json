@@ -154,6 +154,7 @@
     "forgotDesc": "Enter your email and we'll send a reset link.",
     "confirmToPlay": "Please confirm your email to continue playing. Check your inbox.",
     "confirmToCreate": "Please confirm your email to create rooms.",
+    "oneGameLeft": "You can play 1 game. Confirm your email for unlimited access.",
     "resendConfirmation": "Resend confirmation",
     "emailConfirmed": "Email confirmed!",
     "canPlay": "Your account is ready. You can now play without limits.",
