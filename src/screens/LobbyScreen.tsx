@@ -83,12 +83,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
 
   const handleQuickMatch = useCallback(async () => {
-    if (!canStartMatch) return;
+    console.log('[QuickMatch] canStartMatch:', canStartMatch, 'playerCount:', playerCount, 'difficulty:', selectedDifficulty);
+    if (!canStartMatch) {
+      console.log('[QuickMatch] blocked: canStartMatch is false');
+      return;
+    }
     // Read fresh state to avoid stale closure
     const currentGames = useSettingsStore.getState().gamesPlayedUnconfirmed;
     const currentPending = useSettingsStore.getState().pendingEmail;
     const currentUser = useAuthStore.getState().user;
     const emailUnconfirmed = (currentUser && currentUser.email && !currentUser.email_confirmed_at) || !!currentPending;
+    console.log('[QuickMatch] games:', currentGames, 'pending:', currentPending, 'unconfirmed:', emailUnconfirmed);
     if (emailUnconfirmed && currentGames >= 1) {
       Alert.alert(
         String(t('auth.emailNotConfirmed', 'Email not confirmed')),
