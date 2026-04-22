@@ -275,7 +275,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
             {/* Start */}
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: canStartMatch && !needsEmailConfirmation ? colors.accent : colors.accentMuted, opacity: canStartMatch && !needsEmailConfirmation ? 1 : 0.5 }]}
+              style={[styles.actionBtn, { backgroundColor: canStartMatch ? colors.accent : colors.accentMuted, opacity: canStartMatch ? 1 : 0.5 }]}
               onPress={handleQuickMatch}
               disabled={!canStartMatch}
               testID="btn-quick-match"
