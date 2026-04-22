@@ -81,8 +81,6 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const hasUnconfirmedEmail = (user && user.email && !user.email_confirmed_at) || !!pendingEmail;
   const needsEmailConfirmation = hasUnconfirmedEmail && gamesPlayed >= 1;
 
-  // DEBUG — remove after testing
-  console.log('[Lobby] user.email:', user?.email, 'confirmed_at:', user?.email_confirmed_at, 'pendingEmail:', pendingEmail, 'gamesPlayed:', gamesPlayed, 'hasUnconfirmed:', hasUnconfirmedEmail);
 
   const handleQuickMatch = useCallback(async () => {
     if (!canStartMatch) return;
@@ -146,15 +144,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     }
   }, [joinCode, saveName, joinRoom, onRoomJoined, t]);
 
-  const TabButton: React.FC<{ tab: LobbyTab; label: string }> = ({ tab, label }) => {
+  const TabButton: React.FC<{ tab: LobbyTab; label: string; disabled?: boolean }> = ({ tab, label, disabled }) => {
     const isActive = activeTab === tab;
     return (
       <Pressable
         style={[
           styles.tabBtn,
           { backgroundColor: isActive ? colors.accent : colors.surface, borderColor: colors.accent },
+          disabled && { opacity: 0.35 },
         ]}
-        onPress={() => setActiveTab(tab)}
+        onPress={() => !disabled && setActiveTab(tab)}
+        disabled={disabled}
       >
         <Text style={[styles.tabBtnText, { color: isActive ? '#ffffff' : colors.accent }]}>
           {label}
@@ -196,9 +196,23 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           />
         </View>
 
+        {/* Email confirmation warning */}
+        {hasUnconfirmedEmail && (
+          <View style={[styles.confirmBanner, { backgroundColor: colors.warning + '20', borderColor: colors.warning }]}>
+            <Text style={[styles.confirmBannerText, { color: colors.warning }]}>
+              ⚠ {t('auth.emailNotConfirmed', 'Email not confirmed')}
+            </Text>
+            <Text style={[styles.confirmBannerSub, { color: colors.textMuted }]}>
+              {needsEmailConfirmation
+                ? t('auth.confirmToPlay', 'Please confirm your email to continue playing.')
+                : t('auth.oneGameLeft', 'You can play 1 game. Confirm email for unlimited access.')}
+            </Text>
+          </View>
+        )}
+
         {/* Tab buttons */}
         <View style={styles.tabRow}>
-          <TabButton tab="create" label={t('lobby.createRoom')} />
+          <TabButton tab="create" label={t('lobby.createRoom')} disabled={hasUnconfirmedEmail} />
           <TabButton tab="join" label={t('multiplayer.joinRoom')} />
           <TabButton tab="bots" label={t('lobby.playVsBots', 'Play vs Bots')} />
         </View>
@@ -261,9 +275,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
             {/* Start */}
             <Pressable
-              style={[styles.actionBtn, { backgroundColor: canStartMatch ? colors.accent : colors.accentMuted, opacity: canStartMatch ? 1 : 0.5 }]}
+              style={[styles.actionBtn, { backgroundColor: canStartMatch && !needsEmailConfirmation ? colors.accent : colors.accentMuted, opacity: canStartMatch && !needsEmailConfirmation ? 1 : 0.5 }]}
               onPress={handleQuickMatch}
-              disabled={!canStartMatch}
+              disabled={!canStartMatch || needsEmailConfirmation}
               testID="btn-quick-match"
             >
               <Text style={styles.actionBtnText}>
@@ -364,6 +378,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Confirm banner
+  confirmBanner: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: 4,
+  },
+  confirmBannerText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  confirmBannerSub: {
+    fontSize: 12,
+    textAlign: 'center',
   },
   // Tabs
   tabRow: {
