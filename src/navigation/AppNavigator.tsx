@@ -155,19 +155,22 @@ const RejoinGuard: React.FC = () => {
   const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
 
-  // Detect email confirmation from URL hash (web only)
+  // Detect email confirmation: if we had pendingEmail and user is now confirmed
+  const confirmChecked = useRef(false);
   useEffect(() => {
-    if (Platform.OS !== 'web' || !isInitialized) return;
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token') && !hash.includes('error')) {
-      // Email was just confirmed — Supabase put tokens in hash
-      // Clear hash and navigate to EmailConfirmed
-      window.history.replaceState(null, '', window.location.pathname);
-      setTimeout(() => {
-        navigation.navigate('EmailConfirmed');
-      }, 500);
+    if (!isInitialized || !user || confirmChecked.current) return;
+    confirmChecked.current = true;
+
+    const { useSettingsStore } = require('../store/settingsStore');
+    const pendingEmail = useSettingsStore.getState().pendingEmail;
+    const isConfirmed = !!user.email_confirmed_at;
+
+    if (pendingEmail && isConfirmed && user.email === pendingEmail) {
+      // Email was just confirmed — clear pending and show confirmation screen
+      useSettingsStore.getState().resetGamesPlayed();
+      navigation.navigate('EmailConfirmed');
     }
-  }, [isInitialized, navigation]);
+  }, [isInitialized, user, navigation]);
 
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
