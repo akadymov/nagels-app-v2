@@ -77,7 +77,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const incrementGamesPlayed = useSettingsStore((s) => s.incrementGamesPlayed);
 
   // Check if user needs to confirm email before playing
-  const needsEmailConfirmation = !isGuest && user && !user.email_confirmed_at && gamesPlayed >= 1;
+  // User has email but hasn't confirmed it (regardless of guest status)
+  const hasUnconfirmedEmail = user && user.email && !user.email_confirmed_at;
+  const needsEmailConfirmation = hasUnconfirmedEmail && gamesPlayed >= 1;
 
   const handleQuickMatch = useCallback(async () => {
     if (!canStartMatch) return;
@@ -95,7 +97,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch, needsEmailConfirmation]);
 
   const handleCreateRoom = useCallback(async () => {
-    if (needsEmailConfirmation || (!isGuest && user && !user.email_confirmed_at)) {
+    if (hasUnconfirmedEmail) {
       Alert.alert(
         t('auth.emailNotConfirmed', 'Email not confirmed'),
         t('auth.confirmToCreate', 'Please confirm your email to create rooms.'),
