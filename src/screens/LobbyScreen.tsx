@@ -84,10 +84,15 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
   const handleQuickMatch = useCallback(async () => {
     if (!canStartMatch) return;
-    if (needsEmailConfirmation) {
+    // Read fresh state to avoid stale closure
+    const currentGames = useSettingsStore.getState().gamesPlayedUnconfirmed;
+    const currentPending = useSettingsStore.getState().pendingEmail;
+    const currentUser = useAuthStore.getState().user;
+    const emailUnconfirmed = (currentUser && currentUser.email && !currentUser.email_confirmed_at) || !!currentPending;
+    if (emailUnconfirmed && currentGames >= 1) {
       Alert.alert(
-        t('auth.emailNotConfirmed', 'Email not confirmed'),
-        t('auth.confirmToPlay', 'Please confirm your email to continue playing. Check your inbox.'),
+        String(t('auth.emailNotConfirmed', 'Email not confirmed')),
+        String(t('auth.confirmToPlay', 'Please confirm your email to continue playing. Check your inbox.')),
       );
       return;
     }
@@ -95,7 +100,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     setBotDifficulty(selectedDifficulty!);
     incrementGamesPlayed();
     onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || playerName);
-  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch, needsEmailConfirmation]);
+  }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
 
   const handleCreateRoom = useCallback(async () => {
     if (hasUnconfirmedEmail) {
