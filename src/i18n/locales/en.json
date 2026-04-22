@@ -155,6 +155,9 @@
     "confirmToPlay": "Please confirm your email to continue playing. Check your inbox.",
     "confirmToCreate": "Please confirm your email to create rooms.",
     "resendConfirmation": "Resend confirmation",
+    "emailConfirmed": "Email confirmed!",
+    "canPlay": "Your account is ready. You can now play without limits.",
+    "redirecting": "Redirecting to lobby...",
     "sessionRestored": "Session restored",
     "rejoining": "Returning to your game..."
   },

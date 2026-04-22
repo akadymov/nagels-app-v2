@@ -155,6 +155,9 @@
     "confirmToPlay": "Confirma tu correo para seguir jugando. Revisa tu bandeja de entrada.",
     "confirmToCreate": "Confirma tu correo para crear salas.",
     "resendConfirmation": "Reenviar confirmación",
+    "emailConfirmed": "¡Correo confirmado!",
+    "canPlay": "Tu cuenta está lista. Ahora puedes jugar sin límites.",
+    "redirecting": "Redirigiendo al lobby...",
     "sessionRestored": "Sesión restaurada",
     "rejoining": "Volviendo a tu partida..."
   },
