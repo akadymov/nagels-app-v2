@@ -13,12 +13,14 @@ export interface SettingsStore {
   themePreference: ThemePreference;
   fourColorDeck: boolean;
   gamesPlayedUnconfirmed: number;
+  pendingEmail: string | null; // email registered but not yet confirmed
   _hydrated: boolean;
 
   setThemePreference: (pref: ThemePreference) => void;
   setFourColorDeck: (enabled: boolean) => void;
   incrementGamesPlayed: () => void;
   resetGamesPlayed: () => void;
+  setPendingEmail: (email: string | null) => void;
   hydrate: () => Promise<void>;
 }
 
@@ -28,6 +30,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   themePreference: 'system',
   fourColorDeck: true,
   gamesPlayedUnconfirmed: 0,
+  pendingEmail: null,
   _hydrated: false,
 
   setThemePreference: (pref) => {
@@ -46,7 +49,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   resetGamesPlayed: () => {
-    set({ gamesPlayedUnconfirmed: 0 });
+    set({ gamesPlayedUnconfirmed: 0, pendingEmail: null });
+    persistSettings(get());
+  },
+
+  setPendingEmail: (email) => {
+    set({ pendingEmail: email });
     persistSettings(get());
   },
 
@@ -59,6 +67,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           themePreference: parsed.themePreference ?? 'system',
           fourColorDeck: parsed.fourColorDeck ?? true,
           gamesPlayedUnconfirmed: parsed.gamesPlayedUnconfirmed ?? 0,
+          pendingEmail: parsed.pendingEmail ?? null,
           _hydrated: true,
         });
       } else {
@@ -75,6 +84,7 @@ function persistSettings(state: SettingsStore) {
     themePreference: state.themePreference,
     fourColorDeck: state.fourColorDeck,
     gamesPlayedUnconfirmed: state.gamesPlayedUnconfirmed,
+    pendingEmail: state.pendingEmail,
   };
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
 }

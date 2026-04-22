@@ -21,6 +21,7 @@ import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { signInWithEmail, signUpWithEmail, linkEmailToAnonymous, resetPasswordForEmail } from '../lib/supabase/authService';
 import { GameLogo } from '../components/GameLogo';
 
@@ -61,6 +62,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
       if (metaName) {
         useAuthStore.getState().setDisplayName(metaName);
       }
+      // Clear pending email if confirmed
+      if (signedInUser.email_confirmed_at) {
+        useSettingsStore.getState().setPendingEmail(null);
+        useSettingsStore.getState().resetGamesPlayed();
+      }
       onSuccess();
     } catch (err: any) {
       setErrorMsg(String(t(err.message, err.message)));
@@ -77,10 +83,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     setIsLoading(true);
     try {
       // Always use signUpWithEmail for new registration
-      // This triggers the correct "confirm signup" email template
       await signUpWithEmail(email.trim(), password, nickname.trim());
-      // Update auth store with the nickname
+      // Save nickname and pending email for confirmation tracking
       useAuthStore.getState().setDisplayName(nickname.trim());
+      useSettingsStore.getState().setPendingEmail(email.trim());
       onSuccess();
     } catch (err: any) {
       setErrorMsg(String(t(err.message, err.message)));

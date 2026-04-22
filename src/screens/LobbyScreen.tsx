@@ -74,11 +74,12 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const user = useAuthStore((s) => s.user);
   const isGuest = useAuthStore((s) => s.isGuest);
   const gamesPlayed = useSettingsStore((s) => s.gamesPlayedUnconfirmed);
+  const pendingEmail = useSettingsStore((s) => s.pendingEmail);
   const incrementGamesPlayed = useSettingsStore((s) => s.incrementGamesPlayed);
 
-  // Check if user needs to confirm email before playing
-  // User has email but hasn't confirmed it (regardless of guest status)
-  const hasUnconfirmedEmail = user && user.email && !user.email_confirmed_at;
+  // Check if user registered but hasn't confirmed email
+  // Either: user.email exists but not confirmed, OR we have a pendingEmail from registration
+  const hasUnconfirmedEmail = (user && user.email && !user.email_confirmed_at) || !!pendingEmail;
   const needsEmailConfirmation = hasUnconfirmedEmail && gamesPlayed >= 1;
 
   const handleQuickMatch = useCallback(async () => {
