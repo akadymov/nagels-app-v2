@@ -18,6 +18,7 @@ import {
   SettingsScreen,
   AuthScreen,
   ProfileScreen,
+  EmailConfirmedScreen,
 } from '../screens';
 import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
@@ -52,6 +53,7 @@ export type RootStackParamList = {
   Settings: undefined;
   Auth: undefined;
   Profile: undefined;
+  EmailConfirmed: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -80,8 +82,7 @@ const linking = {
       },
       // Email confirmation redirect: /auth/callback?token_hash=...&type=signup
       // Supabase detectSessionInUrl picks up the token automatically on web.
-      // We land on Lobby so the user sees they're now confirmed.
-      Lobby: 'auth/callback',
+      EmailConfirmed: 'auth/callback',
     },
   },
 };
@@ -340,6 +341,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
               {(props) => (
                 <ProfileScreen
                   onBack={() => (props.navigation as any).goBack()}
+                />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="EmailConfirmed">
+              {(props) => (
+                <EmailConfirmedScreen
+                  onContinue={() => (props.navigation as any).navigate('Lobby')}
                 />
               )}
             </Stack.Screen>

@@ -24,3 +24,6 @@ export type { AuthScreenProps } from './AuthScreen';
 
 export { ProfileScreen } from './ProfileScreen';
 export type { ProfileScreenProps } from './ProfileScreen';
+
+export { EmailConfirmedScreen } from './EmailConfirmedScreen';
+export type { EmailConfirmedScreenProps } from './EmailConfirmedScreen';
