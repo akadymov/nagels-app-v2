@@ -58,6 +58,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [showConfirmAlert, setShowConfirmAlert] = useState(false);
 
   useEffect(() => {
     if (playerName && playerName !== 'Guest') {
@@ -83,22 +84,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
 
   const handleQuickMatch = useCallback(async () => {
-    console.log('[QuickMatch] canStartMatch:', canStartMatch, 'playerCount:', playerCount, 'difficulty:', selectedDifficulty);
-    if (!canStartMatch) {
-      console.log('[QuickMatch] blocked: canStartMatch is false');
-      return;
-    }
+    if (!canStartMatch) return;
     // Read fresh state to avoid stale closure
     const currentGames = useSettingsStore.getState().gamesPlayedUnconfirmed;
     const currentPending = useSettingsStore.getState().pendingEmail;
     const currentUser = useAuthStore.getState().user;
     const emailUnconfirmed = (currentUser && currentUser.email && !currentUser.email_confirmed_at) || !!currentPending;
-    console.log('[QuickMatch] games:', currentGames, 'pending:', currentPending, 'unconfirmed:', emailUnconfirmed);
     if (emailUnconfirmed && currentGames >= 1) {
-      Alert.alert(
-        String(t('auth.emailNotConfirmed', 'Email not confirmed')),
-        String(t('auth.confirmToPlay', 'Please confirm your email to continue playing. Check your inbox.')),
-      );
+      setShowConfirmAlert(true);
       return;
     }
     await saveName();
@@ -108,11 +101,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
 
   const handleCreateRoom = useCallback(async () => {
-    if (hasUnconfirmedEmail) {
-      Alert.alert(
-        t('auth.emailNotConfirmed', 'Email not confirmed'),
-        t('auth.confirmToCreate', 'Please confirm your email to create rooms.'),
-      );
+    const currentPending = useSettingsStore.getState().pendingEmail;
+    const currentUser = useAuthStore.getState().user;
+    const unconfirmed = (currentUser && currentUser.email && !currentUser.email_confirmed_at) || !!currentPending;
+    if (unconfirmed) {
+      setShowConfirmAlert(true);
       return;
     }
     await saveName();
@@ -344,6 +337,26 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           </View>
         )}
       </ScrollView>
+
+      {/* Email confirmation alert (replaces Alert.alert which doesn't work on web) */}
+      {showConfirmAlert && (
+        <View style={styles.alertOverlay}>
+          <View style={[styles.alertBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.alertTitle, { color: colors.warning }]}>
+              ⚠ {t('auth.emailNotConfirmed', 'Email not confirmed')}
+            </Text>
+            <Text style={[styles.alertMessage, { color: colors.textSecondary }]}>
+              {t('auth.confirmToPlay', 'Please confirm your email to continue playing. Check your inbox.')}
+            </Text>
+            <Pressable
+              style={[styles.alertBtn, { backgroundColor: colors.accent }]}
+              onPress={() => setShowConfirmAlert(false)}
+            >
+              <Text style={styles.alertBtnText}>OK</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -404,6 +417,40 @@ const styles = StyleSheet.create({
   confirmBannerSub: {
     fontSize: 12,
     textAlign: 'center',
+  },
+  // Alert overlay
+  alertOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  alertBox: {
+    width: '85%',
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  alertMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  alertBtn: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.md,
+  },
+  alertBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   // Tabs
   tabRow: {
