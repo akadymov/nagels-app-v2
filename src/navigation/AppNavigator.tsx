@@ -106,12 +106,15 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const unsubscribe = onAuthStateChange(async (user, isGuest) => {
       setUser(user, isGuest);
 
-      // Load player session to get display name
+      // Load player session — only use guest name if no auth display name
       try {
         const session = await getGuestSession();
         if (session) {
-          setDisplayName(session.playerName);
           useMultiplayerStore.getState().setGuestSession(session);
+          const authName = user?.user_metadata?.display_name;
+          if (!authName) {
+            setDisplayName(session.playerName);
+          }
         }
       } catch {
         // Non-fatal
