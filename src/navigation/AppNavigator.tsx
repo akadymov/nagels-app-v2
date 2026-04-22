@@ -106,6 +106,18 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const unsubscribe = onAuthStateChange(async (user, isGuest) => {
       setUser(user, isGuest);
 
+      // Sync settings from user profile (theme, deck, language)
+      if (user?.user_metadata) {
+        const { useSettingsStore } = require('../store/settingsStore');
+        useSettingsStore.getState().syncFromUserMetadata(user.user_metadata);
+        // Apply language if set
+        const lang = user.user_metadata.language;
+        if (lang) {
+          const i18n = require('../i18n/config').default;
+          i18n.changeLanguage(lang);
+        }
+      }
+
       // Load player session — only use guest name if no auth display name
       try {
         const session = await getGuestSession();

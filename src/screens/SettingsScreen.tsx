@@ -90,6 +90,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onProfil
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
+    useSettingsStore.getState().setLanguage(lang);
   };
 
   return (
