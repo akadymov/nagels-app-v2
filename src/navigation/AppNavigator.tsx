@@ -152,8 +152,22 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
  */
 const RejoinGuard: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { isInitialized } = useAuthStore();
+  const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
+
+  // Detect email confirmation from URL hash (web only)
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isInitialized) return;
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token') && !hash.includes('error')) {
+      // Email was just confirmed — Supabase put tokens in hash
+      // Clear hash and navigate to EmailConfirmed
+      window.history.replaceState(null, '', window.location.pathname);
+      setTimeout(() => {
+        navigation.navigate('EmailConfirmed');
+      }, 500);
+    }
+  }, [isInitialized, navigation]);
 
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
