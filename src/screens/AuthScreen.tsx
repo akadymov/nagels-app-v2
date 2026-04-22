@@ -76,16 +76,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     if (password.length < 6) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
-      // Try linking anonymous session first, fall back to fresh sign-up
-      if (isGuest && user) {
-        try {
-          await linkEmailToAnonymous(email.trim(), password, nickname.trim());
-        } catch {
-          await signUpWithEmail(email.trim(), password, nickname.trim());
-        }
-      } else {
-        await signUpWithEmail(email.trim(), password, nickname.trim());
-      }
+      // Always use signUpWithEmail for new registration
+      // This triggers the correct "confirm signup" email template
+      await signUpWithEmail(email.trim(), password, nickname.trim());
       // Update auth store with the nickname
       useAuthStore.getState().setDisplayName(nickname.trim());
       onSuccess();
