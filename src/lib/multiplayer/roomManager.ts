@@ -419,6 +419,53 @@ export async function loadRoom(roomId: string): Promise<Room | null> {
   return dbRoomToRoom(room, players || []);
 }
 
+/**
+ * Add a bot to the current room (host only)
+ */
+export async function addBotToRoom(): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Not configured');
+
+  const store = useMultiplayerStore.getState();
+  const room = store.currentRoom;
+  if (!room) throw new Error('No active room');
+
+  const currentPlayers = store.roomPlayers;
+  if (currentPlayers.length >= room.maxPlayers) {
+    throw new Error('Room is full');
+  }
+
+  // Bot names by language
+  const botNames = ['Overkill', 'Nil', 'Trumpster', 'Longshot', 'Trickster'];
+  const botIndex = currentPlayers.filter(p => p.isBot).length;
+  const botName = botNames[botIndex % botNames.length];
+  const botId = `bot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('room_players')
+    .insert({
+      room_id: room.id,
+      player_id: botId,
+      player_name: botName,
+      player_index: currentPlayers.length,
+      is_bot: true,
+      is_ready: true, // Bots are always ready
+    });
+
+  if (error) {
+    console.error('[RoomManager] Error adding bot:', error);
+    throw new Error('Failed to add bot');
+  }
+
+  // Update player count in room
+  await supabase
+    .from('rooms')
+    .update({ player_count: currentPlayers.length + 1 })
+    .eq('id', room.id);
+
+  console.log('[RoomManager] Bot added:', botName);
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
