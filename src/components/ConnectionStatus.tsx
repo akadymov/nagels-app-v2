@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { useMultiplayer } from '../hooks/useMultiplayer';
 import { Colors } from '../constants/colors';
 import { Spacing } from '../constants/spacing';
@@ -13,6 +13,11 @@ import { TextStyles } from '../constants/typography';
 
 export const ConnectionStatus: React.FC = () => {
   const { isConnected, isReconnecting, error, reconnect, syncStatus } = useMultiplayer();
+
+  // On web, NetInfo is unreliable — skip connection status to avoid false disconnects
+  if (Platform.OS === 'web') {
+    return null;
+  }
 
   // Don't show anything if connected
   if (isConnected && !error) {

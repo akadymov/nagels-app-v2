@@ -34,6 +34,11 @@ const RECONNECTION_BACKOFF_MULTIPLIER = 1.5;
  * Start monitoring network status
  */
 export function startNetworkMonitoring(): void {
+  // Skip on web — NetInfo is unreliable and causes false disconnects
+  if (typeof document !== 'undefined') {
+    console.log('[NetworkMonitor] Skipping on web platform');
+    return;
+  }
   console.log('[NetworkMonitor] Starting network monitoring');
 
   // Monitor network connectivity
