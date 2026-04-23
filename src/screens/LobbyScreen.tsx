@@ -398,6 +398,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
     gap: Spacing.md,
+    paddingBottom: 160,
   },
   // Nickname
   nicknameRow: {

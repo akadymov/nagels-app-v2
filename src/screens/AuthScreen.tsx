@@ -287,6 +287,7 @@ const styles = StyleSheet.create({
   scroll: {
     padding: Spacing.lg,
     paddingTop: Spacing.sm,
+    paddingBottom: 160,
   },
   backBtn: {
     alignSelf: 'flex-start',

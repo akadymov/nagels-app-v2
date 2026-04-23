@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.sm,
-    paddingBottom: Spacing.lg,
+    paddingBottom: 160,
   },
   // Top bar — 2 rows matching Figma
   topBar: {
