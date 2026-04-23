@@ -14,7 +14,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-// SafeAreaView removed — was blocking scroll on mobile web
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
@@ -134,7 +134,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={[styles.header, { borderBottomColor: colors.glassLight }]}>
         <Pressable onPress={onBack} hitSlop={12}>
           <Text style={[styles.backButton, { color: colors.accent }]}>←</Text>
@@ -146,9 +146,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       </View>
 
       <ScrollView
-        style={[styles.scroll, Platform.OS === 'web' ? { overflowY: 'auto' } as any : {}]}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
 
         {/* === PROFILE === */}
@@ -300,17 +301,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <Text style={[styles.toastText, { color: colors.textPrimary }]}>{alertMessage}</Text>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1, flexShrink: 0 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1 },
   backButton: { fontSize: 22, fontWeight: '700', width: 36 },
   headerTitle: { ...TextStyles.h3, fontWeight: '600' },
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 },
+  scrollContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 60 },
   section: { borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1 },
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
   sectionSubtitle: { fontSize: 13, marginTop: Spacing.md, marginBottom: Spacing.sm },
