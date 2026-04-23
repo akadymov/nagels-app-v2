@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { StatusBar, StatusBarStyle, StyleSheet } from 'react-native';
+import { StatusBar, StatusBarStyle, StyleSheet, Platform } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './navigation';
@@ -30,6 +30,15 @@ export default function App() {
 
   useEffect(() => {
     hydrate();
+    // Fix mobile web scroll — inject CSS for touch scrolling
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const style = document.createElement('style');
+      style.textContent = `
+        * { -webkit-overflow-scrolling: touch; }
+        [data-testid="scroll-view"] { overflow-y: auto !important; }
+      `;
+      document.head.appendChild(style);
+    }
   }, [hydrate]);
 
   return (
