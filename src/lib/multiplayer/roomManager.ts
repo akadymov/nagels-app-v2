@@ -427,18 +427,26 @@ export async function addBotToRoom(): Promise<void> {
 
   const store = useMultiplayerStore.getState();
   const room = store.currentRoom;
-  if (!room) throw new Error('No active room');
+  if (!room) {
+    console.error('[RoomManager] addBotToRoom: no currentRoom in store');
+    throw new Error('No active room');
+  }
 
   const currentPlayers = store.roomPlayers;
+  console.log('[RoomManager] addBotToRoom: room', room.id, 'players:', currentPlayers.length, '/', room.maxPlayers);
+
   if (currentPlayers.length >= room.maxPlayers) {
     throw new Error('Room is full');
   }
 
-  // Bot names by language
+  // Bot names
   const botNames = ['Overkill', 'Nil', 'Trumpster', 'Longshot', 'Trickster'];
   const botIndex = currentPlayers.filter(p => p.isBot).length;
   const botName = botNames[botIndex % botNames.length];
-  const botId = `bot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  // Generate a proper UUID for the bot (player_id column is UUID type)
+  const botId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'b0700000-' + Math.random().toString(16).slice(2, 6) + '-4000-8000-' + Date.now().toString(16).padStart(12, '0');
 
   const supabase = getSupabaseClient();
   const { error } = await supabase
@@ -453,8 +461,8 @@ export async function addBotToRoom(): Promise<void> {
     });
 
   if (error) {
-    console.error('[RoomManager] Error adding bot:', error);
-    throw new Error('Failed to add bot');
+    console.error('[RoomManager] Error adding bot:', error.message, error.code, error.details);
+    throw new Error(`Failed to add bot: ${error.message}`);
   }
 
   // Update player count in room

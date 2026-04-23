@@ -30,6 +30,8 @@ import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
 import { useMultiplayerStore } from '../store/multiplayerStore';
+import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
+import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import type { PlayerScore } from './ScoreboardModal';
 
@@ -83,6 +85,14 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Multiplayer store for multiplayer mode
   const multiplayerStore = useMultiplayerStore();
 
+  // Settings & auth for in-game settings panel
+  const themePreference = useSettingsStore((s) => s.themePreference);
+  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
+  const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
+  const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const authDisplayName = useAuthStore((s) => s.displayName);
+
   // Game store selectors
   const {
     phase,
@@ -134,11 +144,45 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const unreadChatCount = useMultiplayerStore((s) => s.unreadChatCount);
 
   // Language modal
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const currentRoom = useMultiplayerStore((s) => s.currentRoom);
+
+  // Poll for chat messages (Realtime fallback)
+  useEffect(() => {
+    if (!isMultiplayer || !currentRoom?.id) return;
+    const headers = {
+      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+      'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''}`,
+    };
+    const pollChat = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/game_events?room_id=eq.${currentRoom.id}&event_type=eq.chat_message&select=*&order=created_at.desc&limit=20`,
+          { headers }
+        );
+        if (!res.ok) return;
+        const events = await res.json();
+        if (!events?.length) return;
+        const store = useMultiplayerStore.getState();
+        for (const e of events.reverse()) {
+          const data = e.event_data;
+          if (!data) continue;
+          store.addChatMessage({
+            id: e.id,
+            playerId: data.player_id,
+            playerName: data.player_name,
+            text: data.text,
+            timestamp: data.timestamp,
+          });
+        }
+      } catch { /* ignore */ }
+    };
+    const interval = setInterval(pollChat, 5000);
+    return () => clearInterval(interval);
+  }, [isMultiplayer, currentRoom?.id]);
 
   const handleSync = async () => {
     if (!isMultiplayer || isSyncing) return;
@@ -578,8 +622,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           <Pressable onPress={onExit} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
             <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
           </Pressable>
-          <Pressable onPress={() => setShowLanguageModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
-            <Text style={styles.iconBtnEmoji}>🌐</Text>
+          <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
+            <Text style={styles.iconBtnEmoji}>⚙️</Text>
           </Pressable>
           <Pressable
             onPress={() => { if (tricks.length > 0) setShowLastTrick(true); }}
@@ -600,6 +644,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             style={[styles.iconBtn, { backgroundColor: isMultiplayer ? colors.accent : colors.iconButtonBg, borderColor: isMultiplayer ? colors.accent : colors.glassLight, opacity: isMultiplayer ? 1 : 0.3 }]}
           >
             <Text style={styles.iconBtnEmoji}>💬</Text>
+            {isMultiplayer && unreadChatCount > 0 && (
+              <View style={styles.chatBadge}>
+                <Text style={styles.chatBadgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
@@ -910,16 +959,79 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </GlassCard>
         </View>
       </Modal>
-      {/* Language Modal */}
+      {/* Settings Modal */}
       <Modal
-        visible={showLanguageModal}
+        visible={showSettingsModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowLanguageModal(false)}
+        onRequestClose={() => setShowSettingsModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLanguageModal(false)}>
-          <Pressable onPress={() => {}}>
-            <LanguageSwitcher />
+        <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
+          <Pressable onPress={() => {}} style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
+
+            {/* Profile section (logged-in users only) */}
+            {!isGuest && (
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
+                <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>
+                  {authDisplayName}
+                </Text>
+              </View>
+            )}
+
+            {/* Language */}
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
+              <LanguageSwitcher />
+            </View>
+
+            {/* Theme */}
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
+              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
+                  const themeLabels: Record<string, string> = { system: t('settings.system'), light: t('settings.light'), dark: t('settings.dark') };
+                  const isActive = themePreference === opt;
+                  return (
+                    <Pressable
+                      key={opt}
+                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                      onPress={() => setThemePreference(opt)}
+                    >
+                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>
+                        {themeLabels[opt]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Deck Colors */}
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
+              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                {[false, true].map((fc) => {
+                  const isActive = fourColorDeck === fc;
+                  return (
+                    <Pressable
+                      key={String(fc)}
+                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                      onPress={() => setFourColorDeck(fc)}
+                    >
+                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>
+                        {fc ? t('settings.fourColor') : t('settings.classic')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Pressable style={[styles.modalButton, { marginTop: Spacing.md }]} onPress={() => setShowSettingsModal(false)}>
+              <Text style={styles.modalButtonText}>{t('common.close')}</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -993,6 +1105,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  chatBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  chatBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#fff',
   },
   backButton: {
     ...TextStyles.h3,
@@ -1500,6 +1629,48 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: '#ffffff',
     fontWeight: '600' as const,
+  },
+  settingsPanel: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    padding: Spacing.lg,
+  },
+  settingsPanelTitle: {
+    ...TextStyles.h3,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  settingsSection: {
+    marginBottom: Spacing.md,
+  },
+  settingsSectionTitle: {
+    ...TextStyles.caption,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  settingsValue: {
+    ...TextStyles.body,
+    fontWeight: '600',
+  },
+  settingsPills: {
+    flexDirection: 'row',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.glassLight,
+    padding: 3,
+  },
+  settingsPill: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+  },
+  settingsPillText: {
+    ...TextStyles.small,
+    fontWeight: '500',
   },
   betBannerOverlay: {
     flex: 1,

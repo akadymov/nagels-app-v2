@@ -117,11 +117,14 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           if (players) {
             const store = useMultiplayerStore.getState();
             const mappedPlayers = players.map((p: any) => ({
+              id: p.id,
+              roomId: p.room_id,
               playerId: p.player_id,
               playerName: p.player_name || 'Guest',
+              playerIndex: p.player_index ?? 0,
               isBot: p.is_bot || false,
               isReady: p.is_ready || false,
-              seatIndex: p.seat_index ?? p.player_index,
+              isConnected: true,
             }));
             // Always update — syncs count, ready status, new players
             store.setRoomPlayers(mappedPlayers);
@@ -315,9 +318,14 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                 title={`🤖 ${t('multiplayer.addBot', 'Add Bot')}`}
                 onPress={async () => {
                   try {
+                    console.log('[WaitingRoom] Adding bot...');
                     await addBotToRoom();
+                    console.log('[WaitingRoom] Bot added successfully');
                   } catch (err: any) {
-                    Alert.alert(t('common.error'), err.message);
+                    console.error('[WaitingRoom] Add bot failed:', err);
+                    const store = useMultiplayerStore.getState();
+                    store.setError(err.message);
+                    setTimeout(() => store.setError(null), 5000);
                   }
                 }}
                 size="medium"
