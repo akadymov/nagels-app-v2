@@ -54,7 +54,8 @@
     },
     "playerCount": "{{count}} players",
     "players": "players",
-    "playVsBots": "Play vs Bots"
+    "playVsBots": "Play vs Bots",
+    "continueToLobby": "Continue to Lobby"
   },
   "game": {
     "hand": "Hand",

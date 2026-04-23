@@ -218,6 +218,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         placeholder={t('auth.password')}
         placeholderTextColor={colors.textMuted}
         secureTextEntry
+        returnKeyType="go"
+        onSubmitEditing={tab === 'signIn' ? handleSignIn : handleSignUp}
       />
 
       {/* Forgot Password (sign in only) */}

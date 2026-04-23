@@ -54,7 +54,8 @@
     },
     "playerCount": "{{count}} игрока",
     "players": "игроков",
-    "playVsBots": "Играть с ботами"
+    "playVsBots": "Играть с ботами",
+    "continueToLobby": "Перейти в лобби"
   },
   "game": {
     "hand": "Раздача",
