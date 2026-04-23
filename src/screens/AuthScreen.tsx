@@ -82,8 +82,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     if (password.length < 6) { setErrorMsg(String(t('auth.weakPassword'))); return; }
     setIsLoading(true);
     try {
-      // Always use signUpWithEmail for new registration
-      await signUpWithEmail(email.trim(), password, nickname.trim());
+      // If user has an anonymous session — upgrade it (preserves UUID + game history)
+      // Otherwise create fresh account
+      if (isGuest && user) {
+        await linkEmailToAnonymous(email.trim(), password, nickname.trim());
+      } else {
+        await signUpWithEmail(email.trim(), password, nickname.trim());
+      }
       // Save nickname and pending email for confirmation tracking
       useAuthStore.getState().setDisplayName(nickname.trim());
       useSettingsStore.getState().setPendingEmail(email.trim());
