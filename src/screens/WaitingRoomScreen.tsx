@@ -109,7 +109,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
         // Always poll players (catches joins, leaves, ready changes)
         const playersRes = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/room_players?room_id=eq.${currentRoom.id}&select=*&order=joined_at`,
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/room_players?room_id=eq.${currentRoom.id}&select=*&order=player_index`,
           { headers }
         );
         if (playersRes.ok) {
