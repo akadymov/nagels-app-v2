@@ -89,9 +89,8 @@ const linking = {
           code: (code: string) => code.toUpperCase(),
         },
       },
-      // Email confirmation redirect: /auth/callback?token_hash=...&type=signup
-      // Supabase detectSessionInUrl picks up the token automatically on web.
       EmailConfirmed: 'auth/callback',
+      ResetPassword: 'reset-password',
     },
   },
 };
@@ -119,8 +118,14 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }).catch(() => {});
 
     // Subscribe to auth state changes (Supabase fires this on mount with current session)
-    const unsubscribe = onAuthStateChange(async (user, isGuest) => {
+    const unsubscribe = onAuthStateChange(async (user, isGuest, event) => {
       setUser(user, isGuest);
+
+      // PASSWORD_RECOVERY event — navigate to reset password screen
+      if (event === 'PASSWORD_RECOVERY') {
+        // Store flag so RejoinGuard can navigate after init
+        (global as any).__passwordRecovery = true;
+      }
 
       // Sync settings from user profile (theme, deck, language)
       if (user?.user_metadata) {
@@ -178,7 +183,9 @@ const RejoinGuard: React.FC = () => {
     confirmChecked.current = true;
 
     // Method 1: URL hash with access_token (captured at module load)
-    if (_cameFromPasswordReset) {
+    // Check for password recovery — either from URL hash or auth event
+    if (_cameFromPasswordReset || (global as any).__passwordRecovery) {
+      (global as any).__passwordRecovery = false;
       if (typeof window !== 'undefined') {
         window.history.replaceState(null, '', window.location.pathname);
       }

@@ -209,7 +209,7 @@ export async function resetPasswordForEmail(email: string): Promise<void> {
 
   const supabase = getSupabaseClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getAppUrl()}/auth/callback`,
+    redirectTo: `${getAppUrl()}/reset-password`,
   });
 
   if (error) {
@@ -273,15 +273,15 @@ export async function signOut(): Promise<void> {
  * Returns an unsubscribe function — call it on component unmount.
  */
 export function onAuthStateChange(
-  callback: (user: User | null, isGuest: boolean) => void
+  callback: (user: User | null, isGuest: boolean, event?: string) => void
 ): () => void {
   if (!isSupabaseConfigured()) return () => {};
 
   const supabase = getSupabaseClient();
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     const user = session?.user ?? null;
     const isGuest = !user || !!user.is_anonymous;
-    callback(user, isGuest);
+    callback(user, isGuest, event);
   });
 
   return () => subscription.unsubscribe();
