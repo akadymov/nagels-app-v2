@@ -350,7 +350,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: Colors.glassLight,
-    paddingBottom: Platform.OS === 'ios' ? Spacing.xl : Spacing.md,
+    // Extra bottom padding for mobile browser chrome (Android/iOS nav bar)
+    paddingBottom: Platform.OS === 'web' ? 40 : Platform.OS === 'ios' ? Spacing.xl : Spacing.md,
   },
   input: {
     flex: 1,
