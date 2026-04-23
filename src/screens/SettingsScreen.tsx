@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   backButton: { fontSize: 22, fontWeight: '700', width: 36 },
   headerTitle: { ...TextStyles.h3, fontWeight: '600' },
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 60 },
+  scrollContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 160 },
   section: { borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1 },
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
   sectionSubtitle: { fontSize: 13, marginTop: Spacing.md, marginBottom: Spacing.sm },
