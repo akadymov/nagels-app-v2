@@ -155,20 +155,31 @@ const RejoinGuard: React.FC = () => {
   const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
 
-  // Detect email confirmation: if we had pendingEmail and user is now confirmed
+  // Detect email confirmation from URL or auth state
   const confirmChecked = useRef(false);
   useEffect(() => {
-    if (!isInitialized || !user || confirmChecked.current) return;
+    if (!isInitialized || confirmChecked.current) return;
     confirmChecked.current = true;
 
-    const { useSettingsStore } = require('../store/settingsStore');
-    const pendingEmail = useSettingsStore.getState().pendingEmail;
-    const isConfirmed = !!user.email_confirmed_at;
+    // Check 1: URL hash contains access_token (Supabase puts it there after confirmation)
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      // Supabase may have already consumed the hash, check if user just became confirmed
+      if (hash && hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
+        navigation.navigate('EmailConfirmed');
+        return;
+      }
+    }
 
-    if (pendingEmail && isConfirmed && user.email === pendingEmail) {
-      // Email was just confirmed — clear pending and show confirmation screen
-      useSettingsStore.getState().resetGamesPlayed();
-      navigation.navigate('EmailConfirmed');
+    // Check 2: pendingEmail matches confirmed user (same browser)
+    if (user) {
+      const { useSettingsStore } = require('../store/settingsStore');
+      const pendingEmail = useSettingsStore.getState().pendingEmail;
+      if (pendingEmail && user.email_confirmed_at && user.email === pendingEmail) {
+        useSettingsStore.getState().resetGamesPlayed();
+        navigation.navigate('EmailConfirmed');
+      }
     }
   }, [isInitialized, user, navigation]);
 
