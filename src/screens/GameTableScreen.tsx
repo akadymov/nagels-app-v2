@@ -1348,9 +1348,9 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.accent,
     paddingHorizontal: Spacing.xs,
     paddingTop: Spacing.xs,
-    paddingBottom: 60,
+    paddingBottom: 80,
     backgroundColor: '#ffffff',
-    maxHeight: SCREEN_HEIGHT * 0.38,
+    maxHeight: SCREEN_HEIGHT * 0.42,
   },
   youBadge: {
     flexDirection: 'row',
