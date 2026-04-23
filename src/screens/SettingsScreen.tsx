@@ -14,7 +14,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// SafeAreaView removed — was blocking scroll on mobile web
 import { Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
@@ -134,7 +134,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.glassLight }]}>
         <Pressable onPress={onBack} hitSlop={12}>
           <Text style={[styles.backButton, { color: colors.accent }]}>←</Text>
@@ -296,7 +296,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <Text style={[styles.toastText, { color: colors.textPrimary }]}>{alertMessage}</Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
