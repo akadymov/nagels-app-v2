@@ -168,24 +168,46 @@ const RejoinGuard: React.FC = () => {
   const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
 
-  // Detect email confirmation — captured at module load before Supabase consumed the hash
+  // Detect email confirmation
   const confirmChecked = useRef(false);
   useEffect(() => {
     if (!isInitialized || confirmChecked.current) return;
     confirmChecked.current = true;
 
+    // Method 1: URL hash with access_token (captured at module load)
     if (_cameFromEmailConfirmation) {
-      // Clean URL
       if (typeof window !== 'undefined') {
         window.history.replaceState(null, '', window.location.pathname);
       }
-      // Clear pending state
       const { useSettingsStore } = require('../store/settingsStore');
       useSettingsStore.getState().resetGamesPlayed();
-      // Navigate to confirmation screen
       navigation.navigate('EmailConfirmed');
+      return;
     }
-  }, [isInitialized, navigation]);
+
+    // Method 2: User has email_confirmed_at that is very recent (< 60 seconds)
+    if (user && user.email_confirmed_at) {
+      const confirmedAt = new Date(user.email_confirmed_at).getTime();
+      const now = Date.now();
+      const isRecent = (now - confirmedAt) < 60000; // within 1 minute
+      if (isRecent) {
+        const { useSettingsStore } = require('../store/settingsStore');
+        useSettingsStore.getState().resetGamesPlayed();
+        navigation.navigate('EmailConfirmed');
+        return;
+      }
+    }
+
+    // Method 3: pendingEmail matches confirmed user (same browser)
+    if (user && user.email_confirmed_at) {
+      const { useSettingsStore } = require('../store/settingsStore');
+      const pendingEmail = useSettingsStore.getState().pendingEmail;
+      if (pendingEmail && user.email === pendingEmail) {
+        useSettingsStore.getState().resetGamesPlayed();
+        navigation.navigate('EmailConfirmed');
+      }
+    }
+  }, [isInitialized, user, navigation]);
 
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
