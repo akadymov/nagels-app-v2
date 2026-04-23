@@ -78,6 +78,21 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const pendingEmail = useSettingsStore((s) => s.pendingEmail);
   const incrementGamesPlayed = useSettingsStore((s) => s.incrementGamesPlayed);
 
+  // On mount: refresh session to check if email was confirmed in another tab/browser
+  useEffect(() => {
+    const checkConfirmation = async () => {
+      try {
+        const { getCurrentUser } = require('../lib/supabase/authService');
+        const freshUser = await getCurrentUser();
+        if (freshUser && freshUser.email_confirmed_at && pendingEmail) {
+          useSettingsStore.getState().resetGamesPlayed();
+          useAuthStore.getState().setUser(freshUser, false);
+        }
+      } catch {}
+    };
+    if (pendingEmail) checkConfirmation();
+  }, [pendingEmail]);
+
   // Check if user registered but hasn't confirmed email
   const hasUnconfirmedEmail = (user && user.email && !user.email_confirmed_at) || !!pendingEmail;
   const needsEmailConfirmation = hasUnconfirmedEmail && gamesPlayed >= 1;
