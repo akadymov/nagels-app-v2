@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
 
@@ -33,6 +34,23 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const { user, isGuest } = useAuthStore();
+  const isLoggedIn = user && !isGuest && user.email;
+
+  // Show confirmation banner if user just confirmed email
+  const [showConfirmBanner, setShowConfirmBanner] = useState(false);
+  useEffect(() => {
+    if (isLoggedIn && user?.email_confirmed_at) {
+      const confirmedAt = new Date(user.email_confirmed_at).getTime();
+      const isRecent = (Date.now() - confirmedAt) < 120000; // 2 minutes
+      if (isRecent) {
+        setShowConfirmBanner(true);
+        const { useSettingsStore } = require('../store/settingsStore');
+        useSettingsStore.getState().resetGamesPlayed();
+        setTimeout(() => setShowConfirmBanner(false), 5000);
+      }
+    }
+  }, [isLoggedIn, user]);
 
   const fadeIn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -45,6 +63,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Animated.View style={[styles.content, { opacity: fadeIn }]}>
+
+        {/* Email confirmed banner */}
+        {showConfirmBanner && (
+          <View style={[styles.confirmBanner, { backgroundColor: colors.success + '20', borderColor: colors.success }]}>
+            <Text style={[styles.confirmBannerText, { color: colors.success }]}>
+              ✅ {t('auth.emailConfirmed', 'Email confirmed! You can now play without limits.')}
+            </Text>
+          </View>
+        )}
 
         {/* Akula logo */}
         <View style={[styles.logoCircle, { backgroundColor: colors.accent }]}>
@@ -76,26 +103,28 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <Text style={styles.btnPrimaryText}>{t('welcome.quickStart')}</Text>
         </Pressable>
 
-        {/* Play as Guest (secondary) */}
+        {/* Play as Guest / Continue */}
         <Pressable
           style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
           onPress={onAlreadyPlay}
           testID="btn-skip-to-lobby"
         >
           <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
-            {t('welcome.alreadyPlay', 'Skip to Menu')}
+            {isLoggedIn ? t('lobby.continueToLobby', 'Continue to Lobby') : t('welcome.alreadyPlay', 'Skip to Menu')}
           </Text>
         </Pressable>
 
-        {/* Sign In / Register (secondary) — same border style */}
-        <Pressable
-          style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
-          onPress={onSignIn || onAlreadyPlay}
-        >
-          <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
-            {t('auth.signIn')} / {t('auth.signUp', 'Register')}
-          </Text>
-        </Pressable>
+        {/* Sign In / Register — hidden when logged in */}
+        {!isLoggedIn && (
+          <Pressable
+            style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
+            onPress={onSignIn || onAlreadyPlay}
+          >
+            <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
+              {t('auth.signIn')} / {t('auth.signUp', 'Register')}
+            </Text>
+          </Pressable>
+        )}
 
         {/* Language switcher */}
         <View style={[styles.langRow, { backgroundColor: colors.surface }]}>
@@ -217,6 +246,18 @@ const styles = StyleSheet.create({
   langText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  confirmBanner: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    width: Math.min(SW - 64, 340),
+  },
+  confirmBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   credit: {
     fontSize: 11,
