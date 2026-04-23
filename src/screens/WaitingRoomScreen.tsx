@@ -26,6 +26,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useMultiplayer } from '../hooks/useMultiplayer';
 import { onGameStarted, clearGameStartedCallback } from '../lib/multiplayer/eventHandler';
+import { addBotToRoom } from '../lib/multiplayer/roomManager';
 import { buildInviteLink } from '../utils/inviteLink';
 
 export interface WaitingRoomScreenProps {
@@ -306,8 +307,25 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             </Text>
           </>
         ) : (
-          // Host: Start Game button (when all ready)
+          // Host: Add Bot + Start Game
           <>
+            {playerCount < (currentRoom?.maxPlayers ?? 6) && (
+              <GlassButton
+                title={`🤖 ${t('multiplayer.addBot', 'Add Bot')}`}
+                onPress={async () => {
+                  try {
+                    await addBotToRoom();
+                  } catch (err: any) {
+                    Alert.alert(t('common.error'), err.message);
+                  }
+                }}
+                size="medium"
+                variant="secondary"
+                accentColor={Colors.accent}
+                style={styles.actionButton}
+                testID="btn-add-bot"
+              />
+            )}
             <GlassButton
               title={t('multiplayer.startGame')}
               onPress={handleStartGame}

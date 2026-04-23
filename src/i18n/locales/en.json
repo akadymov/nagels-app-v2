@@ -205,6 +205,7 @@
     "you": "You",
     "host": "Host",
     "bot": "Bot",
+    "addBot": "Add Bot",
     "notReady": "Cancel Readiness",
     "ready": "Confirm Ready",
     "reconnecting": "Reconnecting...",
