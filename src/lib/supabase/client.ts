@@ -204,17 +204,22 @@ export function subscribeToRoom(
         break;
 
       case 'CHANNEL_ERROR':
-        console.error('[Supabase] Channel error');
-        store.setIsConnected(false);
-        store.setSyncStatus('disconnected');
-        store.setError('Channel connection error');
+        console.warn('[Supabase] Channel error — falling back to polling');
+        // Don't show error to user on web — polling works as fallback
+        if (typeof document === 'undefined') {
+          store.setIsConnected(false);
+          store.setSyncStatus('disconnected');
+          store.setError('Channel connection error');
+        }
         break;
 
       case 'TIMED_OUT':
-        console.error('[Supabase] Channel timed out');
-        store.setIsConnected(false);
-        store.setSyncStatus('disconnected');
-        store.setError('Connection timed out');
+        console.warn('[Supabase] Channel timed out — falling back to polling');
+        if (typeof document === 'undefined') {
+          store.setIsConnected(false);
+          store.setSyncStatus('disconnected');
+          store.setError('Connection timed out');
+        }
         break;
 
       case 'CLOSED':
