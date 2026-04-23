@@ -102,6 +102,13 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const rejoinAttempted = useRef(false);
 
   useEffect(() => {
+    // Ensure a session exists (creates anonymous if needed)
+    getGuestSession().then((session) => {
+      if (session) {
+        useMultiplayerStore.getState().setGuestSession(session);
+      }
+    }).catch(() => {});
+
     // Subscribe to auth state changes (Supabase fires this on mount with current session)
     const unsubscribe = onAuthStateChange(async (user, isGuest) => {
       setUser(user, isGuest);
