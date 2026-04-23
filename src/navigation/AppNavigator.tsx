@@ -20,6 +20,7 @@ import {
   ProfileScreen,
   EmailConfirmedScreen,
 } from '../screens';
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
@@ -54,6 +55,7 @@ export type RootStackParamList = {
   Auth: undefined;
   Profile: undefined;
   EmailConfirmed: undefined;
+  ResetPassword: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -62,7 +64,8 @@ const Stack = createStackNavigator<RootStackParamList>();
 const _initialHash = (Platform.OS === 'web' && typeof window !== 'undefined')
   ? window.location.hash
   : '';
-const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_initialHash.includes('error');
+const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_initialHash.includes('error') && !_initialHash.includes('type=recovery');
+const _cameFromPasswordReset = _initialHash.includes('access_token') && _initialHash.includes('type=recovery');
 
 /**
  * Deep link configuration.
@@ -175,6 +178,14 @@ const RejoinGuard: React.FC = () => {
     confirmChecked.current = true;
 
     // Method 1: URL hash with access_token (captured at module load)
+    if (_cameFromPasswordReset) {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      navigation.navigate('ResetPassword');
+      return;
+    }
+
     if (_cameFromEmailConfirmation) {
       if (typeof window !== 'undefined') {
         window.history.replaceState(null, '', window.location.pathname);
@@ -410,6 +421,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
               {(props) => (
                 <ProfileScreen
                   onBack={() => (props.navigation as any).goBack()}
+                />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="ResetPassword">
+              {(props) => (
+                <ResetPasswordScreen
+                  onComplete={() => (props.navigation as any).navigate('Lobby')}
                 />
               )}
             </Stack.Screen>
