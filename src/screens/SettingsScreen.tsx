@@ -145,7 +145,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={[styles.scroll, Platform.OS === 'web' ? { overflowY: 'auto' } as any : {}]}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
 
         {/* === PROFILE === */}
         {isLoggedIn && (
@@ -301,11 +305,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, height: '100%' as any },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1 },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1, flexShrink: 0 },
   backButton: { fontSize: 22, fontWeight: '700', width: 36 },
   headerTitle: { ...TextStyles.h3, fontWeight: '600' },
-  scroll: { flex: 1, height: 0 },
+  scroll: { flex: 1 },
   scrollContent: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 },
   section: { borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1 },
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
