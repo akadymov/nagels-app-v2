@@ -148,6 +148,7 @@
     "rateLimited": "Demasiados intentos. Espera un momento.",
     "unknownError": "Algo salió mal. Inténtalo de nuevo.",
     "nicknameRequired": "Ingresa un apodo",
+    "changePassword": "Cambiar contraseña",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "sendResetLink": "Enviar enlace",
     "resetSent": "¡Enlace enviado! Revisa tu correo.",
