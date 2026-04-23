@@ -332,6 +332,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.xl,
     paddingTop: Spacing.lg,
+    paddingBottom: 160,
   },
   roomCodeCard: {
     padding: Spacing.xl,
