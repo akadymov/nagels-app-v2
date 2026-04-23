@@ -25,6 +25,7 @@ import { Colors, Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useMultiplayer } from '../hooks/useMultiplayer';
+import { useMultiplayerStore } from '../store/multiplayerStore';
 import { onGameStarted, clearGameStartedCallback } from '../lib/multiplayer/eventHandler';
 import { addBotToRoom } from '../lib/multiplayer/roomManager';
 import { buildInviteLink } from '../utils/inviteLink';
@@ -81,17 +82,17 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     };
   }, [onGameStart]);
 
-  // Poll for room updates (players + game start) — Realtime fallback
+  // Poll for room updates (players + ready status + game start)
   useEffect(() => {
     if (!currentRoom?.id) return;
 
-    const interval = setInterval(async () => {
-      try {
-        const headers = {
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-          'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''}`,
-        };
+    const headers = {
+      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+      'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''}`,
+    };
 
+    const poll = async () => {
+      try {
         // Poll room status
         const roomRes = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/rooms?id=eq.${currentRoom.id}&select=*`,
@@ -100,42 +101,42 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         if (roomRes.ok) {
           const rooms = await roomRes.json();
           if (rooms?.[0]?.status === 'playing') {
-            console.log('[WaitingRoom] Polling detected game started!');
-            clearInterval(interval);
+            console.log('[WaitingRoom] Game started!');
             onGameStart();
             return;
           }
         }
 
-        // Poll players in room
+        // Always poll players (catches joins, leaves, ready changes)
         const playersRes = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/room_players?room_id=eq.${currentRoom.id}&select=*&order=joined_at`,
           { headers }
         );
         if (playersRes.ok) {
           const players = await playersRes.json();
-          if (players && players.length !== playerCount) {
-            console.log('[WaitingRoom] Polling detected player change:', players.length);
-            // Update store with fresh player list
-            const { useMultiplayerStore } = require('../store/multiplayerStore');
+          if (players) {
             const store = useMultiplayerStore.getState();
             const mappedPlayers = players.map((p: any) => ({
               playerId: p.player_id,
               playerName: p.player_name || 'Guest',
               isBot: p.is_bot || false,
               isReady: p.is_ready || false,
-              seatIndex: p.seat_index,
+              seatIndex: p.seat_index ?? p.player_index,
             }));
+            // Always update — syncs count, ready status, new players
             store.setRoomPlayers(mappedPlayers);
           }
         }
       } catch (error) {
         console.error('[WaitingRoom] Polling error:', error);
       }
-    }, 2000); // Check every 2 seconds
+    };
 
+    // Poll immediately on mount + every 2 seconds
+    poll();
+    const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
-  }, [currentRoom?.id, playerCount, onGameStart]);
+  }, [currentRoom?.id, onGameStart]);
 
   const handleToggleReady = async () => {
     await setReady(!amIReady);
