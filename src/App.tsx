@@ -40,8 +40,12 @@ export default function App() {
           touch-action: pan-y !important;
         }
         body { touch-action: pan-y !important; }
-        #root { touch-action: pan-y !important; overflow: hidden; height: 100vh; }
-        #root > div { height: 100vh !important; max-height: 100vh !important; }
+        #root { touch-action: pan-y !important; overflow: hidden; height: 100dvh; height: 100vh; }
+        #root > div { height: 100dvh !important; max-height: 100dvh !important; }
+        @supports (height: 100dvh) {
+          #root { height: 100dvh; }
+          #root > div { height: 100dvh !important; max-height: 100dvh !important; }
+        }
       `;
       document.head.appendChild(style);
     }
