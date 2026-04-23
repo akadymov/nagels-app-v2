@@ -58,6 +58,12 @@ export type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+// Capture URL hash at module load — before Supabase client consumes it
+const _initialHash = (Platform.OS === 'web' && typeof window !== 'undefined')
+  ? window.location.hash
+  : '';
+const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_initialHash.includes('error');
+
 /**
  * Deep link configuration.
  * nagels://join/ABCDEF  → JoinRoom screen with code pre-filled
@@ -162,33 +168,24 @@ const RejoinGuard: React.FC = () => {
   const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
 
-  // Detect email confirmation from URL or auth state
+  // Detect email confirmation — captured at module load before Supabase consumed the hash
   const confirmChecked = useRef(false);
   useEffect(() => {
     if (!isInitialized || confirmChecked.current) return;
     confirmChecked.current = true;
 
-    // Check 1: URL hash contains access_token (Supabase puts it there after confirmation)
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      // Supabase may have already consumed the hash, check if user just became confirmed
-      if (hash && hash.includes('access_token')) {
+    if (_cameFromEmailConfirmation) {
+      // Clean URL
+      if (typeof window !== 'undefined') {
         window.history.replaceState(null, '', window.location.pathname);
-        navigation.navigate('EmailConfirmed');
-        return;
       }
-    }
-
-    // Check 2: pendingEmail matches confirmed user (same browser)
-    if (user) {
+      // Clear pending state
       const { useSettingsStore } = require('../store/settingsStore');
-      const pendingEmail = useSettingsStore.getState().pendingEmail;
-      if (pendingEmail && user.email_confirmed_at && user.email === pendingEmail) {
-        useSettingsStore.getState().resetGamesPlayed();
-        navigation.navigate('EmailConfirmed');
-      }
+      useSettingsStore.getState().resetGamesPlayed();
+      // Navigate to confirmation screen
+      navigation.navigate('EmailConfirmed');
     }
-  }, [isInitialized, user, navigation]);
+  }, [isInitialized, navigation]);
 
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
