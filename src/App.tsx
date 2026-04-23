@@ -30,12 +30,18 @@ export default function App() {
 
   useEffect(() => {
     hydrate();
-    // Fix mobile web scroll — inject CSS for touch scrolling
+    // Fix mobile web scroll
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const style = document.createElement('style');
       style.textContent = `
-        * { -webkit-overflow-scrolling: touch; }
-        [data-testid="scroll-view"] { overflow-y: auto !important; }
+        * { -webkit-overflow-scrolling: touch !important; }
+        div[style*="overflow"] {
+          -webkit-overflow-scrolling: touch !important;
+          touch-action: pan-y !important;
+        }
+        body { touch-action: pan-y !important; }
+        #root { touch-action: pan-y !important; overflow: hidden; height: 100vh; }
+        #root > div { height: 100vh !important; max-height: 100vh !important; }
       `;
       document.head.appendChild(style);
     }
