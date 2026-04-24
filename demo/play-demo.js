@@ -323,17 +323,12 @@ async function gameLoop(p, w, opts = {}) {
     idle++;
     if (idle % 20 === 0) log(w, `⌛ idle ${idle}s`);
 
-    // Pull-to-refresh: if stuck for ~30s during gameplay, swipe down to resync
+    // Sync button: if stuck for ~30s during gameplay, tap the sync button to resync
     if (idle === 50) {
-      log(w, '🔄 pull-to-refresh (stuck 30s)');
-      await p.mouse.move(VP.width / 2, 40);
-      await p.mouse.down();
-      for (let y = 40; y <= 140; y += 10) {
-        await p.mouse.move(VP.width / 2, y, { steps: 2 });
-        await sleep(20);
-      }
-      await p.mouse.up();
-      await sleep(1000);
+      log(w, '🔄 sync (stuck 30s)');
+      // Try both game screen and betting screen sync buttons
+      const synced = await tap(p, 'game-btn-sync', w, 1000) || await tap(p, 'betting-btn-sync', w, 1000);
+      if (synced) await sleep(2000);
     }
 
     if (idle >= 120) { log(w, '⚠ timeout'); break; }

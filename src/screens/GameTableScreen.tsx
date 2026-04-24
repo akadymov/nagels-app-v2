@@ -648,6 +648,16 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]} testID="game-btn-settings">
             <Text style={styles.iconBtnEmoji}>⚙️</Text>
           </Pressable>
+          {isMultiplayer && (
+            <Pressable
+              onPress={handlePullRefresh}
+              disabled={isRefreshing}
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: isRefreshing ? 0.5 : 1 }]}
+              testID="game-btn-sync"
+            >
+              <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => { if (tricks.length > 0) setShowLastTrick(true); }}
             disabled={tricks.length === 0}
