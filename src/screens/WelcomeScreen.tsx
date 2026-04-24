@@ -119,6 +119,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           <Pressable
             style={[styles.btnSecondary, { backgroundColor: colors.surface, borderColor: colors.accent }]}
             onPress={onSignIn || onAlreadyPlay}
+            testID="btn-sign-in"
           >
             <Text style={[styles.btnSecondaryText, { color: colors.accent }]}>
               {t('auth.signIn')} / {t('auth.signUp', 'Register')}
