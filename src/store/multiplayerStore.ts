@@ -43,6 +43,7 @@ export interface MultiplayerStore {
   // Chat
   chatMessages: ChatMessage[];
   unreadChatCount: number;
+  hasUnreadChat: boolean;
   addChatMessage: (message: ChatMessage) => void;
   clearUnreadCount: () => void;
 
@@ -87,6 +88,7 @@ const initialState = {
   error: null,
   chatMessages: [] as ChatMessage[],
   unreadChatCount: 0,
+  hasUnreadChat: false,
 };
 
 // ============================================================
@@ -102,35 +104,34 @@ export const useMultiplayerStore = create<MultiplayerStore>((set, get) => ({
 
   addChatMessage: (message) => {
     set((state) => {
+      // Skip if exact ID already exists (polling re-delivery)
+      if (state.chatMessages.some((m) => m.id === message.id)) {
+        return {};
+      }
+
       // Deduplicate: if an optimistic message with same playerId+text exists within 5s,
-      // replace it (or skip the server echo if the optimistic one is already there)
-      const isOptimisticDuplicate = state.chatMessages.some(
+      // replace it with the server version
+      const optimisticIdx = state.chatMessages.findIndex(
         (m) =>
+          m.id.startsWith('local-') &&
           m.playerId === message.playerId &&
           m.text === message.text &&
-          Math.abs(m.timestamp - message.timestamp) < 5000 &&
-          m.id !== message.id
+          Math.abs(m.timestamp - message.timestamp) < 5000
       );
-      if (isOptimisticDuplicate) {
-        // Replace optimistic with server version (keep ID stable for the key)
-        return {
-          chatMessages: state.chatMessages.map((m) =>
-            m.playerId === message.playerId &&
-            m.text === message.text &&
-            Math.abs(m.timestamp - message.timestamp) < 5000
-              ? { ...m, id: message.id } // upgrade to server ID
-              : m
-          ),
-        };
+      if (optimisticIdx !== -1) {
+        const updated = [...state.chatMessages];
+        updated[optimisticIdx] = { ...updated[optimisticIdx], id: message.id };
+        return { chatMessages: updated };
       }
+
       return {
         chatMessages: [...state.chatMessages, message],
-        unreadChatCount: state.unreadChatCount + 1,
+        hasUnreadChat: true,
       };
     });
   },
 
-  clearUnreadCount: () => set({ unreadChatCount: 0 }),
+  clearUnreadCount: () => set({ unreadChatCount: 0, hasUnreadChat: false }),
 
   setGuestSession: (session) => set({ guestSession: session }),
 

@@ -98,26 +98,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const renderMessage = (msg: ChatMessage, index: number) => {
     const isMe = msg.playerId === myPlayerId;
-    // Deduplicate: if an optimistic 'local-' message was sent and server echoed it back,
-    // the server version will have a different ID. For simplicity, just show all.
     return (
       <View
         key={msg.id}
         style={[styles.messageRow, isMe && styles.messageRowMe]}
       >
         {!isMe && (
-          <View style={styles.avatarBubble}>
-            <Text style={styles.avatarText}>{msg.playerName[0]?.toUpperCase()}</Text>
+          <View style={[styles.avatarBubble, { backgroundColor: colors.glassDark, borderColor: colors.glassLight }]}>
+            <Text style={[styles.avatarText, { color: colors.textSecondary }]}>{msg.playerName[0]?.toUpperCase()}</Text>
           </View>
         )}
-        <View style={[styles.bubble, isMe && styles.bubbleMe]}>
+        <View style={[
+          styles.bubble,
+          { backgroundColor: colors.glassDark, borderColor: colors.glassLight },
+          isMe && { backgroundColor: colors.accent + '30', borderColor: colors.accent },
+        ]}>
           {!isMe && (
-            <Text style={styles.senderName}>{msg.playerName}</Text>
+            <Text style={[styles.senderName, { color: colors.accent }]}>{msg.playerName}</Text>
           )}
-          <Text style={[styles.messageText, isMe && styles.messageTextMe]}>
+          <Text style={[styles.messageText, { color: colors.textPrimary }]}>
             {msg.text}
           </Text>
-          <Text style={[styles.timestamp, isMe && styles.timestampMe]}>
+          <Text style={[styles.timestamp, { color: colors.textMuted }, isMe && styles.timestampMe]}>
             {formatTime(msg.timestamp)}
           </Text>
         </View>
@@ -140,10 +142,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           style={[styles.panel, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Chat</Text>
+          <View style={[styles.header, { borderBottomColor: colors.glassLight }]}>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Chat</Text>
             <Pressable onPress={onClose} hitSlop={12} style={styles.closeButton}>
-              <Text style={styles.closeText}>✕</Text>
+              <Text style={[styles.closeText, { color: colors.textMuted }]}>✕</Text>
             </Pressable>
           </View>
 
@@ -157,7 +159,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             {chatMessages.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                   Напишите что-нибудь — сообщения видят все за столом
                 </Text>
               </View>
@@ -167,9 +169,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </ScrollView>
 
           {/* Input */}
-          <View style={styles.inputRow}>
+          <View style={[styles.inputRow, { borderTopColor: colors.glassLight }]}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.glassDark, borderColor: colors.glassLight }]}
               value={inputText}
               onChangeText={setInputText}
               placeholder="Сообщение..."
