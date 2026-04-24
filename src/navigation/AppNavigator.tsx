@@ -416,6 +416,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                     (props.navigation as any).navigate('GameTable', { isMultiplayer: true });
                   }}
                   onLeave={() => (props.navigation as any).goBack()}
+                  onSettings={() => (props.navigation as any).navigate('Settings')}
                 />
               )}
             </Stack.Screen>

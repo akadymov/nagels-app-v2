@@ -27,12 +27,13 @@ import { useTranslation } from 'react-i18next';
 import { useMultiplayer } from '../hooks/useMultiplayer';
 import { useMultiplayerStore } from '../store/multiplayerStore';
 import { onGameStarted, clearGameStartedCallback } from '../lib/multiplayer/eventHandler';
-import { addBotToRoom } from '../lib/multiplayer/roomManager';
+import { addBotToRoom, removeBotFromRoom } from '../lib/multiplayer/roomManager';
 import { buildInviteLink } from '../utils/inviteLink';
 
 export interface WaitingRoomScreenProps {
   onGameStart: () => void;
   onLeave: () => void;
+  onSettings?: () => void;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface WaitingRoomScreenProps {
 export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   onGameStart,
   onLeave,
+  onSettings,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -183,8 +185,16 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ConnectionStatus />
-      <View style={styles.logoHeader}>
+      <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
+        <View style={{ width: 36 }} />
         <GameLogo size="sm" />
+        {onSettings ? (
+          <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn}>
+            <Text style={{ fontSize: 18 }}>⚙️</Text>
+          </Pressable>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -238,10 +248,25 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   )}
                 </Text>
                 {player.isBot && (
-                  <Text style={styles.botBadge}> {t('multiplayer.bot')}</Text>
+                  <Text style={[styles.botBadge, { color: colors.textMuted }]}> {t('multiplayer.bot')}</Text>
                 )}
                 {player.playerId === currentRoom?.hostId && (
                   <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
+                )}
+                {player.isBot && isHost && (
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        await removeBotFromRoom(player.playerId);
+                      } catch (err: any) {
+                        console.error('[WaitingRoom] Remove bot failed:', err);
+                      }
+                    }}
+                    hitSlop={8}
+                    style={styles.removeBotBtn}
+                  >
+                    <Text style={styles.removeBotText}>✕</Text>
+                  </Pressable>
                 )}
               </View>
               <View style={[
@@ -377,10 +402,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.glassLight,
+  },
+  settingsBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
     padding: Spacing.xl,
@@ -435,9 +470,22 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   myPlayerCard: {
-    backgroundColor: `${Colors.accent}22`,
     borderWidth: 1,
     borderColor: Colors.accent,
+  },
+  removeBotBtn: {
+    marginLeft: Spacing.xs,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeBotText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
   },
   seatBadge: {
     width: 24,

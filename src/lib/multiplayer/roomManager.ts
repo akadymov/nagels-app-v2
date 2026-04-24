@@ -474,6 +474,38 @@ export async function addBotToRoom(): Promise<void> {
   console.log('[RoomManager] Bot added:', botName);
 }
 
+/**
+ * Remove a bot from the current room (host only)
+ */
+export async function removeBotFromRoom(botPlayerId: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Not configured');
+
+  const store = useMultiplayerStore.getState();
+  const room = store.currentRoom;
+  if (!room) throw new Error('No active room');
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from('room_players')
+    .delete()
+    .eq('room_id', room.id)
+    .eq('player_id', botPlayerId);
+
+  if (error) {
+    console.error('[RoomManager] Error removing bot:', error.message);
+    throw new Error(`Failed to remove bot: ${error.message}`);
+  }
+
+  // Update player count
+  const currentPlayers = store.roomPlayers;
+  await supabase
+    .from('rooms')
+    .update({ player_count: Math.max(0, currentPlayers.length - 1) })
+    .eq('id', room.id);
+
+  console.log('[RoomManager] Bot removed:', botPlayerId);
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
