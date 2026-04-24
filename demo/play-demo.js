@@ -124,17 +124,16 @@ async function goToLobby(page, who) {
   }
 }
 
-async function setNameAndCount(page, who, name, count) {
+async function createRoom(page, who, name) {
+  // Set nickname
   await fill(page.locator('[data-testid="input-player-name"]'), name, who, 'input-player-name');
-  await click(page.locator(`[data-testid="player-count-${count}"]`), who, `player-count-${count}`);
-}
-
-async function createRoom(page, who, name, count) {
-  await setNameAndCount(page, who, name, count);
-  await sleep(300);
+  // Switch to Create Room tab
+  await click(page.locator('[data-testid="tab-create"]'), who, 'tab-create');
+  await sleep(500);
+  // Click Create Room
   await click(page.locator('[data-testid="btn-create-room"]'), who, 'btn-create-room');
   log(who, 'жду создания комнаты в Supabase…');
-  await sleep(4000);
+  await sleep(5000);
   const code = await readText(page.locator('[data-testid="room-code"]'), who, 'room-code');
   console.log(`\n  ╔══════════════════════╗`);
   console.log(`  ║  КОД КОМНАТЫ: ${code}  ║`);
@@ -143,12 +142,17 @@ async function createRoom(page, who, name, count) {
 }
 
 async function joinRoom(page, who, name, code) {
+  // Set nickname
   await fill(page.locator('[data-testid="input-player-name"]'), name, who, 'input-player-name');
-  await fill(page.locator('[data-testid="input-join-code"]'),    code, who, 'input-join-code');
+  // Switch to Join Room tab
+  await click(page.locator('[data-testid="tab-join"]'), who, 'tab-join');
+  await sleep(500);
+  // Enter room code and join
+  await fill(page.locator('[data-testid="input-join-code"]'), code, who, 'input-join-code');
   await sleep(300);
   await click(page.locator('[data-testid="btn-join-room"]'), who, 'btn-join-room');
   log(who, 'жду подключения к комнате…');
-  await sleep(4000);
+  await sleep(5000);
 }
 
 async function pressReady(page, who) {
@@ -348,7 +352,7 @@ async function main() {
 
     // ── 2. Alice создаёт комнату ──────────────────────────────────────────
     step('Шаг 2: Alice создаёт комнату');
-    const roomCode = await createRoom(alicePage, 'Alice', 'Alice', 2);
+    const roomCode = await createRoom(alicePage, 'Alice', 'Alice');
 
     // ── 3. Bob присоединяется ─────────────────────────────────────────────
     step('Шаг 3: Bob входит по коду');

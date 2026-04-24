@@ -173,6 +173,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         ]}
         onPress={() => !disabled && setActiveTab(tab)}
         disabled={disabled}
+        testID={`tab-${tab}`}
       >
         <Text style={[styles.tabBtnText, { color: isActive ? '#ffffff' : colors.accent }]}>
           {label}
