@@ -211,7 +211,7 @@ async function refreshPlayers(roomId: string): Promise<void> {
 /**
  * Refresh game state from database (for reconnection)
  */
-async function refreshGameState(roomId: string): Promise<void> {
+export async function refreshGameState(roomId: string): Promise<void> {
   try {
     const supabase = getSupabaseClient();
     const { data: gameState, error } = await supabase
