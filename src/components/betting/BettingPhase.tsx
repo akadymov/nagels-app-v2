@@ -280,6 +280,17 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>⚙️</Text>
             </Pressable>
+            {isMultiplayer && (
+              <Pressable
+                onPress={handleRefresh}
+                disabled={isRefreshing}
+                style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight, opacity: isRefreshing ? 0.5 : 1 }]}
+                hitSlop={8}
+                testID="betting-btn-sync"
+              >
+                <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+              </Pressable>
+            )}
             <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
