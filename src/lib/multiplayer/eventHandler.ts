@@ -334,18 +334,18 @@ function handleGameStateChange(state: DatabaseGameState): void {
     if (gameStore.players.length > 0) {
       console.log('[EventHandler] Syncing game state from server...');
       gameStore.setRemoteState({
-        phase: remoteGameState.phase || state.phase,
-        handNumber: remoteGameState.handNumber || state.hand_number,
-        currentPlayerIndex: remoteGameState.currentPlayerIndex || state.current_player_index,
-        trumpSuit: remoteGameState.trumpSuit || state.trump_suit,
+        phase: remoteGameState.phase ?? state.phase,
+        handNumber: remoteGameState.handNumber ?? state.hand_number,
+        currentPlayerIndex: remoteGameState.currentPlayerIndex ?? state.current_player_index,
+        trumpSuit: remoteGameState.trumpSuit ?? state.trump_suit,
         cardsPerPlayer: remoteGameState.cardsPerPlayer,
         startingPlayerIndex: remoteGameState.startingPlayerIndex,
         bettingPlayerIndex: remoteGameState.bettingPlayerIndex,
         hasAllBets: remoteGameState.hasAllBets,
         currentTrick: remoteGameState.currentTrick,
-        tricks: remoteGameState.tricks || [],
-        players: remoteGameState.players || gameStore.players,
-        version: state.version || 0,
+        tricks: remoteGameState.tricks ?? [],
+        players: remoteGameState.players ?? gameStore.players,
+        version: state.version ?? 0,
       });
     }
   }
