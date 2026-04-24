@@ -1,10 +1,10 @@
 /**
  * Nägels Online — 4-Player Full Feature Demo
  *
- *   Alice  — registers, picks 🦈 avatar, dark theme, English,  creates room, chats
+ *   Alice  — registers, picks 🦈 avatar, dark theme, English, joins, chats
  *   Bob    — registers (unconfirmed email), picks 🐺 avatar, Russian, joins, chats
  *   Carol  — guest, picks 🦊 avatar, Spanish, joins
- *   Dave   — guest, light theme, English, joins, views last trick periodically
+ *   Dave   — guest, light theme, English, creates room, views last trick periodically
  *
  * Features tested:
  *   ✓ Registration (2 registered, 2 guests)
@@ -30,8 +30,8 @@ const SLOW_MO  = parseInt(process.env.DEMO_SLOW || '100', 10);
 const MAX_HANDS= parseInt(process.env.DEMO_HANDS || '0', 10);
 const DEVTOOLS = (process.env.DEMO_DEVTOOLS ?? '0') !== '0';
 
-const IPHONE   = devices['iPhone 14 Pro'];
-const VP       = { width: 393, height: 852 };
+const IPHONE   = devices['iPhone 15 Pro Max'];
+const VP       = { width: 430, height: 932 };
 const WAIT     = 8000;
 const POLL     = 250;
 
@@ -206,9 +206,14 @@ async function chatGame(p, w, msg) {
 async function viewLastTrick(p, w) {
   if (await tap(p, 'game-btn-last-trick', w, 1500)) {
     await sleep(1500);
-    // Close modal
-    const close = p.locator('text=/Close|Закрыть|Cerrar/i').first();
-    if (await find(close, 2000)) await close.click();
+    // Use testID if available, otherwise fall back to text with force click
+    const closeBtn = p.locator('[data-testid="last-trick-close"]');
+    if (await find(closeBtn, 1500)) {
+      await closeBtn.click();
+    } else {
+      const close = p.locator('text=/Close|Закрыть|Cerrar/i').first();
+      if (await find(close, 2000)) await close.click({ force: true });
+    }
     log(w, '✓ viewed last trick');
   }
 }
@@ -317,6 +322,20 @@ async function gameLoop(p, w, opts = {}) {
 
     idle++;
     if (idle % 20 === 0) log(w, `⌛ idle ${idle}s`);
+
+    // Pull-to-refresh: if stuck for ~30s during gameplay, swipe down to resync
+    if (idle === 50) {
+      log(w, '🔄 pull-to-refresh (stuck 30s)');
+      await p.mouse.move(VP.width / 2, 40);
+      await p.mouse.down();
+      for (let y = 40; y <= 140; y += 10) {
+        await p.mouse.move(VP.width / 2, y, { steps: 2 });
+        await sleep(20);
+      }
+      await p.mouse.up();
+      await sleep(1000);
+    }
+
     if (idle >= 120) { log(w, '⚠ timeout'); break; }
   }
 }
@@ -412,25 +431,26 @@ async function main() {
     }
 
     // ── Create & join room ───────────────────────────────────────
-    step('Step 5: Alice creates room');
-    const code = await createRoom(ap, 'Alice');
+    // Dave (guest) creates — registered users can't create with unconfirmed email
+    step('Step 5: Dave creates room');
+    const code = await createRoom(dp, 'Dave');
 
     step('Step 6: Others join');
     // Sequential joins so each player appears one by one
+    await joinRoom(ap, 'Alice', code);
     await joinRoom(bp, 'Bob', code);
     await joinRoom(cp, 'Carol', code);
-    await joinRoom(dp, 'Dave', code);
 
     // ── Ready & start ────────────────────────────────────────────
     step('Step 7: Ready & start');
     await sleep(1500);
     await Promise.all([
+      tap(ap, 'btn-ready', 'Alice'),
       tap(bp, 'btn-ready', 'Bob'),
       tap(cp, 'btn-ready', 'Carol'),
-      tap(dp, 'btn-ready', 'Dave'),
     ]);
     await sleep(2500);
-    await tap(ap, 'btn-start-game', 'Alice');
+    await tap(dp, 'btn-start-game', 'Dave');
 
     // ── Play ─────────────────────────────────────────────────────
     step('Step 8: Playing!');
