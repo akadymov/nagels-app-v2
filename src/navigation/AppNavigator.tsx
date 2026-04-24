@@ -176,22 +176,11 @@ const RejoinGuard: React.FC = () => {
   const { isInitialized, user } = useAuthStore();
   const rejoinAttempted = useRef(false);
 
-  // Detect email confirmation
+  // Detect email confirmation (password reset handled by NavigatorGuard)
   const confirmChecked = useRef(false);
   useEffect(() => {
     if (!isInitialized || confirmChecked.current) return;
     confirmChecked.current = true;
-
-    // Method 1: URL hash with access_token (captured at module load)
-    // Check for password recovery — either from URL hash or auth event
-    if (_cameFromPasswordReset || (global as any).__passwordRecovery) {
-      (global as any).__passwordRecovery = false;
-      if (typeof window !== 'undefined') {
-        window.history.replaceState(null, '', window.location.pathname);
-      }
-      navigation.navigate('ResetPassword');
-      return;
-    }
 
     if (_cameFromEmailConfirmation) {
       if (typeof window !== 'undefined') {
@@ -300,38 +289,75 @@ export interface AppNavigatorProps {
   onPrimerComplete?: () => void;
 }
 
+/**
+ * Navigator-level guard: runs on every screen, handles password reset
+ * and rejoin logic after auth initializes.
+ */
+const NavigatorGuard: React.FC = () => {
+  const navigation = useNavigation<any>();
+  const { isInitialized, isLoading, user } = useAuthStore();
+  const guardRan = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || !isInitialized || guardRan.current) return;
+    guardRan.current = true;
+
+    // Password reset detection (URL hash or auth event)
+    if (_cameFromPasswordReset || (global as any).__passwordRecovery) {
+      (global as any).__passwordRecovery = false;
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      console.log('[NavigatorGuard] Password reset detected → ResetPassword');
+      navigation.navigate('ResetPassword');
+      return;
+    }
+
+    // Also check URL path directly (deep link fallback)
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location.pathname === '/reset-password') {
+      console.log('[NavigatorGuard] URL path /reset-password → ResetPassword');
+      navigation.navigate('ResetPassword');
+      return;
+    }
+  }, [isLoading, isInitialized, navigation]);
+
+  return null;
+};
+
 export const AppNavigator: React.FC<AppNavigatorProps> = () => {
-  const { isLoading } = useAuthStore();
+  const { isLoading, isInitialized } = useAuthStore();
 
   return (
     <NavigationContainer linking={linking}>
       <AuthProvider>
-        {isLoading ? (
-          <AuthLoadingScreen />
-        ) : (
-          <Stack.Navigator
-            initialRouteName="Welcome"
-            screenOptions={{
-              headerShown: false,
-              cardStyle: { backgroundColor: Colors.backgroundDark },
-              transitionSpec: {
-                open: { animation: 'timing', config: { duration: 300 } },
-                close: { animation: 'timing', config: { duration: 300 } },
-              },
-            }}
-          >
-            <Stack.Screen name="Welcome">
-              {(props) => (
-                <>
-                  <RejoinGuard />
+        <Stack.Navigator
+          initialRouteName="Welcome"
+          screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: Colors.backgroundDark },
+            transitionSpec: {
+              open: { animation: 'timing', config: { duration: 300 } },
+              close: { animation: 'timing', config: { duration: 300 } },
+            },
+          }}
+        >
+          <Stack.Screen name="Welcome">
+            {(props) => (
+              <>
+                <RejoinGuard />
+                <NavigatorGuard />
+                {isLoading ? (
+                  <AuthLoadingScreen />
+                ) : (
                   <WelcomeScreen
                     onQuickStart={() => (props.navigation as any).navigate('Primer')}
                     onAlreadyPlay={() => (props.navigation as any).navigate('Lobby')}
                     onSignIn={() => (props.navigation as any).navigate('Auth')}
                   />
-                </>
-              )}
-            </Stack.Screen>
+                )}
+              </>
+            )}
+          </Stack.Screen>
 
             <Stack.Screen name="Primer">
               {(props) => (
@@ -448,7 +474,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
               )}
             </Stack.Screen>
           </Stack.Navigator>
-        )}
       </AuthProvider>
     </NavigationContainer>
   );
