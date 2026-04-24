@@ -30,6 +30,8 @@ import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
 import { useGameStore } from '../../store';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
+import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
+import { useAuthStore } from '../../store/authStore';
 import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
 import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
@@ -82,8 +84,17 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const myPlayer = players.find(p => p.id === myPlayerId);
 
   // Action bar modals / toggles
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showChat, setShowChat] = useState(true);
+
+  // Settings & auth for in-game settings panel
+  const themePreference = useSettingsStore((s) => s.themePreference);
+  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
+  const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
+  const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const authDisplayName = useAuthStore((s) => s.displayName);
+  const unreadChatCount = useMultiplayerStore((s) => s.unreadChatCount);
 
   // Chat state (multiplayer only)
   const chatMessages = useMultiplayerStore((s) => s.chatMessages);
@@ -247,14 +258,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable onPress={onClose} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
             </Pressable>
-            <Pressable onPress={() => setShowLanguageModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
-              <Text style={styles.iconBtnEmoji}>🌐</Text>
+            <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
+              <Text style={styles.iconBtnEmoji}>⚙️</Text>
             </Pressable>
             <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
             <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>💬</Text>
+              {isMultiplayer && unreadChatCount > 0 && !showChat && (
+                <View style={styles.chatBadge}>
+                  <Text style={styles.chatBadgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
@@ -452,16 +468,61 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
       {/* Bottom action bar removed — all buttons are in top bar icons */}
 
-      {/* Language modal */}
+      {/* Settings modal */}
       <Modal
-        visible={showLanguageModal}
+        visible={showSettingsModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowLanguageModal(false)}
+        onRequestClose={() => setShowSettingsModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowLanguageModal(false)}>
-          <Pressable onPress={() => {}}>
-            <LanguageSwitcher />
+        <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
+          <Pressable onPress={() => {}} style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
+
+            {!isGuest && (
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
+                <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>{authDisplayName}</Text>
+              </View>
+            )}
+
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
+              <LanguageSwitcher />
+            </View>
+
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
+              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
+                  const labels: Record<string, string> = { system: t('settings.system'), light: t('settings.light'), dark: t('settings.dark') };
+                  const isActive = themePreference === opt;
+                  return (
+                    <Pressable key={opt} style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]} onPress={() => setThemePreference(opt)}>
+                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>{labels[opt]}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
+              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                {[false, true].map((fc) => {
+                  const isActive = fourColorDeck === fc;
+                  return (
+                    <Pressable key={String(fc)} style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]} onPress={() => setFourColorDeck(fc)}>
+                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>{fc ? t('settings.fourColor') : t('settings.classic')}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Pressable style={styles.settingsCloseBtn} onPress={() => setShowSettingsModal(false)}>
+              <Text style={styles.settingsCloseBtnText}>{t('common.close')}</Text>
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -896,6 +957,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
+    paddingBottom: Platform.OS === 'web' ? 40 : Spacing.xs,
     gap: Spacing.xs,
     borderTopWidth: 1,
     borderTopColor: Colors.glassLight,
@@ -960,6 +1022,77 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     fontWeight: '700' as const,
     textDecorationLine: 'underline' as const,
+  },
+  chatBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  chatBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  settingsPanel: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    padding: Spacing.lg,
+  },
+  settingsPanelTitle: {
+    ...TextStyles.h3,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  settingsSection: {
+    marginBottom: Spacing.md,
+  },
+  settingsSectionTitle: {
+    ...TextStyles.caption,
+    fontWeight: '600',
+    marginBottom: Spacing.xs,
+  },
+  settingsValue: {
+    ...TextStyles.body,
+    fontWeight: '600',
+  },
+  settingsPills: {
+    flexDirection: 'row',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    padding: 3,
+  },
+  settingsPill: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: Radius.lg,
+    alignItems: 'center',
+  },
+  settingsPillText: {
+    ...TextStyles.small,
+    fontWeight: '500',
+  },
+  settingsCloseBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.md,
+    alignSelf: 'center',
+    marginTop: Spacing.sm,
+  },
+  settingsCloseBtnText: {
+    ...TextStyles.body,
+    color: '#ffffff',
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
