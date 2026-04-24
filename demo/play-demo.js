@@ -176,29 +176,31 @@ async function joinRoom(p, w, code) {
 // ─── Chat ───────────────────────────────────────────────────────────────────
 
 async function chatBetting(p, w, msg) {
-  // Chat is inline on betting screen
-  const input = p.locator('[data-testid="betting-chat-input"]');
-  if (!(await find(input, 2000))) { log(w, '✗ chat input hidden'); return; }
-  await input.click();
-  await input.type(msg, { delay: 20 });
-  await tap(p, 'betting-chat-send', w, 2000);
-  log(w, `✓ chat: "${msg}"`);
+  try {
+    const input = p.locator('[data-testid="betting-chat-input"]');
+    if (!(await find(input, 2000))) { log(w, '✗ chat input hidden'); return; }
+    await input.click({ timeout: 3000 });
+    await input.type(msg, { delay: 20 });
+    await tap(p, 'betting-chat-send', w, 3000);
+    log(w, `✓ chat: "${msg}"`);
+  } catch (_) { log(w, `✗ chat send failed (non-fatal)`); }
 }
 
 async function chatGame(p, w, msg) {
-  // Open chat panel
-  await tap(p, 'game-btn-chat', w, 2000);
-  await sleep(400);
-  const input = p.locator('[data-testid="chat-input"]');
-  if (!(await find(input, 2000))) { log(w, '✗ chat panel not open'); return; }
-  await input.click();
-  await input.type(msg, { delay: 20 });
-  await tap(p, 'chat-send', w, 2000);
-  await sleep(300);
-  // Close chat
-  const close = p.locator('text=/✕/').first();
-  if (await find(close, 1000)) await close.click();
-  log(w, `✓ chat: "${msg}"`);
+  try {
+    await tap(p, 'game-btn-chat', w, 2000);
+    await sleep(400);
+    const input = p.locator('[data-testid="chat-input"]');
+    if (!(await find(input, 2000))) { log(w, '✗ chat panel not open'); return; }
+    await input.click({ timeout: 3000 });
+    await input.type(msg, { delay: 20 });
+    await tap(p, 'chat-send', w, 3000);
+    await sleep(300);
+    // Close chat
+    const close = p.locator('text=/✕/').first();
+    if (await find(close, 1000)) await close.click();
+    log(w, `✓ chat: "${msg}"`);
+  } catch (_) { log(w, `✗ chat send failed (non-fatal)`); }
 }
 
 // ─── Last Trick ─────────────────────────────────────────────────────────────
@@ -321,12 +323,21 @@ async function gameLoop(p, w, opts = {}) {
     }
 
     idle++;
-    if (idle % 20 === 0) log(w, `⌛ idle ${idle}s`);
+    if (idle % 20 === 0) {
+      log(w, `⌛ idle ${idle}s`);
+      // Diagnostic: dump visible text near turn indicator
+      try {
+        const turnText = await p.locator('[data-testid="turn-indicator"], [data-testid="waiting-text"]').first().textContent().catch(() => '');
+        const handVisible = await p.locator('[data-testid="my-hand"]').isVisible().catch(() => false);
+        const cardCount = handVisible ? await p.locator('[data-testid="my-hand"] [data-testid^="card-"]').count().catch(() => 0) : 0;
+        const phase = await p.locator('text=/Place Your Bets|Сделайте ставки|Hagan sus apuestas/i').first().isVisible().catch(() => false) ? 'betting' : 'playing';
+        log(w, `  📋 phase=${phase} cards=${cardCount} turn="${turnText}"`);
+      } catch (_) {}
+    }
 
     // Sync button: if stuck for ~30s during gameplay, tap the sync button to resync
-    if (idle === 50) {
-      log(w, '🔄 sync (stuck 30s)');
-      // Try both game screen and betting screen sync buttons
+    if (idle === 50 || idle === 80) {
+      log(w, '🔄 sync (stuck)');
       const synced = await tap(p, 'game-btn-sync', w, 1000) || await tap(p, 'betting-btn-sync', w, 1000);
       if (synced) await sleep(2000);
     }
