@@ -220,11 +220,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               key={player.playerId}
               style={[
                 styles.playerCard,
-                player.playerId === myPlayerId && styles.myPlayerCard,
+                { backgroundColor: colors.surface },
+                player.playerId === myPlayerId && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
               ]}
             >
-              <View style={styles.seatBadge}>
-                <Text style={styles.seatNumber}>{index + 1}</Text>
+              <View style={[styles.seatBadge, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text style={[styles.seatNumber, { color: colors.textMuted }]}>{index + 1}</Text>
               </View>
               <View style={styles.playerInfo}>
                 <Text style={[styles.playerName, { color: colors.textPrimary }]}>
@@ -245,10 +246,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               </View>
               <View style={[
                 styles.readyIndicator,
+                { backgroundColor: colors.surfaceSecondary },
                 player.isReady && styles.readyIndicatorReady,
               ]}>
                 <Text style={[
                   styles.readyText,
+                  { color: colors.textMuted },
                   player.isReady && styles.readyTextReady,
                 ]}>
                   {player.isReady ? '✓' : '○'}
