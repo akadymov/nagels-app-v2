@@ -619,22 +619,24 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         </View>
         {/* Row 3: icon buttons */}
         <View style={styles.topBarRow3}>
-          <Pressable onPress={onExit} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
+          <Pressable onPress={onExit} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]} testID="game-btn-exit">
             <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
           </Pressable>
-          <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}>
+          <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]} testID="game-btn-settings">
             <Text style={styles.iconBtnEmoji}>⚙️</Text>
           </Pressable>
           <Pressable
             onPress={() => { if (tricks.length > 0) setShowLastTrick(true); }}
             disabled={tricks.length === 0}
             style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: tricks.length === 0 ? 0.3 : 1 }]}
+            testID="game-btn-last-trick"
           >
             <Text style={styles.iconBtnEmoji}>↩</Text>
           </Pressable>
           <Pressable
             onPress={() => { setIsViewingScores(true); setShowScoreboard(true); }}
             style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+            testID="game-btn-scores"
           >
             <Text style={styles.iconBtnEmoji}>🏆</Text>
           </Pressable>
@@ -642,6 +644,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             onPress={isMultiplayer ? () => setShowChat(true) : undefined}
             disabled={!isMultiplayer}
             style={[styles.iconBtn, { backgroundColor: isMultiplayer ? colors.accent : colors.iconButtonBg, borderColor: isMultiplayer ? colors.accent : colors.glassLight, opacity: isMultiplayer ? 1 : 0.3 }]}
+            testID="game-btn-chat"
           >
             <Text style={styles.iconBtnEmoji}>💬</Text>
             {isMultiplayer && unreadChatCount > 0 && (

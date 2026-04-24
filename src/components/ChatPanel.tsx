@@ -179,11 +179,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               maxLength={200}
               multiline={false}
               autoCorrect={false}
+              testID="chat-input"
             />
             <Pressable
               style={[styles.sendButton, (!inputText.trim() || isSending) && styles.sendButtonDisabled]}
               onPress={handleSend}
               disabled={!inputText.trim() || isSending}
+              testID="chat-send"
             >
               {isSending ? (
                 <ActivityIndicator size="small" color={colors.textPrimary} />

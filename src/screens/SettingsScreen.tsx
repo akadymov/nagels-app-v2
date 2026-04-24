@@ -39,14 +39,15 @@ const OptionPills: React.FC<{
   accentColor: string;
   textColor: string;
   bgColor: string;
-}> = ({ options, selected, onSelect, accentColor, textColor, bgColor }) => {
+  testIDPrefix?: string;
+}> = ({ options, selected, onSelect, accentColor, textColor, bgColor, testIDPrefix }) => {
   const { colors } = useTheme();
   return (
     <View style={[pillStyles.container, { backgroundColor: bgColor, borderColor: colors.glassLight }]}>
       {options.map((opt) => {
         const isActive = opt.key === selected;
         return (
-          <Pressable key={opt.key} style={[pillStyles.pill, isActive && { backgroundColor: accentColor }]} onPress={() => onSelect(opt.key)}>
+          <Pressable key={opt.key} style={[pillStyles.pill, isActive && { backgroundColor: accentColor }]} onPress={() => onSelect(opt.key)} testID={testIDPrefix ? `${testIDPrefix}-${opt.key}` : undefined}>
             <Text style={[pillStyles.pillText, { color: textColor }, isActive && { color: '#ffffff', fontWeight: '700' }]}>{opt.label}</Text>
           </Pressable>
         );
@@ -136,7 +137,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={[styles.header, { borderBottomColor: colors.glassLight }]}>
-        <Pressable onPress={onBack} hitSlop={12}>
+        <Pressable onPress={onBack} hitSlop={12} testID="settings-back">
           <Text style={[styles.backButton, { color: colors.accent }]}>←</Text>
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -190,8 +191,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                 autoCapitalize="words"
                 placeholder={String(t('profile.editNickname', 'Nickname'))}
                 placeholderTextColor={colors.textMuted}
+                testID="settings-nickname"
               />
-              <Pressable style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={handleSaveProfile}>
+              <Pressable style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={handleSaveProfile} testID="settings-save">
                 <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
               </Pressable>
             </View>
@@ -212,6 +214,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                   key={emoji}
                   style={[styles.avatarOption, { backgroundColor: colors.surfaceSecondary }, selectedAvatar === emoji && styles.avatarOptionSelected]}
                   onPress={() => setSelectedAvatar(emoji)}
+                  testID={`avatar-${emoji}`}
                 >
                   <Text style={styles.avatarOptionEmoji}>{emoji}</Text>
                 </Pressable>
@@ -247,6 +250,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             selected={themePreference}
             onSelect={(key) => setThemePreference(key as ThemePreference)}
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
+            testIDPrefix="theme"
           />
         </View>
 
@@ -262,6 +266,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             selected={fourColorDeck ? 'fourColor' : 'classic'}
             onSelect={(key) => setFourColorDeck(key === 'fourColor')}
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
+            testIDPrefix="deck"
           />
           <View style={styles.deckPreview}>
             <Text style={[styles.previewSuit, { color: '#1a1a1a' }]}>♠</Text>
@@ -284,6 +289,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             selected={currentLang}
             onSelect={handleLanguageChange}
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
+            testIDPrefix="lang"
           />
         </View>
 
