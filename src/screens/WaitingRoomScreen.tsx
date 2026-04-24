@@ -189,7 +189,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         <View style={{ width: 36 }} />
         <GameLogo size="sm" />
         {onSettings ? (
-          <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn}>
+          <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn} testID="waiting-btn-settings">
             <Text style={{ fontSize: 18 }}>⚙️</Text>
           </Pressable>
         ) : (

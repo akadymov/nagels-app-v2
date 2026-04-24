@@ -264,7 +264,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
-            <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8}>
+            <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8} testID="betting-btn-chat">
               <Text style={styles.iconBtnEmoji}>💬</Text>
               {isMultiplayer && unreadChatCount > 0 && !showChat && (
                 <View style={styles.chatBadge}>
@@ -451,11 +451,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               maxLength={200}
               multiline={false}
               autoCorrect={false}
+              testID="betting-chat-input"
             />
             <Pressable
               style={[styles.chatSendBtn, (!chatInput.trim() || isSendingChat) && styles.chatSendBtnDisabled]}
               onPress={handleChatSend}
               disabled={!chatInput.trim() || isSendingChat}
+              testID="betting-chat-send"
             >
               {isSendingChat
                 ? <ActivityIndicator size="small" color="#ffffff" />
