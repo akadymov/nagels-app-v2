@@ -6,6 +6,75 @@
 
 import { getSupabaseClient } from '../supabase/client';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
+import { useGameStore } from '../../store/gameStore';
+
+// ============================================================
+// GAME STATE SNAPSHOTS
+// ============================================================
+
+/**
+ * Save a full game state snapshot to the server.
+ * Called after each action (bet, card play) so other clients can
+ * recover from missed Realtime events via sync/refresh.
+ */
+export async function saveGameSnapshot(): Promise<void> {
+  const multiplayerState = useMultiplayerStore.getState();
+  const roomId = multiplayerState.currentRoom?.id;
+  if (!roomId) return;
+
+  const gs = useGameStore.getState();
+  const supabase = getSupabaseClient();
+
+  const snapshot = {
+    room_id: roomId,
+    hand_number: gs.handNumber,
+    phase: gs.phase,
+    current_player_index: gs.currentPlayerIndex,
+    trump_suit: gs.trumpSuit,
+    cards_per_player: gs.cardsPerPlayer,
+    version: gs.version + 1,
+    game_state: {
+      phase: gs.phase,
+      handNumber: gs.handNumber,
+      totalHands: gs.totalHands,
+      playerCount: gs.playerCount,
+      maxCardsPerPlayer: gs.maxCardsPerPlayer,
+      cardsPerPlayer: gs.cardsPerPlayer,
+      currentPlayerIndex: gs.currentPlayerIndex,
+      startingPlayerIndex: gs.startingPlayerIndex,
+      firstHandStartingPlayerIndex: gs.firstHandStartingPlayerIndex,
+      bettingPlayerIndex: gs.bettingPlayerIndex,
+      hasAllBets: gs.hasAllBets,
+      trumpSuit: gs.trumpSuit,
+      currentTrick: gs.currentTrick,
+      tricks: gs.tricks,
+      players: gs.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        hand: p.hand,
+        bet: p.bet,
+        tricksWon: p.tricksWon,
+        score: p.score,
+        bonus: p.bonus,
+        isReady: p.isReady,
+      })),
+      scoreHistory: gs.scoreHistory,
+    },
+  };
+
+  try {
+    // Upsert: update existing row for this room, or insert if none
+    const { error } = await supabase
+      .from('game_states')
+      .upsert(snapshot, { onConflict: 'room_id' });
+
+    if (error) {
+      console.error('[GameActions] Error saving snapshot:', error);
+    }
+  } catch (e) {
+    console.error('[GameActions] saveGameSnapshot failed:', e);
+  }
+}
 
 // ============================================================
 // BET ACTIONS
@@ -44,6 +113,9 @@ export async function multiplayerPlaceBet(playerId: string, bet: number): Promis
   }
 
   console.log('[GameActions] Bet placed:', playerId, bet);
+
+  // Save full game state snapshot (fire-and-forget)
+  saveGameSnapshot();
 }
 
 // ============================================================
@@ -84,6 +156,9 @@ export async function multiplayerPlayCard(playerId: string, cardId: string, card
   }
 
   console.log('[GameActions] Card played:', playerId, cardId);
+
+  // Save full game state snapshot (fire-and-forget)
+  saveGameSnapshot();
 }
 
 // ============================================================

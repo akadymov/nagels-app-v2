@@ -209,9 +209,10 @@ async function refreshPlayers(roomId: string): Promise<void> {
 }
 
 /**
- * Refresh game state from database (for reconnection)
+ * Refresh game state from database.
+ * When force=true (sync button), bypasses guards to fix desync.
  */
-export async function refreshGameState(roomId: string): Promise<void> {
+export async function refreshGameState(roomId: string, force = false): Promise<void> {
   try {
     const supabase = getSupabaseClient();
     const { data: gameState, error } = await supabase
@@ -223,7 +224,6 @@ export async function refreshGameState(roomId: string): Promise<void> {
       .single();
 
     if (error) {
-      // No game state yet (game hasn't started) - this is OK
       console.log('[EventHandler] No game state found (game may not have started yet)');
       return;
     }
@@ -236,11 +236,17 @@ export async function refreshGameState(roomId: string): Promise<void> {
     console.log('[EventHandler] Loaded game state from database:', {
       phase: gameState.phase,
       handNumber: gameState.hand_number,
+      currentPlayerIndex: gameState.current_player_index,
       version: gameState.version,
+      force,
     });
 
-    // Apply the loaded state
-    handleGameStateChange(gameState as DatabaseGameState);
+    if (force) {
+      // Force-apply: bypass all guards in setRemoteState
+      handleGameStateChange(gameState as DatabaseGameState, true);
+    } else {
+      handleGameStateChange(gameState as DatabaseGameState);
+    }
   } catch (error) {
     console.error('[EventHandler] Error refreshing game state:', error);
   }
@@ -305,7 +311,7 @@ function handleRoomChange(payload: any): void {
 /**
  * Handle game state changes from server
  */
-function handleGameStateChange(state: DatabaseGameState): void {
+function handleGameStateChange(state: DatabaseGameState, force = false): void {
   const multiplayerStore = useMultiplayerStore.getState();
   const gameStore = useGameStore.getState();
 
@@ -332,21 +338,32 @@ function handleGameStateChange(state: DatabaseGameState): void {
 
     // Only sync if we have players (game is initialized)
     if (gameStore.players.length > 0) {
-      console.log('[EventHandler] Syncing game state from server...');
-      gameStore.setRemoteState({
+      console.log('[EventHandler] Syncing game state from server...', force ? '(FORCE)' : '');
+      const remoteData = {
         phase: remoteGameState.phase ?? state.phase,
         handNumber: remoteGameState.handNumber ?? state.hand_number,
+        totalHands: remoteGameState.totalHands ?? gameStore.totalHands,
+        playerCount: remoteGameState.playerCount ?? gameStore.playerCount,
+        maxCardsPerPlayer: remoteGameState.maxCardsPerPlayer ?? gameStore.maxCardsPerPlayer,
         currentPlayerIndex: remoteGameState.currentPlayerIndex ?? state.current_player_index,
+        startingPlayerIndex: remoteGameState.startingPlayerIndex ?? gameStore.startingPlayerIndex,
+        firstHandStartingPlayerIndex: remoteGameState.firstHandStartingPlayerIndex ?? gameStore.firstHandStartingPlayerIndex,
         trumpSuit: remoteGameState.trumpSuit ?? state.trump_suit,
-        cardsPerPlayer: remoteGameState.cardsPerPlayer,
-        startingPlayerIndex: remoteGameState.startingPlayerIndex,
-        bettingPlayerIndex: remoteGameState.bettingPlayerIndex,
-        hasAllBets: remoteGameState.hasAllBets,
+        cardsPerPlayer: remoteGameState.cardsPerPlayer ?? state.cards_per_player,
+        bettingPlayerIndex: remoteGameState.bettingPlayerIndex ?? gameStore.bettingPlayerIndex,
+        hasAllBets: remoteGameState.hasAllBets ?? gameStore.hasAllBets,
         currentTrick: remoteGameState.currentTrick,
         tricks: remoteGameState.tricks ?? [],
         players: remoteGameState.players ?? gameStore.players,
+        scoreHistory: remoteGameState.scoreHistory ?? gameStore.scoreHistory,
         version: state.version ?? 0,
-      });
+      };
+
+      if (force) {
+        gameStore.forceRemoteState(remoteData);
+      } else {
+        gameStore.setRemoteState(remoteData);
+      }
     }
   }
 }

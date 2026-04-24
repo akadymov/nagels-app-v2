@@ -140,6 +140,7 @@ export interface GameStore {
 
   // Multiplayer sync
   setRemoteState: (remoteState: Partial<GameStore> & { players: GamePlayer[] }) => void;
+  forceRemoteState: (remoteState: Partial<GameStore> & { players: GamePlayer[] }) => void;
   applyRemoteBet: (playerId: string, bet: number) => void;
   applyRemoteCardPlay: (playerId: string, card: Card) => void;
   setMultiplayerMode: (isMultiplayer: boolean) => void;
@@ -985,6 +986,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
+    set({
+      ...remoteState,
+      myPlayerId: state.myPlayerId,
+    });
+  },
+
+  /**
+   * Force-apply remote state without any guards.
+   * Used by sync button to recover from desync.
+   */
+  forceRemoteState: (remoteState) => {
+    const state = get();
+    console.log('[GameStore] Force-applying remote state:', {
+      phase: remoteState.phase,
+      handNumber: remoteState.handNumber,
+      currentPlayerIndex: remoteState.currentPlayerIndex,
+    });
     set({
       ...remoteState,
       myPlayerId: state.myPlayerId,
