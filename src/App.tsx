@@ -35,13 +35,30 @@ export default function App() {
       const style = document.createElement('style');
       style.textContent = `
         * { -webkit-overflow-scrolling: touch !important; }
-        div[style*="overflow"] {
+        html, body { height: 100%; margin: 0; touch-action: pan-y !important; }
+        body { overflow: hidden !important; }
+        #root {
+          touch-action: pan-y !important;
+          overflow: hidden;
+          height: 100vh;
+          display: flex;
+          flex-direction: column;
+        }
+        #root > div,
+        #root > div > div,
+        #root > div > div > div,
+        #root > div > div > div > div {
+          display: flex !important;
+          flex-direction: column !important;
+          flex: 1 !important;
+          min-height: 0 !important;
+          max-height: 100vh !important;
+        }
+        div[style*="overflow"][style*="auto"],
+        div[style*="overflow"][style*="scroll"] {
           -webkit-overflow-scrolling: touch !important;
           touch-action: pan-y !important;
         }
-        body { touch-action: pan-y !important; }
-        #root { touch-action: pan-y !important; overflow: hidden; height: 100vh; }
-        #root > div { height: 100vh !important; max-height: 100vh !important; }
       `;
       document.head.appendChild(style);
     }
