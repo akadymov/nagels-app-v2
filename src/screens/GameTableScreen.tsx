@@ -26,7 +26,7 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
-import { refreshGameState, replayMissedEvents } from '../lib/multiplayer/eventHandler';
+import { refreshGameState } from '../lib/multiplayer/eventHandler';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -157,7 +157,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     if (!currentRoom?.id) return;
     setIsRefreshing(true);
     try {
-      await replayMissedEvents(currentRoom.id);
+      await refreshGameState(currentRoom.id, true);
     } finally {
       setIsRefreshing(false);
     }
