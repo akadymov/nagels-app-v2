@@ -20,6 +20,7 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { GlassCard } from '../glass';
 import { GlassButton } from '../buttons/GlassButton';
@@ -36,6 +37,7 @@ import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
 import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
+import { refreshGameState } from '../../lib/multiplayer/eventHandler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -94,7 +96,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
-  const unreadChatCount = useMultiplayerStore((s) => s.unreadChatCount);
+  const hasUnreadChat = useMultiplayerStore((s) => s.hasUnreadChat);
+  const currentRoom = useMultiplayerStore((s) => s.currentRoom);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Chat state (multiplayer only)
   const chatMessages = useMultiplayerStore((s) => s.chatMessages);
@@ -140,6 +144,16 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       setIsSendingChat(false);
     }
   }, [chatInput, isSendingChat, myPlayerId, myPlayer]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!isMultiplayer || !currentRoom?.id) return;
+    setIsRefreshing(true);
+    try {
+      await refreshGameState(currentRoom.id);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isMultiplayer, currentRoom?.id]);
 
   // Get allowed bets for the current betting player
   const allowedBets = useMemo(() => {
@@ -238,6 +252,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
+        refreshControl={
+          isMultiplayer ? (
+            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+          ) : undefined
+        }
       >
         {/* Header — matches Figma: Hand info left, Trump badge center, icons right */}
         <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
@@ -266,10 +285,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             </Pressable>
             <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8} testID="betting-btn-chat">
               <Text style={styles.iconBtnEmoji}>💬</Text>
-              {isMultiplayer && unreadChatCount > 0 && !showChat && (
-                <View style={styles.chatBadge}>
-                  <Text style={styles.chatBadgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
-                </View>
+              {isMultiplayer && hasUnreadChat && !showChat && (
+                <View style={styles.chatBadgeDot} />
               )}
             </Pressable>
           </View>
@@ -1025,22 +1042,14 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     textDecorationLine: 'underline' as const,
   },
-  chatBadge: {
+  chatBadgeDot: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  chatBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#fff',
   },
   settingsPanel: {
     width: '100%',

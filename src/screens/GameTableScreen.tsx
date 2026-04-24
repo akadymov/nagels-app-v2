@@ -15,6 +15,7 @@ import {
   Platform,
   Dimensions,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,7 +26,6 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
-import { PullToRefresh } from '../components/PullToRefresh';
 import { refreshGameState } from '../lib/multiplayer/eventHandler';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
@@ -152,9 +152,15 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const currentRoom = useMultiplayerStore((s) => s.currentRoom);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const handlePullRefresh = useCallback(async () => {
     if (!currentRoom?.id) return;
-    await refreshGameState(currentRoom.id);
+    setIsRefreshing(true);
+    try {
+      await refreshGameState(currentRoom.id);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)
@@ -603,7 +609,16 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      <PullToRefresh onRefresh={handlePullRefresh} enabled={isMultiplayer}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
+        scrollEnabled={false}
+        refreshControl={
+          isMultiplayer ? (
+            <RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} />
+          ) : undefined
+        }
+      >
 
       {/* Connection Status (multiplayer only) */}
       {isMultiplayer && <ConnectionStatus />}
@@ -1045,7 +1060,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </Pressable>
         </Pressable>
       </Modal>
-      </PullToRefresh>
+      </ScrollView>
     </SafeAreaView>
   );
 };
