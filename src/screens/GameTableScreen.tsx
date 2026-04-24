@@ -4,7 +4,7 @@
  * Connected to Zustand game store
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
+import { PullToRefresh } from '../components/PullToRefresh';
+import { refreshGameState } from '../lib/multiplayer/eventHandler';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -149,6 +151,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const currentRoom = useMultiplayerStore((s) => s.currentRoom);
+
+  const handlePullRefresh = useCallback(async () => {
+    if (!currentRoom?.id) return;
+    await refreshGameState(currentRoom.id);
+  }, [currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)
   useEffect(() => {
@@ -596,6 +603,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <PullToRefresh onRefresh={handlePullRefresh} enabled={isMultiplayer}>
 
       {/* Connection Status (multiplayer only) */}
       {isMultiplayer && <ConnectionStatus />}
@@ -956,6 +964,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             <Pressable
               style={styles.modalButton}
               onPress={() => setShowLastTrick(false)}
+              testID="last-trick-close"
             >
               <Text style={styles.modalButtonText}>{t('common.close')}</Text>
             </Pressable>
@@ -1038,6 +1047,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </Pressable>
         </Pressable>
       </Modal>
+      </PullToRefresh>
     </SafeAreaView>
   );
 };
