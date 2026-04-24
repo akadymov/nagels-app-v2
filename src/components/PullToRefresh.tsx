@@ -5,7 +5,7 @@
  * zone of the screen.  Shows an ActivityIndicator while refreshing.
  */
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   PanResponder,
@@ -35,9 +35,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
   style,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
+  const enabledRef = useRef(enabled);
   const lastRefreshRef = useRef(0);
   const pullDistance = useRef(new Animated.Value(0)).current;
-  const startY = useRef(0);
+
+  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
   const handleRefresh = useCallback(async () => {
     const now = Date.now();
@@ -45,10 +48,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     lastRefreshRef.current = now;
 
     setRefreshing(true);
+    refreshingRef.current = true;
     try {
       await onRefresh();
     } finally {
       setRefreshing(false);
+      refreshingRef.current = false;
       Animated.timing(pullDistance, {
         toValue: 0,
         duration: 200,
@@ -64,16 +69,12 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         evt: GestureResponderEvent,
         gestureState: PanResponderGestureState,
       ) => {
-        if (!enabled || refreshing) return false;
+        if (!enabledRef.current || refreshingRef.current) return false;
         // Only capture if touch started in the top activation zone
         const touchStartY = evt.nativeEvent.pageY - gestureState.dy;
         if (touchStartY > ACTIVATION_ZONE_Y) return false;
         // Only capture downward swipes (dy > 10 filters out taps)
         return gestureState.dy > 10 && Math.abs(gestureState.dx) < gestureState.dy;
-      },
-
-      onPanResponderGrant: (_evt, gestureState) => {
-        startY.current = gestureState.y0;
       },
 
       onPanResponderMove: (_evt, gestureState) => {
@@ -108,8 +109,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
 
   return (
     <View style={[styles.container, style]} {...panResponder.panHandlers}>
-      {/* Pull indicator */}
-      <Animated.View
+      {/* Pull indicator (hidden during active refresh) */}
+      {!refreshing && <Animated.View
         style={[
           styles.indicator,
           {
@@ -125,7 +126,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         ]}
       >
         <ActivityIndicator size="small" color="#888" />
-      </Animated.View>
+      </Animated.View>}
 
       {/* Refreshing indicator (stays visible during fetch) */}
       {refreshing && (
