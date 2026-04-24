@@ -169,6 +169,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         <Pressable
           style={[styles.tab, { backgroundColor: tab === 'signIn' ? colors.accent : colors.surface, borderColor: colors.accent }]}
           onPress={() => setTab('signIn')}
+          testID="auth-tab-signIn"
         >
           <Text style={[styles.tabText, { color: tab === 'signIn' ? '#fff' : colors.accent }]}>
             {t('auth.signIn')}
@@ -177,6 +178,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         <Pressable
           style={[styles.tab, { backgroundColor: tab === 'signUp' ? colors.accent : colors.surface, borderColor: colors.accent }]}
           onPress={() => setTab('signUp')}
+          testID="auth-tab-signUp"
         >
           <Text style={[styles.tabText, { color: tab === 'signUp' ? '#fff' : colors.accent }]}>
             {t('auth.signUp')}
@@ -195,6 +197,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
             placeholderTextColor={colors.textMuted}
             autoCapitalize="words"
             maxLength={20}
+            testID="auth-input-nickname"
           />
         </>
       )}
@@ -208,6 +211,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         placeholderTextColor={colors.textMuted}
         keyboardType="email-address"
         autoCapitalize="none"
+        testID="auth-input-email"
       />
 
       {/* Password */}
@@ -220,6 +224,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         secureTextEntry
         returnKeyType="go"
         onSubmitEditing={tab === 'signIn' ? handleSignIn : handleSignUp}
+        testID="auth-input-password"
       />
 
       {/* Forgot Password (sign in only) */}
@@ -241,6 +246,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
         style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
         onPress={tab === 'signIn' ? handleSignIn : handleSignUp}
         disabled={isLoading}
+        testID="auth-btn-submit"
       >
         {isLoading ? <ActivityIndicator color="#fff" /> : (
           <Text style={styles.primaryBtnText}>
