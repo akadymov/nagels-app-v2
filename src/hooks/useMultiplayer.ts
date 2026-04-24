@@ -25,6 +25,7 @@ import {
 import {
   subscribeToRoomEvents,
   unsubscribeFromRoomEvents,
+  refreshGameState,
 } from '../lib/multiplayer/eventHandler';
 import { manualReconnect } from '../lib/multiplayer/networkMonitor';
 import { isSupabaseConfigured } from '../lib/supabase/client';
@@ -62,6 +63,7 @@ export interface UseMultiplayerReturn {
   startGame: () => Promise<void>;
   leaveRoom: () => Promise<void>;
   refreshRoom: () => Promise<void>;
+  refreshGameState: () => Promise<void>;
   reconnect: () => void;
 }
 
@@ -183,6 +185,11 @@ export function useMultiplayer(): UseMultiplayerReturn {
     }
   }, [currentRoom?.id]);
 
+  const handleRefreshGameState = useCallback(async () => {
+    if (!currentRoom?.id) return;
+    await refreshGameState(currentRoom.id);
+  }, [currentRoom?.id]);
+
   return {
     // Session
     guestSession,
@@ -215,6 +222,7 @@ export function useMultiplayer(): UseMultiplayerReturn {
     startGame: handleStartGame,
     leaveRoom: handleLeaveRoom,
     refreshRoom: handleRefreshRoom,
+    refreshGameState: handleRefreshGameState,
     reconnect: manualReconnect,
   };
 }
