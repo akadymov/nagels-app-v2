@@ -143,7 +143,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // Chat state
   const [showChat, setShowChat] = React.useState(false);
-  const unreadChatCount = useMultiplayerStore((s) => s.unreadChatCount);
+  const hasUnreadChat = useMultiplayerStore((s) => s.hasUnreadChat);
 
   // Language modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -655,10 +655,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             testID="game-btn-chat"
           >
             <Text style={styles.iconBtnEmoji}>💬</Text>
-            {isMultiplayer && unreadChatCount > 0 && (
-              <View style={styles.chatBadge}>
-                <Text style={styles.chatBadgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
-              </View>
+            {isMultiplayer && hasUnreadChat && (
+              <View style={styles.chatBadgeDot} />
             )}
           </Pressable>
         </View>
@@ -1119,22 +1117,14 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
-  chatBadge: {
+  chatBadgeDot: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  chatBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#fff',
   },
   backButton: {
     ...TextStyles.h3,
