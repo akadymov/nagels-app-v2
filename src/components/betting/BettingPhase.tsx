@@ -232,12 +232,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
   return (
     <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' }]}>
-      <View style={styles.gradient} />
+      <View style={styles.gradient} pointerEvents="none" />
 
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       >
         {/* Header — matches Figma: Hand info left, Trump badge center, icons right */}
         <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>

@@ -1,11 +1,3 @@
-## Next Up
-
-### Scoreboard redesign — table layout with score history per round, bonus circles, ▶ first player
-
-
-### Reconnect resilience — graceful disconnect, rejoin, bot takeover on timeout, fix realtime subscriptions
-
-
 ## Backlog
 
 ### Custom game modes — replace 1-card rounds with 2-card rounds
@@ -44,6 +36,15 @@
 ### Reset password flow
 
   - defaultExpanded: false
+
+
+## Next Up
+
+### Scoreboard redesign — table layout with score history per round, bonus circles, ▶ first player
+
+
+### Reconnect resilience — graceful disconnect, rejoin, bot takeover on timeout, fix realtime subscriptions
+
 
 ## In Progress
 
