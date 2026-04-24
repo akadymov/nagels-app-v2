@@ -37,7 +37,7 @@ import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
 import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
-import { refreshGameState } from '../../lib/multiplayer/eventHandler';
+import { replayMissedEvents } from '../../lib/multiplayer/eventHandler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -149,7 +149,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     if (!isMultiplayer || !currentRoom?.id) return;
     setIsRefreshing(true);
     try {
-      await refreshGameState(currentRoom.id);
+      await replayMissedEvents(currentRoom.id);
     } finally {
       setIsRefreshing(false);
     }
