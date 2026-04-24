@@ -25,6 +25,17 @@ export async function saveGameSnapshot(): Promise<void> {
   const gs = useGameStore.getState();
   const supabase = getSupabaseClient();
 
+  const playerData = gs.players.map(p => ({
+    id: p.id,
+    name: p.name,
+    hand: p.hand,
+    bet: p.bet,
+    tricksWon: p.tricksWon,
+    score: p.score,
+    bonus: p.bonus,
+    isReady: p.isReady,
+  }));
+
   const snapshot = {
     room_id: roomId,
     hand_number: gs.handNumber,
@@ -32,7 +43,11 @@ export async function saveGameSnapshot(): Promise<void> {
     current_player_index: gs.currentPlayerIndex,
     trump_suit: gs.trumpSuit,
     cards_per_player: gs.cardsPerPlayer,
-    version: gs.version + 1,
+    players: playerData,
+    current_trick: gs.currentTrick ?? { cards: [], winnerId: '', leadSuit: '' },
+    tricks: gs.tricks,
+    deck: gs.deck,
+    version: (gs.version || 0) + 1,
     game_state: {
       phase: gs.phase,
       handNumber: gs.handNumber,
@@ -48,16 +63,7 @@ export async function saveGameSnapshot(): Promise<void> {
       trumpSuit: gs.trumpSuit,
       currentTrick: gs.currentTrick,
       tricks: gs.tricks,
-      players: gs.players.map(p => ({
-        id: p.id,
-        name: p.name,
-        hand: p.hand,
-        bet: p.bet,
-        tricksWon: p.tricksWon,
-        score: p.score,
-        bonus: p.bonus,
-        isReady: p.isReady,
-      })),
+      players: playerData,
       scoreHistory: gs.scoreHistory,
     },
   };
