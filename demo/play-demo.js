@@ -206,18 +206,19 @@ async function chatGame(p, w, msg) {
 // ─── Last Trick ─────────────────────────────────────────────────────────────
 
 async function viewLastTrick(p, w) {
-  if (await tap(p, 'game-btn-last-trick', w, 1500)) {
-    await sleep(1500);
-    // Use testID if available, otherwise fall back to text with force click
-    const closeBtn = p.locator('[data-testid="last-trick-close"]');
-    if (await find(closeBtn, 1500)) {
-      await closeBtn.click();
-    } else {
-      const close = p.locator('text=/Close|Закрыть|Cerrar/i').first();
-      if (await find(close, 2000)) await close.click({ force: true });
+  try {
+    if (await tap(p, 'game-btn-last-trick', w, 1500)) {
+      await sleep(1500);
+      const closeBtn = p.locator('[data-testid="last-trick-close"]');
+      if (await find(closeBtn, 1500)) {
+        await closeBtn.click({ force: true, timeout: 3000 });
+      } else {
+        const close = p.locator('text=/Close|Закрыть|Cerrar/i').first();
+        if (await find(close, 2000)) await close.click({ force: true, timeout: 3000 });
+      }
+      log(w, '✓ viewed last trick');
     }
-    log(w, '✓ viewed last trick');
-  }
+  } catch (_) { log(w, '✗ last trick view failed (non-fatal)'); }
 }
 
 // ─── Game Logic ─────────────────────────────────────────────────────────────
