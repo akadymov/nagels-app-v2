@@ -432,10 +432,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       {isMultiplayer && myPlayer && showChat && (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.chatSection}
+          style={[styles.chatSection, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}
         >
-          <View style={styles.chatHeader}>
-            <Text style={styles.chatHeaderText}>Chat</Text>
+          <View style={[styles.chatHeader, { backgroundColor: colors.background, borderBottomColor: colors.glassLight }]}>
+            <Text style={[styles.chatHeaderText, { color: colors.textMuted }]}>Chat</Text>
           </View>
 
           <ScrollView
@@ -446,20 +446,24 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             keyboardShouldPersistTaps="handled"
           >
             {chatMessages.length === 0 ? (
-              <Text style={styles.chatEmpty}>{t('game.chatEmpty')}</Text>
+              <Text style={[styles.chatEmpty, { color: colors.textMuted }]}>{t('game.chatEmpty')}</Text>
             ) : (
               chatMessages.map((msg) => {
                 const isMe = msg.playerId === myPlayerId;
                 return (
                   <View key={msg.id} style={[styles.chatMsgRow, isMe && styles.chatMsgRowMe]}>
                     {!isMe && (
-                      <View style={styles.chatAvatar}>
+                      <View style={[styles.chatAvatar, { backgroundColor: colors.accentMuted }]}>
                         <Text style={styles.chatAvatarText}>{msg.playerName[0]?.toUpperCase()}</Text>
                       </View>
                     )}
-                    <View style={[styles.chatBubble, isMe && styles.chatBubbleMe]}>
-                      {!isMe && <Text style={styles.chatSender}>{msg.playerName}</Text>}
-                      <Text style={[styles.chatMsgText, isMe && styles.chatMsgTextMe]}>{msg.text}</Text>
+                    <View style={[
+                      styles.chatBubble,
+                      { backgroundColor: colors.glassDark, borderColor: colors.glassLight },
+                      isMe && { backgroundColor: colors.accent, borderColor: colors.accent },
+                    ]}>
+                      {!isMe && <Text style={[styles.chatSender, { color: colors.textMuted }]}>{msg.playerName}</Text>}
+                      <Text style={[styles.chatMsgText, { color: colors.textPrimary }, isMe && styles.chatMsgTextMe]}>{msg.text}</Text>
                     </View>
                   </View>
                 );
@@ -467,13 +471,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             )}
           </ScrollView>
 
-          <View style={styles.chatInputRow}>
+          <View style={[styles.chatInputRow, { borderTopColor: colors.glassLight }]}>
             <TextInput
-              style={styles.chatInput}
+              style={[styles.chatInput, { color: colors.textPrimary, backgroundColor: colors.glassDark, borderColor: colors.glassLight }]}
               value={chatInput}
               onChangeText={setChatInput}
               placeholder={t('game.chatPlaceholder')}
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               onSubmitEditing={handleChatSend}
               returnKeyType="send"
               maxLength={200}
