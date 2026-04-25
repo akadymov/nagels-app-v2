@@ -34,7 +34,7 @@ import {
   type PlayContext,
   sortHand,
 } from '../game';
-import { multiplayerPlaceBet, multiplayerPlayCard } from '../lib/multiplayer/gameActions';
+import { multiplayerPlaceBet, multiplayerPlayCard, saveGameSnapshot } from '../lib/multiplayer/gameActions';
 import { seededShuffle, createSeededRandom } from '../lib/multiplayer/seededRandom';
 import { useMultiplayerStore } from './multiplayerStore';
 import { trickWonHaptic } from '../utils/haptics';
@@ -657,6 +657,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players: updatedPlayers,
       scoreHistory: [...state.scoreHistory, handResult],
     });
+
+    // Save scoring snapshot so other clients can sync to end-of-hand state
+    if (state.isMultiplayer) saveGameSnapshot();
   },
 
   /**
@@ -719,9 +722,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * End the game
    */
   endGame: () => {
+    const state = get();
     set({
       phase: 'finished',
     });
+
+    if (state.isMultiplayer) saveGameSnapshot();
   },
 
   /**
