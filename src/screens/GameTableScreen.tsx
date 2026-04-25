@@ -181,8 +181,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       const staleDuration = Date.now() - lastStateChangeRef.current;
       if (inActivePhase && staleDuration > 10000) {
         console.log('[Heartbeat] Auto-sync: no state change for', Math.round(staleDuration / 1000), 's');
-        await refreshGameState(roomId, true);
-        lastStateChangeRef.current = Date.now(); // reset to avoid rapid re-syncs
+        // Use non-force to let guards prevent stale overwrites; force only on manual sync
+        await refreshGameState(roomId, false);
+        lastStateChangeRef.current = Date.now();
       }
     }, 5000);
 
