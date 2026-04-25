@@ -1015,6 +1015,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...remoteState,
       myPlayerId: state.myPlayerId,
     });
+
+    // If the snapshot contains a completed trick (winnerId set), clear it immediately.
+    // Without this, playCard() blocks forever because no completeTrick timer is running.
+    const applied = get();
+    if (applied.currentTrick?.winnerId) {
+      console.log('[GameStore] Force-apply: clearing completed trick');
+      setTimeout(() => get().completeTrick(), 500);
+    }
   },
 
   /**
