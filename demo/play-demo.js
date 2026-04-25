@@ -224,17 +224,19 @@ async function viewLastTrick(p, w) {
 // ─── Game Logic ─────────────────────────────────────────────────────────────
 
 async function tryBet(p, w) {
-  const btns = p.locator('[data-testid^="bet-btn-"]:not([disabled]):not([aria-disabled="true"])');
-  if ((await btns.count()) === 0) return false;
-  const b = btns.first();
-  const v = ((await b.textContent()) || '?').trim();
-  await b.click();
-  await sleep(400);
-  if (!(await btns.first().isVisible().catch(() => false))) {
-    log(w, `✓ bet=${v}`);
-    return true;
-  }
-  return false;
+  try {
+    const btns = p.locator('[data-testid^="bet-btn-"]:not([disabled]):not([aria-disabled="true"])');
+    if ((await btns.count()) === 0) return false;
+    const b = btns.first();
+    const v = ((await b.textContent()) || '?').trim();
+    await b.click({ timeout: 5000 });
+    await sleep(400);
+    if (!(await btns.first().isVisible().catch(() => false))) {
+      log(w, `✓ bet=${v}`);
+      return true;
+    }
+    return false;
+  } catch (_) { return false; }
 }
 
 async function tryPlay(p, w) {
@@ -284,12 +286,14 @@ async function gameLoop(p, w, opts = {}) {
     // Continue
     const cont = p.locator('text=/Continue Playing|Продолжить|Continuar/i').first();
     if (await cont.isVisible().catch(() => false)) {
-      await cont.click();
-      hands++;
-      idle = 0;
-      tricks = 0;
-      log(w, `✓ Continue (hand ${hands})`);
-      if (MAX_HANDS > 0 && hands >= MAX_HANDS) break;
+      try {
+        await cont.click({ timeout: 5000 });
+        hands++;
+        idle = 0;
+        tricks = 0;
+        log(w, `✓ Continue (hand ${hands})`);
+        if (MAX_HANDS > 0 && hands >= MAX_HANDS) break;
+      } catch (_) { log(w, '✗ Continue click failed (non-fatal)'); }
       continue;
     }
 
