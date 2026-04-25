@@ -993,11 +993,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   /**
-   * Force-apply remote state without any guards.
-   * Used by sync button to recover from desync.
+   * Force-apply remote state, bypassing most guards.
+   * Used by sync button and heartbeat to recover from desync.
+   * Only guard: never skip scoring phase (user needs to see scoreboard).
    */
   forceRemoteState: (remoteState) => {
     const state = get();
+
+    // Don't skip past scoring — user needs to see the scoreboard and press Continue
+    if (state.phase === 'scoring') {
+      console.log('[GameStore] Force-apply skipped: local is in scoring phase');
+      return;
+    }
+
     console.log('[GameStore] Force-applying remote state:', {
       phase: remoteState.phase,
       handNumber: remoteState.handNumber,
