@@ -177,14 +177,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     const roomId = currentRoom.id;
 
     heartbeatRef.current = setInterval(async () => {
-      const currentPhase = useGameStore.getState().phase;
-      // Only auto-sync in active phases; skip scoring (user is viewing scoreboard)
-      // and finished (game over screen)
-      const inActivePhase = currentPhase === 'playing' || currentPhase === 'betting';
+      const gs = useGameStore.getState();
       const staleDuration = Date.now() - lastStateChangeRef.current;
+      const inActivePhase = gs.phase === 'playing' || gs.phase === 'betting';
+
       if (inActivePhase && staleDuration > 10000) {
-        console.log('[Heartbeat] Auto-sync: no state change for', Math.round(staleDuration / 1000), 's');
-        await refreshGameState(roomId, true);
+        console.log('[Heartbeat] Auto-sync: phase=' + gs.phase + ' stale=' + Math.round(staleDuration / 1000) + 's cards=' + gs.players.map(p => p.hand.length).join(','));
+        try {
+          await refreshGameState(roomId, true);
+        } catch (e) {
+          console.error('[Heartbeat] refreshGameState failed:', e);
+        }
         lastStateChangeRef.current = Date.now();
       }
     }, 5000);
@@ -192,7 +195,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
     };
-  }, [isMultiplayer, currentRoom?.id, phase]);
+  }, [isMultiplayer, currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)
   useEffect(() => {
@@ -360,6 +363,23 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       setIsViewingScores(false);
     }
   }, [phase]);
+
+  // Stuck detection: if all cards played but still in playing phase, force completeHand
+  useEffect(() => {
+    if (!isMultiplayer || phase !== 'playing') return;
+    const allCardsPlayed = players.every(p => p.hand.length === 0);
+    if (!allCardsPlayed || currentTrick) return;
+
+    // All cards gone, no active trick, still in playing — we're stuck
+    const timer = setTimeout(() => {
+      const currentState = useGameStore.getState();
+      if (currentState.phase === 'playing' && currentState.players.every(p => p.hand.length === 0) && !currentState.currentTrick) {
+        console.log('[StuckDetect] All cards played, no trick, forcing completeHand');
+        currentState.completeHand();
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [isMultiplayer, phase, players, currentTrick]);
 
   // Bot betting automation (skip in multiplayer)
   useEffect(() => {
