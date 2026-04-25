@@ -1582,6 +1582,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     padding: Spacing.lg,
     maxHeight: SCREEN_HEIGHT * 0.75,
+    overflow: 'visible',
   },
   modalHeader: {
     flexDirection: 'row',
