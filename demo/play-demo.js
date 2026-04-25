@@ -340,11 +340,10 @@ async function gameLoop(p, w, opts = {}) {
       } catch (_) {}
     }
 
-    // Sync button fallback: if heartbeat auto-sync hasn't helped after 40s, press sync manually
-    if (idle === 65) {
-      log(w, '🔄 manual sync (heartbeat insufficient)');
-      const synced = await tap(p, 'game-btn-sync', w, 1000) || await tap(p, 'betting-btn-sync', w, 1000);
-      if (synced) await sleep(2000);
+    // Press sync button every 10s of idle to recover from desync
+    if (idle > 0 && idle % 16 === 0) {
+      const synced = await tap(p, 'game-btn-sync', w, 500) || await tap(p, 'betting-btn-sync', w, 500);
+      if (synced) { log(w, '🔄 sync'); await sleep(1500); }
     }
 
     if (idle >= 120) { log(w, '⚠ timeout'); break; }
