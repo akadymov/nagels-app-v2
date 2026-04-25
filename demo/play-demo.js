@@ -336,9 +336,9 @@ async function gameLoop(p, w, opts = {}) {
       } catch (_) {}
     }
 
-    // Sync button: if stuck for ~30s during gameplay, tap the sync button to resync
-    if (idle === 50 || idle === 80) {
-      log(w, '🔄 sync (stuck)');
+    // Sync button fallback: if heartbeat auto-sync hasn't helped after 40s, press sync manually
+    if (idle === 65) {
+      log(w, '🔄 manual sync (heartbeat insufficient)');
       const synced = await tap(p, 'game-btn-sync', w, 1000) || await tap(p, 'betting-btn-sync', w, 1000);
       if (synced) await sleep(2000);
     }
