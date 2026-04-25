@@ -658,8 +658,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       scoreHistory: [...state.scoreHistory, handResult],
     });
 
-    // Save scoring snapshot so other clients can sync to end-of-hand state
-    if (state.isMultiplayer) saveGameSnapshot();
+    // Save scoring snapshot — only host writes to avoid concurrent upsert conflicts
+    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -727,7 +727,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: 'finished',
     });
 
-    if (state.isMultiplayer) saveGameSnapshot();
+    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**

@@ -69,16 +69,17 @@ export async function saveGameSnapshot(): Promise<void> {
   };
 
   try {
-    // Upsert: update existing row for this room, or insert if none
     const { error } = await supabase
       .from('game_states')
       .upsert(snapshot, { onConflict: 'room_id' });
 
     if (error) {
-      console.error('[GameActions] Error saving snapshot:', error);
+      console.error('[GameActions] Snapshot save error:', error.message, error.details, error.hint);
+    } else {
+      console.log('[GameActions] Snapshot saved: hand=' + gs.handNumber + ' phase=' + gs.phase + ' v=' + snapshot.version);
     }
   } catch (e) {
-    console.error('[GameActions] saveGameSnapshot failed:', e);
+    console.error('[GameActions] saveGameSnapshot exception:', e);
   }
 }
 
