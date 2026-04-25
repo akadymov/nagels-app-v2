@@ -177,7 +177,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     const roomId = currentRoom.id;
 
     heartbeatRef.current = setInterval(async () => {
-      const inActivePhase = phase === 'playing' || phase === 'betting';
+      const currentPhase = useGameStore.getState().phase;
+      // Only auto-sync in active phases; skip scoring (user is viewing scoreboard)
+      // and finished (game over screen)
+      const inActivePhase = currentPhase === 'playing' || currentPhase === 'betting';
       const staleDuration = Date.now() - lastStateChangeRef.current;
       if (inActivePhase && staleDuration > 10000) {
         console.log('[Heartbeat] Auto-sync: no state change for', Math.round(staleDuration / 1000), 's');
@@ -350,11 +353,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [players, phase]);
 
-  // Show scoreboard when hand scoring phase starts
+  // Show scoreboard when hand scoring or game finished
   useEffect(() => {
-    if (phase === 'scoring') {
+    if (phase === 'scoring' || phase === 'finished') {
       setShowScoreboard(true);
-      setIsViewingScores(false); // end-of-hand scoreboard, not a mid-game peek
+      setIsViewingScores(false);
     }
   }, [phase]);
 
@@ -941,7 +944,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         players={scoreboardPlayers}
         scoreHistory={useGameStore.getState().scoreHistory}
         startingPlayerIndex={startingPlayerIndex}
-        isGameOver={handNumber >= totalHands}
+        isGameOver={handNumber >= totalHands || phase === 'finished'}
         isMidGame={isViewingScores}
         onContinue={handleScoreboardContinue}
         onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
