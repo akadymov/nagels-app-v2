@@ -4,7 +4,7 @@
  * Connected to Zustand game store
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -162,6 +162,34 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       setIsRefreshing(false);
     }
   }, [currentRoom?.id]);
+
+  // Auto-sync heartbeat: if no state change for 10s during active gameplay, refresh
+  const lastStateChangeRef = useRef(Date.now());
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Track state changes
+  useEffect(() => {
+    lastStateChangeRef.current = Date.now();
+  }, [phase, currentPlayerIndex, handNumber, currentTrick, hasAllBets]);
+
+  useEffect(() => {
+    if (!isMultiplayer || !currentRoom?.id) return;
+    const roomId = currentRoom.id;
+
+    heartbeatRef.current = setInterval(async () => {
+      const inActivePhase = phase === 'playing' || phase === 'betting';
+      const staleDuration = Date.now() - lastStateChangeRef.current;
+      if (inActivePhase && staleDuration > 10000) {
+        console.log('[Heartbeat] Auto-sync: no state change for', Math.round(staleDuration / 1000), 's');
+        await refreshGameState(roomId, true);
+        lastStateChangeRef.current = Date.now(); // reset to avoid rapid re-syncs
+      }
+    }, 5000);
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    };
+  }, [isMultiplayer, currentRoom?.id, phase]);
 
   // Poll for chat messages (Realtime fallback)
   useEffect(() => {
