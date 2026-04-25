@@ -342,6 +342,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       bettingPlayerIndex: state.startingPlayerIndex,
       hasAllBets: false,
     });
+
+    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -438,6 +440,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         leadSuit: 'diamonds', // Will be set when first card is played
       },
     });
+
+    // Save snapshot at phase transition — only host to avoid concurrent writes
+    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -599,6 +604,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentTrick: null,
       currentPlayerIndex: winnerIndex, // Winner leads next trick
     });
+
+    // Save snapshot after trick cleared (prevents deadlock from stale completed trick)
+    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
 
     // If all tricks played, schedule completeHand (short delay for UI to settle)
     if (isHandComplete) {
