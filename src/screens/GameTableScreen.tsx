@@ -27,7 +27,7 @@ import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
 import { refreshGameState } from '../lib/multiplayer/eventHandler';
-import { multiplayerContinueHand } from '../lib/multiplayer/gameActions';
+import { multiplayerContinueHand, multiplayerStartGame } from '../lib/multiplayer/gameActions';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -272,10 +272,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         console.log('[GameTable] Initializing multiplayer game with players:', gamePlayers.map(p => p.name));
         initGame(gamePlayers, myPlayerId);
 
-        // Start betting after a short delay
-        setTimeout(() => {
-          startBetting();
-        }, 500);
+        // Initialize game state on server via Edge Function
+        // The server deals cards and sets phase=betting
+        multiplayerStartGame(gamePlayers, 0).catch(e => {
+          console.error('[GameTable] Failed to start game on server:', e);
+        });
       } else {
         console.log('[GameTable] Waiting for players...', roomPlayers.length, '/ 2');
       }
@@ -304,38 +305,30 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     };
   }, [isMultiplayer, multiplayerStore.roomPlayers.length]);
 
-  // Multiplayer mode: start betting when game is ready (ONLY for hand 1)
+  // Single-player: start betting when game is ready
   useEffect(() => {
-    // Only auto-start betting for the first hand (handNumber === 1)
-    // For subsequent hands, wait for explicit nextHand() call
-    if (isMultiplayer && phase === 'lobby' && players.length > 0 && handNumber === 1) {
-      console.log('[GameTable] Multiplayer game ready, starting betting for hand 1...');
-      setTimeout(() => {
-        startBetting();
-      }, 500);
+    if (!isMultiplayer && phase === 'lobby' && players.length > 0 && handNumber === 1) {
+      setTimeout(() => startBetting(), 500);
     }
   }, [isMultiplayer, phase, players.length, handNumber]);
 
-  // Start betting for hands 2+ when phase becomes 'lobby' (both single-player and multiplayer)
+  // Single-player: start betting for hands 2+
   useEffect(() => {
-    if (phase === 'lobby' && handNumber > 1 && players.length > 0) {
-      console.log('[GameTable] Hand', handNumber, 'lobby phase detected, starting betting...');
-      const timer = setTimeout(() => {
-        startBetting();
-      }, 300);
+    if (!isMultiplayer && phase === 'lobby' && handNumber > 1 && players.length > 0) {
+      const timer = setTimeout(() => startBetting(), 300);
       return () => clearTimeout(timer);
     }
-  }, [phase, handNumber]);
+  }, [isMultiplayer, phase, handNumber]);
 
-  // Auto-start playing when all bets are placed
+  // Single-player: auto-start playing when all bets are placed
+  // In multiplayer, server auto-transitions to playing when last bet is placed
   useEffect(() => {
+    if (isMultiplayer) return;
     const allBetsPlaced = players.every(p => p.bet !== null);
     if (phase === 'betting' && allBetsPlaced) {
-      setTimeout(() => {
-        startPlaying();
-      }, 1000);
+      setTimeout(() => startPlaying(), 1000);
     }
-  }, [players, phase]);
+  }, [isMultiplayer, players, phase]);
 
   // Show scoreboard when hand scoring or game finished
   useEffect(() => {
