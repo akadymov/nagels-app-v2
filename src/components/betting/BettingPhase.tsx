@@ -155,19 +155,17 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     }
   }, [isMultiplayer, currentRoom?.id]);
 
-  // Non-host clients: poll game_states every 3s during betting
-  const isHost = useMultiplayerStore((s) => s.isHost);
-
+  // Poll server game_states every 2s during betting (all multiplayer clients)
   useEffect(() => {
-    if (!isMultiplayer || isHost || !visible || !currentRoom?.id) return;
+    if (!isMultiplayer || !visible || !currentRoom?.id) return;
     const roomId = currentRoom.id;
     const interval = setInterval(async () => {
       try {
         await refreshGameState(roomId, true);
       } catch (_) {}
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [isMultiplayer, isHost, visible, currentRoom?.id]);
+  }, [isMultiplayer, visible, currentRoom?.id]);
 
   // Get allowed bets for the current betting player
   const allowedBets = useMemo(() => {
