@@ -1,210 +1,120 @@
 /**
- * Nägels Online - Multiplayer Game Actions
+ * Nagels Online - Multiplayer Game Actions
  *
- * Sends game actions to Supabase for multiplayer sync
+ * All game actions go through the Supabase Edge Function.
+ * The server is the single source of truth.
  */
 
-import { getSupabaseClient } from '../supabase/client';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
 import { useGameStore } from '../../store/gameStore';
+import { getSupabaseClient } from '../supabase/client';
 
-// ============================================================
-// GAME STATE SNAPSHOTS
-// ============================================================
+const EDGE_FUNCTION_URL = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1/game-action';
 
-/**
- * Save a full game state snapshot to the server.
- * Called after each action (bet, card play) so other clients can
- * recover from missed Realtime events via sync/refresh.
- */
-export async function saveGameSnapshot(): Promise<void> {
+async function callGameAction(
+  actionType: string,
+  actionData?: Record<string, unknown>,
+): Promise<{ success: boolean; state?: Record<string, unknown>; version?: number; error?: string }> {
   const multiplayerState = useMultiplayerStore.getState();
   const roomId = multiplayerState.currentRoom?.id;
-  if (!roomId) return;
+  const gameState = useGameStore.getState();
+  const playerId = gameState.myPlayerId;
 
-  const gs = useGameStore.getState();
-  const supabase = getSupabaseClient();
-
-  const playerData = gs.players.map(p => ({
-    id: p.id,
-    name: p.name,
-    hand: p.hand,
-    bet: p.bet,
-    tricksWon: p.tricksWon,
-    score: p.score,
-    bonus: p.bonus,
-    isReady: p.isReady,
-  }));
-
-  const snapshot = {
-    room_id: roomId,
-    hand_number: gs.handNumber,
-    phase: gs.phase,
-    current_player_index: gs.currentPlayerIndex,
-    trump_suit: gs.trumpSuit,
-    cards_per_player: gs.cardsPerPlayer,
-    players: playerData,
-    current_trick: gs.currentTrick ?? { cards: [], winnerId: '', leadSuit: '' },
-    tricks: gs.tricks,
-    deck: gs.deck,
-    version: (gs.version || 0) + 1,
-    game_state: {
-      phase: gs.phase,
-      handNumber: gs.handNumber,
-      totalHands: gs.totalHands,
-      playerCount: gs.playerCount,
-      maxCardsPerPlayer: gs.maxCardsPerPlayer,
-      cardsPerPlayer: gs.cardsPerPlayer,
-      currentPlayerIndex: gs.currentPlayerIndex,
-      startingPlayerIndex: gs.startingPlayerIndex,
-      firstHandStartingPlayerIndex: gs.firstHandStartingPlayerIndex,
-      bettingPlayerIndex: gs.bettingPlayerIndex,
-      hasAllBets: gs.hasAllBets,
-      trumpSuit: gs.trumpSuit,
-      currentTrick: gs.currentTrick,
-      tricks: gs.tricks,
-      players: playerData,
-      scoreHistory: gs.scoreHistory,
-    },
-  };
+  if (!roomId || !playerId) {
+    return { success: false, error: 'Not in a room' };
+  }
 
   try {
-    const { error } = await supabase
-      .from('game_states')
-      .upsert(snapshot, { onConflict: 'room_id' });
+    const response = await fetch(EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        room_id: roomId,
+        player_id: playerId,
+        action_type: actionType,
+        action_data: actionData,
+      }),
+    });
 
-    if (error) {
-      console.error('[GameActions] Snapshot save error:', error.message, error.details, error.hint);
-    } else {
-      console.log('[GameActions] Snapshot saved: hand=' + gs.handNumber + ' phase=' + gs.phase + ' v=' + snapshot.version);
+    const result = await response.json();
+
+    if (result.success && result.state) {
+      // Apply server state immediately (actor gets instant feedback)
+      useGameStore.getState().forceRemoteState({
+        ...result.state,
+        version: result.version,
+        players: result.state.players,
+      });
     }
-  } catch (e) {
-    console.error('[GameActions] saveGameSnapshot exception:', e);
+
+    return result;
+  } catch (error) {
+    console.error('[GameActions] Edge Function call failed:', error);
+    return { success: false, error: 'Network error' };
   }
 }
 
-// ============================================================
-// BET ACTIONS
-// ============================================================
-
-/**
- * Place a bet (multiplayer mode)
- * Updates local gameStore and syncs to server
- */
 export async function multiplayerPlaceBet(playerId: string, bet: number): Promise<void> {
-  const state = useMultiplayerStore.getState();
-  if (!state.currentRoom?.id) {
-    throw new Error('Not in a room');
+  const result = await callGameAction('place_bet', { bet });
+  if (!result.success) {
+    console.error('[GameActions] Place bet failed:', result.error);
+    throw new Error(result.error || 'Failed to place bet');
   }
-
-  const supabase = getSupabaseClient();
-  const roomId = state.currentRoom.id;
-
-  // Insert bet event
-  const { error } = await supabase
-    .from('game_events')
-    .insert({
-      room_id: roomId,
-      event_type: 'bet_placed',
-      event_data: {
-        player_id: playerId,
-        bet: bet,
-      },
-      player_id: playerId,
-      version: 1,
-    });
-
-  if (error) {
-    console.error('[GameActions] Error placing bet:', error);
-    throw new Error('Failed to place bet');
-  }
-
-  console.log('[GameActions] Bet placed:', playerId, bet);
-
-  // Host saves snapshot after processing the bet (via applyRemoteBet handler)
-  // Non-host actors don't write — host is the single source of truth
-  if (useMultiplayerStore.getState().isHost) saveGameSnapshot();
 }
 
-// ============================================================
-// CARD PLAY ACTIONS
-// ============================================================
-
-/**
- * Play a card (multiplayer mode)
- * Updates local gameStore and syncs to server
- */
-export async function multiplayerPlayCard(playerId: string, cardId: string, card: any): Promise<void> {
-  const state = useMultiplayerStore.getState();
-  if (!state.currentRoom?.id) {
-    throw new Error('Not in a room');
+export async function multiplayerPlayCard(playerId: string, cardId: string): Promise<void> {
+  const result = await callGameAction('play_card', { cardId });
+  if (!result.success) {
+    console.error('[GameActions] Play card failed:', result.error);
+    throw new Error(result.error || 'Failed to play card');
   }
-
-  const supabase = getSupabaseClient();
-  const roomId = state.currentRoom.id;
-
-  // Insert card played event
-  const { error } = await supabase
-    .from('game_events')
-    .insert({
-      room_id: roomId,
-      event_type: 'card_played',
-      event_data: {
-        player_id: playerId,
-        card_id: cardId,
-        card: card, // Include full card data for other players
-      },
-      player_id: playerId,
-      version: 1,
-    });
-
-  if (error) {
-    console.error('[GameActions] Error playing card:', error);
-    throw new Error('Failed to play card');
-  }
-
-  console.log('[GameActions] Card played:', playerId, cardId);
-
-  if (useMultiplayerStore.getState().isHost) saveGameSnapshot();
 }
 
-// ============================================================
-// CHAT ACTIONS
-// ============================================================
+export async function multiplayerContinueHand(): Promise<void> {
+  const result = await callGameAction('continue_hand');
+  if (!result.success) {
+    console.error('[GameActions] Continue hand failed:', result.error);
+  }
+}
+
+export async function multiplayerStartGame(
+  players: Array<{ id: string; name: string }>,
+  firstHandStartingPlayerIndex: number,
+): Promise<void> {
+  const multiplayerState = useMultiplayerStore.getState();
+  const roomId = multiplayerState.currentRoom?.id;
+  const result = await callGameAction('start_game', {
+    players,
+    roomId,
+    firstHandStartingPlayerIndex,
+  });
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to start game');
+  }
+}
 
 /**
- * Send a chat message (multiplayer mode)
+ * Send a chat message (unchanged -- still writes to game_events)
  */
 export async function multiplayerSendChat(
   playerId: string,
   playerName: string,
-  text: string
+  text: string,
 ): Promise<void> {
   const state = useMultiplayerStore.getState();
-  if (!state.currentRoom?.id) {
-    throw new Error('Not in a room');
-  }
+  if (!state.currentRoom?.id) throw new Error('Not in a room');
 
   const supabase = getSupabaseClient();
-  const roomId = state.currentRoom.id;
+  const { error } = await supabase.from('game_events').insert({
+    room_id: state.currentRoom.id,
+    event_type: 'chat_message',
+    event_data: { player_id: playerId, player_name: playerName, text, timestamp: Date.now() },
+    player_id: playerId,
+    version: 1,
+  });
 
-  const { error } = await supabase
-    .from('game_events')
-    .insert({
-      room_id: roomId,
-      event_type: 'chat_message',
-      event_data: {
-        player_id: playerId,
-        player_name: playerName,
-        text,
-        timestamp: Date.now(),
-      },
-      player_id: playerId,
-      version: 1,
-    });
-
-  if (error) {
-    console.error('[GameActions] Error sending chat:', error);
-    throw new Error('Failed to send message');
-  }
+  if (error) throw new Error('Failed to send message');
 }
