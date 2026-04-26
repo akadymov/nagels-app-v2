@@ -170,9 +170,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
     const pollInterval = setInterval(async () => {
       try {
-        // Only apply if server version is newer than local
-        const localVersion = useGameStore.getState().version || 0;
-        await refreshGameState(roomId, true, localVersion);
+        await refreshGameState(roomId, true);
       } catch (e) {
         console.error('[Poll] refreshGameState failed:', e);
       }
