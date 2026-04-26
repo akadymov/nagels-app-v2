@@ -83,6 +83,9 @@ export function subscribeToRoomEvents(roomId: string): RealtimeChannel {
   store.setError(null);
   // isConnected will be set to true only after SUBSCRIBED callback fires in client.ts
 
+  // Initialize event tracking — set timestamp to now so we don't replay old events
+  lastProcessedEventTime = new Date().toISOString();
+
   // Initial data load
   refreshRoom(roomId);
   refreshPlayers(roomId);
@@ -564,32 +567,42 @@ function handleGameFinished(event: DatabaseGameEvent): void {
 // ============================================================
 
 /**
+ * Track the last processed event timestamp to avoid re-processing.
+ */
+let lastProcessedEventTime: string | null = null;
+
+/**
  * Replay missed game events from the database.
- * Called on manual Sync to recover from lost realtime events.
- * Fetches the last N card_played / bet_placed events and re-processes any
- * that haven't been applied to the local game state yet.
+ * Only processes events newer than the last one we've seen.
  */
 export async function replayMissedEvents(roomId: string): Promise<void> {
   try {
     const supabase = getSupabaseClient();
 
-    // Fetch the 50 most recent gameplay events (card plays + bets)
-    const { data: events, error } = await supabase
+    // Fetch only events newer than our last processed timestamp
+    let query = supabase
       .from('game_events')
       .select('*')
       .eq('room_id', roomId)
       .in('event_type', ['card_played', 'bet_placed'])
       .order('created_at', { ascending: true })
-      .limit(50);
+      .limit(20);
 
-    if (error || !events?.length) {
-      console.log('[EventHandler] replayMissedEvents: no events or error', error);
-      return;
+    if (lastProcessedEventTime) {
+      query = query.gt('created_at', lastProcessedEventTime);
     }
 
-    console.log('[EventHandler] Replaying', events.length, 'missed events');
+    const { data: events, error } = await query;
+
+    if (error || !events?.length) return;
+
+    console.log('[EventHandler] Replaying', events.length, 'new events');
     for (const event of events) {
       handleGameEvent(event as DatabaseGameEvent);
+      // Track the latest processed timestamp
+      if (event.created_at) {
+        lastProcessedEventTime = event.created_at;
+      }
     }
   } catch (e) {
     console.error('[EventHandler] replayMissedEvents failed:', e);
