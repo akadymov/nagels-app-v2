@@ -26,7 +26,7 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
-import { refreshGameState } from '../lib/multiplayer/eventHandler';
+import { refreshGameState, replayMissedEvents } from '../lib/multiplayer/eventHandler';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -163,17 +163,24 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [currentRoom?.id]);
 
-  // Non-host clients: poll game_states every 3s to sync with host's authoritative state
-  // Host doesn't poll — it IS the authority
+  // Host-authoritative sync:
+  // - Host: polls game_events every 3s to catch missed Realtime events, then saves snapshot
+  // - Non-host: polls game_states every 3s to read host's authoritative state
   const isHost = useMultiplayerStore((s) => s.isHost);
 
   useEffect(() => {
-    if (!isMultiplayer || isHost || !currentRoom?.id) return;
+    if (!isMultiplayer || !currentRoom?.id) return;
     const roomId = currentRoom.id;
 
     const pollInterval = setInterval(async () => {
       try {
-        await refreshGameState(roomId, true);
+        if (isHost) {
+          // Host replays missed events to stay in sync
+          await replayMissedEvents(roomId);
+        } else {
+          // Non-host reads host's authoritative state
+          await refreshGameState(roomId, true);
+        }
       } catch (_) {}
     }, 3000);
 
