@@ -1,7 +1,12 @@
 /**
- * Nägels Online - Event Handler
+ * Nagels Online - Event Handler
  *
- * Handles Supabase Realtime subscriptions for game events
+ * Handles Supabase Realtime subscriptions for room/lobby events
+ * and polling-based game state sync from the server.
+ *
+ * Game actions (bet, play card, continue hand) are no longer processed
+ * via Realtime events -- they go through the Edge Function and the
+ * client polls game_states every 2s to stay in sync.
  */
 
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -9,7 +14,6 @@ import { subscribeToRoom, getSupabaseClient } from '../supabase/client';
 import { useMultiplayerStore } from '../../store/multiplayerStore';
 import { useGameStore } from '../../store/gameStore';
 import type { DatabaseRoom, DatabaseGameState, DatabaseGameEvent, DatabaseRoomPlayer } from '../supabase/types';
-import type { Card } from '../../game';
 import { startNetworkMonitoring, stopNetworkMonitoring, updateLastSyncVersion, setResubscribeCallback, clearResubscribeCallback } from './networkMonitor';
 
 // ============================================================
@@ -82,9 +86,6 @@ export function subscribeToRoomEvents(roomId: string): RealtimeChannel {
   store.setIsReconnecting(false);
   store.setError(null);
   // isConnected will be set to true only after SUBSCRIBED callback fires in client.ts
-
-  // Initialize event tracking — set timestamp to now so we don't replay old events
-  lastProcessedEventTime = new Date().toISOString();
 
   // Initial data load
   refreshRoom(roomId);
@@ -213,7 +214,7 @@ async function refreshPlayers(roomId: string): Promise<void> {
 
 /**
  * Refresh game state from database.
- * When force=true (sync button), bypasses guards to fix desync.
+ * Always force-applies the server state (server is the source of truth).
  */
 export async function refreshGameState(roomId: string, force = false): Promise<void> {
   try {
@@ -241,15 +242,9 @@ export async function refreshGameState(roomId: string, force = false): Promise<v
       handNumber: gameState.hand_number,
       currentPlayerIndex: gameState.current_player_index,
       version: gameState.version,
-      force,
     });
 
-    if (force) {
-      // Force-apply: bypass all guards in setRemoteState
-      handleGameStateChange(gameState as DatabaseGameState, true);
-    } else {
-      handleGameStateChange(gameState as DatabaseGameState);
-    }
+    handleGameStateChange(gameState as DatabaseGameState);
   } catch (error) {
     console.error('[EventHandler] Error refreshing game state:', error);
   }
@@ -312,9 +307,10 @@ function handleRoomChange(payload: any): void {
 }
 
 /**
- * Handle game state changes from server
+ * Handle game state changes from server.
+ * Always force-applies since the server is the single source of truth.
  */
-function handleGameStateChange(state: DatabaseGameState, force = false): void {
+function handleGameStateChange(state: DatabaseGameState): void {
   const multiplayerStore = useMultiplayerStore.getState();
   const gameStore = useGameStore.getState();
 
@@ -341,7 +337,7 @@ function handleGameStateChange(state: DatabaseGameState, force = false): void {
 
     // Only sync if we have players (game is initialized)
     if (gameStore.players.length > 0) {
-      console.log('[EventHandler] Syncing game state from server...', force ? '(FORCE)' : '');
+      console.log('[EventHandler] Syncing game state from server...');
       const remoteData = {
         phase: remoteGameState.phase ?? state.phase,
         handNumber: remoteGameState.handNumber ?? state.hand_number,
@@ -362,25 +358,19 @@ function handleGameStateChange(state: DatabaseGameState, force = false): void {
         version: state.version ?? 0,
       };
 
-      if (force) {
-        gameStore.forceRemoteState(remoteData);
-      } else {
-        gameStore.setRemoteState(remoteData);
-      }
+      gameStore.forceRemoteState(remoteData);
     }
   }
 }
 
 /**
- * Handle game events
+ * Handle game events (lobby/chat only -- game actions go through Edge Function)
  */
 function handleGameEvent(event: DatabaseGameEvent | null | undefined): void {
   if (!event) {
     console.warn('[EventHandler] Received null/undefined event');
     return;
   }
-
-  const store = useMultiplayerStore.getState();
 
   switch (event.event_type) {
     case 'player_joined':
@@ -399,32 +389,12 @@ function handleGameEvent(event: DatabaseGameEvent | null | undefined): void {
       handleGameStartedEvent(event);
       break;
 
-    case 'bet_placed':
-      handleBetPlaced(event);
-      break;
-
-    case 'card_played':
-      handleCardPlayed(event);
-      break;
-
     case 'chat_message':
       handleChatMessage(event);
       break;
 
-    case 'trick_completed':
-      handleTrickCompleted(event);
-      break;
-
-    case 'hand_completed':
-      handleHandCompleted(event);
-      break;
-
-    case 'game_finished':
-      handleGameFinished(event);
-      break;
-
     default:
-      console.warn('[EventHandler] Unknown event type:', event.event_type);
+      console.log('[EventHandler] Ignoring event type:', event.event_type);
   }
 }
 
@@ -433,7 +403,7 @@ function handleGameEvent(event: DatabaseGameEvent | null | undefined): void {
 // ============================================================
 
 function handlePlayerJoined(event: DatabaseGameEvent): void {
-  const { player_id, player_name } = event.event_data as { player_id: string; player_name: string };
+  const { player_name } = event.event_data as { player_id: string; player_name: string };
   console.log('[EventHandler] Player joined event:', player_name);
 
   // Refresh player list to get updated data
@@ -443,7 +413,7 @@ function handlePlayerJoined(event: DatabaseGameEvent): void {
 }
 
 function handlePlayerLeft(event: DatabaseGameEvent): void {
-  const { player_id, player_name } = event.event_data as { player_id: string; player_name: string };
+  const { player_name } = event.event_data as { player_id: string; player_name: string };
   console.log('[EventHandler] Player left event:', player_name);
 
   // Refresh player list to get updated data
@@ -470,51 +440,6 @@ function handleGameStartedEvent(event: DatabaseGameEvent): void {
   }
 }
 
-function handleBetPlaced(event: DatabaseGameEvent): void {
-  const { player_id, bet } = event.event_data as { player_id: string; bet: number };
-  console.log('[EventHandler] Bet placed event:', player_id, bet);
-
-  // Apply bet to gameStore (for other players' bets)
-  const gameStore = useGameStore.getState();
-  if (gameStore.myPlayerId !== player_id) {
-    gameStore.applyRemoteBet(player_id, bet);
-  }
-}
-
-function handleCardPlayed(event: DatabaseGameEvent): void {
-  const { player_id, card_id, card: cardData } = event.event_data as {
-    player_id: string;
-    card_id: string;
-    card?: { id: string; suit: string; rank: string };
-  };
-  console.log('[EventHandler] Card played event:', player_id, card_id);
-
-  // Apply card play to gameStore (for other players' card plays)
-  const gameStore = useGameStore.getState();
-  const player = gameStore.players.find(p => p.id === player_id);
-
-  if (player && gameStore.myPlayerId !== player_id) {
-    // Try to find the card in the player's hand
-    let card = player.hand.find(c => c.id === card_id);
-
-    // If not found in hand (might not be synced), use card data from event
-    if (!card && cardData) {
-      card = {
-        id: cardData.id,
-        suit: cardData.suit as any,
-        rank: cardData.rank as any,
-      };
-      console.log('[EventHandler] Using card data from event:', card);
-    }
-
-    if (card) {
-      gameStore.applyRemoteCardPlay(player_id, card);
-    } else {
-      console.error('[EventHandler] Card not found in player hand:', card_id);
-    }
-  }
-}
-
 function handleChatMessage(event: DatabaseGameEvent): void {
   const { player_id, player_name, text, timestamp } = event.event_data as {
     player_id: string;
@@ -534,80 +459,9 @@ function handleChatMessage(event: DatabaseGameEvent): void {
   });
 }
 
-function handleTrickCompleted(event: DatabaseGameEvent): void {
-  const { winner_id, cards } = event.event_data as {
-    winner_id: string;
-    cards: unknown[];
-  };
-  console.log('[EventHandler] Trick completed event, winner:', winner_id);
-
-  // TODO: Update gameStore with trick result
-}
-
-function handleHandCompleted(event: DatabaseGameEvent): void {
-  const { hand_number, scores } = event.event_data as {
-    hand_number: number;
-    scores: unknown[];
-  };
-  console.log('[EventHandler] Hand completed event:', hand_number, scores);
-
-  // TODO: Update gameStore with hand results
-  // TODO: Show scoreboard modal
-}
-
-function handleGameFinished(event: DatabaseGameEvent): void {
-  const { final_scores } = event.event_data as { final_scores: unknown[] };
-  console.log('[EventHandler] Game finished event!', final_scores);
-
-  // TODO: Show final results
-}
-
 // ============================================================
 // UTILITIES
 // ============================================================
-
-/**
- * Track the last processed event timestamp to avoid re-processing.
- */
-let lastProcessedEventTime: string | null = null;
-
-/**
- * Replay missed game events from the database.
- * Only processes events newer than the last one we've seen.
- */
-export async function replayMissedEvents(roomId: string): Promise<void> {
-  try {
-    const supabase = getSupabaseClient();
-
-    // Fetch only events newer than our last processed timestamp
-    let query = supabase
-      .from('game_events')
-      .select('*')
-      .eq('room_id', roomId)
-      .in('event_type', ['card_played', 'bet_placed'])
-      .order('created_at', { ascending: true })
-      .limit(20);
-
-    if (lastProcessedEventTime) {
-      query = query.gt('created_at', lastProcessedEventTime);
-    }
-
-    const { data: events, error } = await query;
-
-    if (error || !events?.length) return;
-
-    console.log('[EventHandler] Replaying', events.length, 'new events');
-    for (const event of events) {
-      handleGameEvent(event as DatabaseGameEvent);
-      // Track the latest processed timestamp
-      if (event.created_at) {
-        lastProcessedEventTime = event.created_at;
-      }
-    }
-  } catch (e) {
-    console.error('[EventHandler] replayMissedEvents failed:', e);
-  }
-}
 
 /**
  * Check if currently subscribed to a room
