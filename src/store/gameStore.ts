@@ -34,7 +34,7 @@ import {
   type PlayContext,
   sortHand,
 } from '../game';
-import { multiplayerPlaceBet, multiplayerPlayCard, saveGameSnapshot } from '../lib/multiplayer/gameActions';
+import { multiplayerPlaceBet, multiplayerPlayCard } from '../lib/multiplayer/gameActions';
 import { seededShuffle, createSeededRandom } from '../lib/multiplayer/seededRandom';
 import { useMultiplayerStore } from './multiplayerStore';
 import { trickWonHaptic } from '../utils/haptics';
@@ -108,9 +108,8 @@ export interface GameStore {
   // Bot difficulty for single-player
   botDifficulty: BotDifficulty;
 
-  // State versioning for conflict resolution
+  // State version (set by server in multiplayer)
   version: number;
-  pendingActions: Map<string, { action: string; data: any; localVersion: number }>;
 
   // Actions
   initGame: (players: Omit<Player, 'isBot'>[], myPlayerId: string) => void;
@@ -139,19 +138,9 @@ export interface GameStore {
   playBotCard: () => void;
 
   // Multiplayer sync
-  setRemoteState: (remoteState: Partial<GameStore> & { players: GamePlayer[] }) => void;
   forceRemoteState: (remoteState: Partial<GameStore> & { players: GamePlayer[] }) => void;
-  applyRemoteBet: (playerId: string, bet: number) => void;
-  applyRemoteCardPlay: (playerId: string, card: Card) => void;
   setMultiplayerMode: (isMultiplayer: boolean) => void;
   setBotDifficulty: (difficulty: BotDifficulty) => void;
-
-  // Version control & conflict resolution
-  incrementVersion: () => void;
-  addPendingAction: (actionId: string, action: string, data: any) => void;
-  removePendingAction: (actionId: string) => void;
-  rollbackPendingActions: () => void;
-  getVersion: () => number;
 }
 
 // ============================================================
@@ -187,7 +176,6 @@ const initialState = {
   botDifficulty: 'medium' as BotDifficulty,
 
   version: 0,
-  pendingActions: new Map(),
 };
 
 // ============================================================
@@ -343,7 +331,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hasAllBets: false,
     });
 
-    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -389,37 +376,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hasAllBets,
     });
 
-    // Sync to multiplayer server if in multiplayer mode
+    // In multiplayer mode, also call the Edge Function.
+    // The server response (via forceRemoteState in gameActions) will
+    // overwrite local state, ensuring server is the source of truth.
     if (state.isMultiplayer && playerId === state.myPlayerId) {
-      const actionId = `bet-${playerId}-${Date.now()}`;
-
-      // Track pending action
-      get().addPendingAction(actionId, 'placeBet', { playerId, bet });
-      get().incrementVersion();
-
-      multiplayerPlaceBet(playerId, bet)
-        .then(() => {
-          // Server confirmed - remove pending action
-          get().removePendingAction(actionId);
-        })
-        .catch(err => {
-          console.error('[GameStore] Failed to sync bet:', err);
-          // Rollback optimistic update
-          const currentState = get();
-          const rollbackPlayers = [...currentState.players];
-          rollbackPlayers[bettingPlayerIndex] = {
-            ...rollbackPlayers[bettingPlayerIndex],
-            bet: null, // Rollback to null
-          };
-
-          set({
-            players: rollbackPlayers,
-            bettingPlayerIndex,
-            hasAllBets: false,
-          });
-
-          get().removePendingAction(actionId);
-        });
+      multiplayerPlaceBet(playerId, bet).catch(err => {
+        console.error('[GameStore] Failed to sync bet:', err);
+      });
     }
   },
 
@@ -440,9 +403,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         leadSuit: 'diamonds', // Will be set when first card is played
       },
     });
-
-    // Save snapshot at phase transition — only host to avoid concurrent writes
-    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -541,28 +501,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    // Sync to multiplayer server if in multiplayer mode (after optimistic update)
+    // In multiplayer mode, also call the Edge Function.
+    // The server response (via forceRemoteState in gameActions) will
+    // overwrite local state, ensuring server is the source of truth.
     if (state.isMultiplayer && playerId === state.myPlayerId) {
-      const actionId = `play-${playerId}-${card.id}-${Date.now()}`;
-      get().addPendingAction(actionId, 'playCard', { playerId, card });
-      get().incrementVersion();
-
-      multiplayerPlayCard(playerId, card.id, card)
-        .then(() => {
-          console.log('[GameStore] Card play synced successfully');
-          get().removePendingAction(actionId);
-        })
-        .catch(err => {
-          console.error('[GameStore] Failed to sync card play:', err);
-          // Rollback optimistic update
-          console.log('[GameStore] Rolling back card play...');
-          set({
-            players: currentState.players,
-            currentTrick: currentState.currentTrick,
-            currentPlayerIndex: currentState.currentPlayerIndex,
-          });
-          get().removePendingAction(actionId);
-        });
+      multiplayerPlayCard(playerId, card.id).catch(err => {
+        console.error('[GameStore] Failed to sync card play:', err);
+      });
     }
   },
 
@@ -604,9 +549,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentTrick: null,
       currentPlayerIndex: winnerIndex, // Winner leads next trick
     });
-
-    // Save snapshot after trick cleared (prevents deadlock from stale completed trick)
-    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
 
     // If all tricks played, schedule completeHand (short delay for UI to settle)
     if (isHandComplete) {
@@ -665,9 +607,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       players: updatedPlayers,
       scoreHistory: [...state.scoreHistory, handResult],
     });
-
-    // Save scoring snapshot — only host writes to avoid concurrent upsert conflicts
-    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -735,7 +674,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: 'finished',
     });
 
-    if (state.isMultiplayer && useMultiplayerStore.getState().isHost) saveGameSnapshot();
   },
 
   /**
@@ -949,64 +887,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ============================================================
 
   /**
-   * Apply remote state from server
-   * Used to sync game state in multiplayer mode
-   */
-  setRemoteState: (remoteState) => {
-    const state = get();
-
-    // Block only the specific stale-snapshot regression: a server snapshot with
-    // phase='playing' (currentTrick=null) must not overwrite our local phase='scoring'
-    // that was just computed by completeTrick/completeHand.
-    // We do NOT use a broad phase-order guard because rounds cycle backward
-    // (scoring → betting for the next hand), which a rank comparison would block.
-    if (state.phase === 'scoring' && remoteState.phase === 'playing') {
-      console.log('[GameStore] Ignoring stale playing snapshot that would overwrite scoring phase');
-      return;
-    }
-
-    // Don't clear an in-progress completed trick (winnerId set, awaiting completeTrick timer)
-    if (state.currentTrick?.winnerId && !remoteState.currentTrick?.winnerId) {
-      console.log('[GameStore] Ignoring remote state that would clear active trick winner');
-      return;
-    }
-
-    // Don't restore a trick we already completed locally.
-    // Scenario: completeTrick() fired (currentTrick = null), then a stale snapshot
-    // with currentTrick.winnerId arrives.  The timer won't fire again → deadlock.
-    if (!state.currentTrick && remoteState.currentTrick?.winnerId) {
-      console.log('[GameStore] Ignoring stale remote state that would restore already-completed trick');
-      return;
-    }
-
-    // Don't rewind to an earlier hand.
-    // Scenario: nextHand() already advanced to hand N+1, but a stale snapshot for
-    // hand N arrives and overwrites phase/players back — betting never starts.
-    if (state.handNumber > 1 && remoteState.handNumber < state.handNumber) {
-      console.log('[GameStore] Ignoring stale remote state for earlier hand', remoteState.handNumber, '<', state.handNumber);
-      return;
-    }
-
-    // Within the same hand, don't revert to an earlier phase.
-    // Scenario: startBetting() set phase='betting', then a stale snapshot with
-    // phase='lobby' (same handNumber) arrives and clears the dealt hands.
-    // Note: only block if LOCAL is AHEAD; if local is behind, apply remote to catch up.
-    const phaseRank: Record<string, number> = { lobby: 0, betting: 1, playing: 2, scoring: 3, finished: 4 };
-    if (
-      remoteState.handNumber === state.handNumber &&
-      (phaseRank[remoteState.phase as string] ?? 0) < (phaseRank[state.phase as string] ?? 0)
-    ) {
-      console.log('[GameStore] Ignoring stale remote state with earlier phase', remoteState.phase, '<', state.phase);
-      return;
-    }
-
-    set({
-      ...remoteState,
-      myPlayerId: state.myPlayerId,
-    });
-  },
-
-  /**
    * Force-apply remote state, bypassing most guards.
    * Used by sync button and heartbeat to recover from desync.
    * Only guard: never skip scoring phase (user needs to see scoreboard).
@@ -1040,195 +920,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   /**
-   * Apply a bet placed by another player (received from server)
-   * Skips if this is the local player (already updated locally)
-   * Detects conflicts with pending local actions
-   */
-  applyRemoteBet: (playerId, bet) => {
-    const state = get();
-
-    // Skip if this is the local player (already updated)
-    if (state.myPlayerId === playerId) {
-      console.log('[GameStore] Skipping remote bet for local player:', playerId);
-      return;
-    }
-
-    // Check for conflicts with pending actions
-    // If we have pending actions for other players, it might indicate we're out of sync
-    const hasPendingActions = state.pendingActions.size > 0;
-    if (hasPendingActions) {
-      console.warn('[GameStore] Receiving remote bet while having pending actions - potential conflict');
-      // In a real conflict resolution scenario, we would check if this remote bet
-      // conflicts with our pending actions. For now, we trust the server.
-    }
-
-    // If we receive a bet event while still in 'lobby' phase (race condition: the other
-    // player placed their bet before our startBetting() fired), fast-forward to betting.
-    if (state.phase === 'lobby' && state.handNumber > 0 && state.players.length > 0) {
-      console.log('[GameStore] Received remote bet in lobby phase — fast-forwarding to betting');
-      get().startBetting();
-    }
-
-    const refreshedState = get();
-    if (refreshedState.phase !== 'betting') return;
-
-    const bettingPlayerIndex = refreshedState.players.findIndex(p => p.id === playerId);
-    if (bettingPlayerIndex === -1) return;
-
-    // Update player's bet (use refreshedState which may have been updated by startBetting)
-    const updatedPlayers = [...refreshedState.players];
-    updatedPlayers[bettingPlayerIndex] = {
-      ...updatedPlayers[bettingPlayerIndex],
-      bet,
-    };
-
-    // Move to next betting player
-    const nextIndex = getNextPlayerIndex(bettingPlayerIndex, refreshedState.playerCount);
-    const hasAllBets = updatedPlayers.every(p => p.bet !== null);
-
-    console.log('[GameStore] Remote bet applied:', playerId, 'bet:', bet, 'next:', nextIndex, 'allBets:', hasAllBets);
-
-    set({
-      players: updatedPlayers,
-      bettingPlayerIndex: hasAllBets ? bettingPlayerIndex : nextIndex,
-      hasAllBets,
-    });
-
-    // Increment version after applying remote change
-    get().incrementVersion();
-
-    // Host saves authoritative snapshot after processing remote bet
-    if (get().isMultiplayer && useMultiplayerStore.getState().isHost) {
-      saveGameSnapshot();
-    }
-  },
-
-  /**
-   * Apply a card play by another player (received from server)
-   * Skips if this is the local player (already updated locally)
-   * Detects conflicts with pending local actions
-   */
-  applyRemoteCardPlay: (playerId, card) => {
-    const state = get();
-
-    // Skip if this is the local player (already updated)
-    if (state.myPlayerId === playerId) {
-      console.log('[GameStore] Skipping remote card play for local player:', playerId);
-      return;
-    }
-
-    // Check for conflicts with pending actions
-    const hasPendingActions = state.pendingActions.size > 0;
-    if (hasPendingActions) {
-      console.warn('[GameStore] Receiving remote card play while having pending actions - potential conflict');
-      // In a real conflict resolution scenario, we would check if this remote card play
-      // conflicts with our pending actions. For now, we trust the server.
-    }
-
-    // If we receive a card-play event while still in 'betting' phase (all bets are in but
-    // our local startPlaying() hasn't fired yet), fast-forward to playing phase.
-    if (state.phase === 'betting' && state.hasAllBets) {
-      console.log('[GameStore] Received remote card play in betting phase — fast-forwarding to playing');
-      get().startPlaying();
-    }
-
-    const playingState = get();
-    if (playingState.phase !== 'playing') return;
-
-    const playerIndex = playingState.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) return;
-
-    // If the previous trick is complete (winnerId set) but its timer hasn't fired yet,
-    // complete it immediately. This prevents the race condition where the trick winner
-    // plays their first card of the next trick before the remote completeTrick timer fires,
-    // causing the new card to be incorrectly appended to the finished trick.
-    if (get().currentTrick?.winnerId) {
-      console.log('[GameStore] Completing lingering trick before applying new card play');
-      get().completeTrick();
-    }
-
-    // Create new trick if needed
-    if (!get().currentTrick) {
-      set({
-        currentTrick: {
-          cards: [],
-          winnerId: '',
-          leadSuit: card.suit,
-        },
-      });
-    }
-
-    // Re-get state after potential update
-    const updatedState = get();
-
-    // Remove card from player's hand
-    const updatedPlayers = [...updatedState.players];
-    const player = updatedPlayers[playerIndex];
-    updatedPlayers[playerIndex] = {
-      ...player,
-      hand: player.hand.filter(c => c.id !== card.id),
-    };
-
-    // Add to current trick
-    const trick = updatedState.currentTrick!;
-    const isFirstCard = trick.cards.length === 0;
-
-    const updatedTrick: Trick = {
-      ...trick,
-      cards: [...trick.cards, { playerId, card }],
-      leadSuit: isFirstCard ? card.suit : trick.leadSuit,
-    };
-
-    // Check if trick is complete
-    const trickComplete = updatedTrick.cards.length === playingState.playerCount;
-
-    if (trickComplete) {
-      // Determine winner
-      const { winnerId } = determineTrickWinner(
-        updatedTrick.cards,
-        playingState.trumpSuit
-      );
-
-      console.log('[GameStore] Remote card play completed trick, winner:', winnerId);
-
-      set({
-        players: updatedPlayers,
-        currentTrick: {
-          ...updatedTrick,
-          winnerId,
-        },
-      });
-
-      // Schedule completeTrick from the store side (same as playCard)
-      setTimeout(() => {
-        const s = get();
-        if (s.phase === 'playing' && s.currentTrick?.winnerId === winnerId) {
-          s.completeTrick();
-        }
-      }, 1500);
-    } else {
-      // Move to next player
-      const nextIndex = getNextPlayerIndex(playingState.currentPlayerIndex, playingState.playerCount);
-
-      console.log('[GameStore] Remote card play applied:', playerId, 'card:', card, 'next:', nextIndex);
-
-      set({
-        players: updatedPlayers,
-        currentTrick: updatedTrick,
-        currentPlayerIndex: nextIndex,
-      });
-    }
-
-    // Increment version after applying remote change
-    get().incrementVersion();
-
-    // Host saves authoritative snapshot after processing remote card play
-    if (get().isMultiplayer && useMultiplayerStore.getState().isHost) {
-      saveGameSnapshot();
-    }
-  },
-
-  /**
    * Set multiplayer mode
    * When enabled, bets and card plays will sync to server
    */
@@ -1243,61 +934,5 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setBotDifficulty: (difficulty: BotDifficulty) => {
     console.log('[GameStore] Bot difficulty set to:', difficulty);
     set({ botDifficulty: difficulty });
-  },
-
-  // ============================================================
-  // VERSION CONTROL & CONFLICT RESOLUTION
-  // ============================================================
-
-  /**
-   * Increment state version after local change
-   */
-  incrementVersion: () => {
-    const state = get();
-    const newVersion = state.version + 1;
-    console.log('[GameStore] Version incremented:', state.version, '->', newVersion);
-    set({ version: newVersion });
-  },
-
-  /**
-   * Add pending action (optimistic update)
-   */
-  addPendingAction: (actionId: string, action: string, data: any) => {
-    const state = get();
-    const pending = new Map(state.pendingActions);
-    pending.set(actionId, { action, data, localVersion: state.version });
-    console.log('[GameStore] Pending action added:', actionId, 'v' + state.version);
-    set({ pendingActions: pending });
-  },
-
-  /**
-   * Remove pending action (confirmed by server)
-   */
-  removePendingAction: (actionId: string) => {
-    const state = get();
-    const pending = new Map(state.pendingActions);
-    const removed = pending.delete(actionId);
-    if (removed) {
-      console.log('[GameStore] Pending action confirmed:', actionId);
-      set({ pendingActions: pending });
-    }
-  },
-
-  /**
-   * Rollback all pending actions (on conflict)
-   */
-  rollbackPendingActions: () => {
-    const state = get();
-    if (state.pendingActions.size > 0) {
-      console.warn('[GameStore] Rolling back', state.pendingActions.size, 'pending actions');
-      set({ pendingActions: new Map() });
-    }
-  },
-
-  /**
-   * Get current version
-   */
-  getVersion: () => {
-    return get().version;
   },
 }));
