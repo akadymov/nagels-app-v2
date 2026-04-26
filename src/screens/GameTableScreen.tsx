@@ -26,7 +26,8 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { ChatPanel, ChatButton } from '../components/ChatPanel';
-import { refreshGameState, replayMissedEvents } from '../lib/multiplayer/eventHandler';
+import { refreshGameState } from '../lib/multiplayer/eventHandler';
+import { multiplayerContinueHand } from '../lib/multiplayer/gameActions';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -163,29 +164,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [currentRoom?.id]);
 
-  // Host-authoritative sync:
-  // - Host: polls game_events every 3s to catch missed Realtime events, then saves snapshot
-  // - Non-host: polls game_states every 3s to read host's authoritative state
-  const isHost = useMultiplayerStore((s) => s.isHost);
-
+  // Poll server game_states every 2s in multiplayer to stay in sync.
+  // The Edge Function is the single source of truth.
   useEffect(() => {
     if (!isMultiplayer || !currentRoom?.id) return;
     const roomId = currentRoom.id;
 
-    const pollInterval = setInterval(async () => {
+    const interval = setInterval(async () => {
       try {
-        if (isHost) {
-          // Host replays missed events to stay in sync
-          await replayMissedEvents(roomId);
-        } else {
-          // Non-host reads host's authoritative state
-          await refreshGameState(roomId, true);
-        }
+        await refreshGameState(roomId, true);
       } catch (_) {}
-    }, 3000);
+    }, 2000);
 
-    return () => clearInterval(pollInterval);
-  }, [isMultiplayer, isHost, currentRoom?.id]);
+    return () => clearInterval(interval);
+  }, [isMultiplayer, currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)
   useEffect(() => {
@@ -227,12 +219,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     if (!roomId) return;
     setIsSyncing(true);
     try {
-      const { subscribeToRoomEvents, replayMissedEvents } = await import('../lib/multiplayer/eventHandler');
+      const { subscribeToRoomEvents } = await import('../lib/multiplayer/eventHandler');
       // Re-subscribe to refresh room/player data and the realtime channel
       subscribeToRoomEvents(roomId);
-      // Replay recent card_played / bet_placed events from DB to recover
-      // any realtime events that were silently dropped (network glitch, etc.)
-      await replayMissedEvents(roomId);
+      // Force-refresh game state from server
+      await refreshGameState(roomId, true);
     } catch (e) {
       console.error('[Sync] Failed:', e);
     } finally {
@@ -462,10 +453,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       return;
     }
 
-    if (handNumber >= totalHands) {
-      // Game over
+    if (isMultiplayer) {
+      // In multiplayer, tell the server to advance to next hand (or finish).
+      // The server response will update local state via forceRemoteState.
+      multiplayerContinueHand().catch(err => {
+        console.error('[GameTable] Continue hand failed:', err);
+      });
+    } else if (handNumber >= totalHands) {
+      // Game over (single-player)
       endGame();
     } else {
+      // Next hand (single-player)
       nextHand();
       // startBetting() is triggered by the useEffect watching phase === 'lobby'
     }
