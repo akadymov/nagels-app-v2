@@ -1096,6 +1096,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Increment version after applying remote change
     get().incrementVersion();
+
+    // Host saves authoritative snapshot after processing remote bet
+    if (get().isMultiplayer && useMultiplayerStore.getState().isHost) {
+      saveGameSnapshot();
+    }
   },
 
   /**
@@ -1216,6 +1221,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Increment version after applying remote change
     get().incrementVersion();
+
+    // Host saves authoritative snapshot after processing remote card play
+    if (get().isMultiplayer && useMultiplayerStore.getState().isHost) {
+      saveGameSnapshot();
+    }
   },
 
   /**

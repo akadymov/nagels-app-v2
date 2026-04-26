@@ -155,22 +155,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     }
   }, [isMultiplayer, currentRoom?.id]);
 
-  // Auto-sync heartbeat for betting phase
-  const lastBetChangeRef = useRef(Date.now());
-  useEffect(() => { lastBetChangeRef.current = Date.now(); }, [bettingPlayerIndex, hasAllBets]);
+  // Non-host clients: poll game_states every 3s during betting
+  const isHost = useMultiplayerStore((s) => s.isHost);
 
   useEffect(() => {
-    if (!isMultiplayer || !visible || !currentRoom?.id) return;
+    if (!isMultiplayer || isHost || !visible || !currentRoom?.id) return;
     const roomId = currentRoom.id;
     const interval = setInterval(async () => {
-      if (Date.now() - lastBetChangeRef.current > 10000) {
-        console.log('[Heartbeat] Betting auto-sync');
+      try {
         await refreshGameState(roomId, true);
-        lastBetChangeRef.current = Date.now();
-      }
-    }, 5000);
+      } catch (_) {}
+    }, 3000);
     return () => clearInterval(interval);
-  }, [isMultiplayer, visible, currentRoom?.id]);
+  }, [isMultiplayer, isHost, visible, currentRoom?.id]);
 
   // Get allowed bets for the current betting player
   const allowedBets = useMemo(() => {

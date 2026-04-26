@@ -121,8 +121,9 @@ export async function multiplayerPlaceBet(playerId: string, bet: number): Promis
 
   console.log('[GameActions] Bet placed:', playerId, bet);
 
-  // Save full game state snapshot (fire-and-forget)
-  saveGameSnapshot();
+  // Host saves snapshot after processing the bet (via applyRemoteBet handler)
+  // Non-host actors don't write — host is the single source of truth
+  if (useMultiplayerStore.getState().isHost) saveGameSnapshot();
 }
 
 // ============================================================
@@ -164,8 +165,7 @@ export async function multiplayerPlayCard(playerId: string, cardId: string, card
 
   console.log('[GameActions] Card played:', playerId, cardId);
 
-  // Save full game state snapshot (fire-and-forget)
-  saveGameSnapshot();
+  if (useMultiplayerStore.getState().isHost) saveGameSnapshot();
 }
 
 // ============================================================
