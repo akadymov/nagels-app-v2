@@ -894,12 +894,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   forceRemoteState: (remoteState) => {
     const state = get();
 
-    // Don't skip past scoring — user needs to see the scoreboard and press Continue
-    if (state.phase === 'scoring') {
-      console.log('[GameStore] Force-apply skipped: local is in scoring phase');
-      return;
-    }
-
+    // Server is authoritative — always apply. No guards needed.
     console.log('[GameStore] Force-applying remote state:', {
       phase: remoteState.phase,
       handNumber: remoteState.handNumber,
@@ -909,14 +904,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...remoteState,
       myPlayerId: state.myPlayerId,
     });
-
-    // If the snapshot contains a completed trick (winnerId set), clear it immediately.
-    // Without this, playCard() blocks forever because no completeTrick timer is running.
-    const applied = get();
-    if (applied.currentTrick?.winnerId) {
-      console.log('[GameStore] Force-apply: clearing completed trick');
-      setTimeout(() => get().completeTrick(), 500);
-    }
   },
 
   /**
