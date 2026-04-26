@@ -54,9 +54,11 @@ async function find(loc, ms = WAIT) {
 async function tap(p, tid, w, ms = WAIT) {
   const l = p.locator(`[data-testid="${tid}"]`);
   if (!(await find(l, ms))) { log(w, `✗ ${tid} (${ms}ms)`); return false; }
-  await l.click();
-  log(w, `✓ ${tid}`);
-  return true;
+  try {
+    await l.click({ timeout: 5000 });
+    log(w, `✓ ${tid}`);
+    return true;
+  } catch (_) { log(w, `✗ ${tid} (click failed)`); return false; }
 }
 
 async function type(p, tid, val, w) {
