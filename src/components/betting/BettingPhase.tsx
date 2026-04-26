@@ -161,8 +161,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     const roomId = currentRoom.id;
     const interval = setInterval(async () => {
       try {
-        const localVersion = useGameStore.getState().version || 0;
-        await refreshGameState(roomId, true, localVersion);
+        await refreshGameState(roomId, true);
       } catch (_) {}
     }, 2000);
     return () => clearInterval(interval);

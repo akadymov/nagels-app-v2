@@ -210,10 +210,9 @@ async function refreshPlayers(roomId: string): Promise<void> {
 
 /**
  * Refresh game state from database.
- * @param force - bypass guards in setRemoteState
- * @param minVersion - only apply if server version > minVersion (prevents stale overwrites)
+ * When force=true (sync button), bypasses guards to fix desync.
  */
-export async function refreshGameState(roomId: string, force = false, minVersion = 0): Promise<void> {
+export async function refreshGameState(roomId: string, force = false): Promise<void> {
   try {
     const supabase = getSupabaseClient();
     const { data: gameState, error } = await supabase
@@ -224,12 +223,26 @@ export async function refreshGameState(roomId: string, force = false, minVersion
       .limit(1)
       .single();
 
-    if (error || !gameState) return;
+    if (error) {
+      console.log('[EventHandler] No game state found (game may not have started yet)');
+      return;
+    }
 
-    // Skip if server version is not newer than local
-    if (minVersion > 0 && (gameState.version || 0) <= minVersion) return;
+    if (!gameState) {
+      console.log('[EventHandler] No game state in database');
+      return;
+    }
+
+    console.log('[EventHandler] Loaded game state from database:', {
+      phase: gameState.phase,
+      handNumber: gameState.hand_number,
+      currentPlayerIndex: gameState.current_player_index,
+      version: gameState.version,
+      force,
+    });
 
     if (force) {
+      // Force-apply: bypass all guards in setRemoteState
       handleGameStateChange(gameState as DatabaseGameState, true);
     } else {
       handleGameStateChange(gameState as DatabaseGameState);
