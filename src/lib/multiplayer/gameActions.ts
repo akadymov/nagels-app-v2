@@ -13,9 +13,9 @@ import { useGameStore } from '../../store/gameStore';
 // ============================================================
 
 /**
- * Save game state to server via RPC with optimistic locking.
- * Only the acting client calls this after computing the new state.
- * All other clients pick up the state via polling.
+ * Save a full game state snapshot to the server.
+ * Called after each action (bet, card play) so other clients can
+ * recover from missed Realtime events via sync/refresh.
  */
 export async function saveGameSnapshot(): Promise<void> {
   const multiplayerState = useMultiplayerStore.getState();
@@ -36,66 +36,47 @@ export async function saveGameSnapshot(): Promise<void> {
     isReady: p.isReady,
   }));
 
-  const gameState = {
+  const snapshot = {
+    room_id: roomId,
+    hand_number: gs.handNumber,
     phase: gs.phase,
-    handNumber: gs.handNumber,
-    totalHands: gs.totalHands,
-    playerCount: gs.playerCount,
-    maxCardsPerPlayer: gs.maxCardsPerPlayer,
-    cardsPerPlayer: gs.cardsPerPlayer,
-    currentPlayerIndex: gs.currentPlayerIndex,
-    startingPlayerIndex: gs.startingPlayerIndex,
-    firstHandStartingPlayerIndex: gs.firstHandStartingPlayerIndex,
-    bettingPlayerIndex: gs.bettingPlayerIndex,
-    hasAllBets: gs.hasAllBets,
-    trumpSuit: gs.trumpSuit,
-    currentTrick: gs.currentTrick,
-    tricks: gs.tricks,
+    current_player_index: gs.currentPlayerIndex,
+    trump_suit: gs.trumpSuit,
+    cards_per_player: gs.cardsPerPlayer,
     players: playerData,
-    scoreHistory: gs.scoreHistory,
+    current_trick: gs.currentTrick ?? { cards: [], winnerId: '', leadSuit: '' },
+    tricks: gs.tricks,
+    deck: gs.deck,
+    version: (gs.version || 0) + 1,
+    game_state: {
+      phase: gs.phase,
+      handNumber: gs.handNumber,
+      totalHands: gs.totalHands,
+      playerCount: gs.playerCount,
+      maxCardsPerPlayer: gs.maxCardsPerPlayer,
+      cardsPerPlayer: gs.cardsPerPlayer,
+      currentPlayerIndex: gs.currentPlayerIndex,
+      startingPlayerIndex: gs.startingPlayerIndex,
+      firstHandStartingPlayerIndex: gs.firstHandStartingPlayerIndex,
+      bettingPlayerIndex: gs.bettingPlayerIndex,
+      hasAllBets: gs.hasAllBets,
+      trumpSuit: gs.trumpSuit,
+      currentTrick: gs.currentTrick,
+      tricks: gs.tricks,
+      players: playerData,
+      scoreHistory: gs.scoreHistory,
+    },
   };
 
   try {
-    // Try RPC with version lock first
-    const { data, error } = await supabase.rpc('update_game_state', {
-      p_room_id: roomId,
-      p_expected_version: gs.version || 0,
-      p_phase: gs.phase,
-      p_hand_number: gs.handNumber,
-      p_current_player_index: gs.currentPlayerIndex,
-      p_trump_suit: gs.trumpSuit,
-      p_cards_per_player: gs.cardsPerPlayer,
-      p_game_state: gameState,
-    });
+    const { error } = await supabase
+      .from('game_states')
+      .upsert(snapshot, { onConflict: 'room_id' });
 
     if (error) {
-      // RPC failed — fallback to upsert (e.g. first write for this room)
-      console.log('[GameActions] RPC failed, falling back to upsert:', error.message);
-      const { error: upsertErr } = await supabase
-        .from('game_states')
-        .upsert({
-          room_id: roomId,
-          hand_number: gs.handNumber,
-          phase: gs.phase,
-          current_player_index: gs.currentPlayerIndex,
-          trump_suit: gs.trumpSuit,
-          cards_per_player: gs.cardsPerPlayer,
-          players: playerData,
-          current_trick: gs.currentTrick ?? { cards: [], winnerId: '', leadSuit: '' },
-          tricks: gs.tricks,
-          deck: gs.deck ?? [],
-          version: (gs.version || 0) + 1,
-          game_state: gameState,
-        }, { onConflict: 'room_id' });
-
-      if (upsertErr) {
-        console.error('[GameActions] Upsert also failed:', upsertErr.message);
-      }
-    } else if (data?.success) {
-      // Update local version to match server
-      useGameStore.setState({ version: data.version });
-    } else if (data && !data.success) {
-      console.log('[GameActions] Version conflict, server at v' + data.version);
+      console.error('[GameActions] Snapshot save error:', error.message, error.details, error.hint);
+    } else {
+      console.log('[GameActions] Snapshot saved: hand=' + gs.handNumber + ' phase=' + gs.phase + ' v=' + snapshot.version);
     }
   } catch (e) {
     console.error('[GameActions] saveGameSnapshot exception:', e);

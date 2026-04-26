@@ -163,20 +163,38 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [currentRoom?.id]);
 
-  // Poll game_states every 2s — replaces Realtime dependency for game state
+  // Auto-sync heartbeat: if no state change for 10s during active gameplay, refresh
+  const lastStateChangeRef = useRef(Date.now());
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Track state changes
+  useEffect(() => {
+    lastStateChangeRef.current = Date.now();
+  }, [phase, currentPlayerIndex, handNumber, currentTrick, hasAllBets]);
+
   useEffect(() => {
     if (!isMultiplayer || !currentRoom?.id) return;
     const roomId = currentRoom.id;
 
-    const pollInterval = setInterval(async () => {
-      try {
-        await refreshGameState(roomId, true);
-      } catch (e) {
-        console.error('[Poll] refreshGameState failed:', e);
-      }
-    }, 2000);
+    heartbeatRef.current = setInterval(async () => {
+      const gs = useGameStore.getState();
+      const staleDuration = Date.now() - lastStateChangeRef.current;
+      const inActivePhase = gs.phase === 'playing' || gs.phase === 'betting';
 
-    return () => clearInterval(pollInterval);
+      if (inActivePhase && staleDuration > 10000) {
+        console.log('[Heartbeat] Auto-sync: phase=' + gs.phase + ' stale=' + Math.round(staleDuration / 1000) + 's cards=' + gs.players.map(p => p.hand.length).join(','));
+        try {
+          await refreshGameState(roomId, true);
+        } catch (e) {
+          console.error('[Heartbeat] refreshGameState failed:', e);
+        }
+        lastStateChangeRef.current = Date.now();
+      }
+    }, 5000);
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    };
   }, [isMultiplayer, currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)

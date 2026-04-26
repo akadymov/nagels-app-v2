@@ -155,15 +155,20 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     }
   }, [isMultiplayer, currentRoom?.id]);
 
-  // Poll game_states every 2s during betting
+  // Auto-sync heartbeat for betting phase
+  const lastBetChangeRef = useRef(Date.now());
+  useEffect(() => { lastBetChangeRef.current = Date.now(); }, [bettingPlayerIndex, hasAllBets]);
+
   useEffect(() => {
     if (!isMultiplayer || !visible || !currentRoom?.id) return;
     const roomId = currentRoom.id;
     const interval = setInterval(async () => {
-      try {
+      if (Date.now() - lastBetChangeRef.current > 10000) {
+        console.log('[Heartbeat] Betting auto-sync');
         await refreshGameState(roomId, true);
-      } catch (_) {}
-    }, 2000);
+        lastBetChangeRef.current = Date.now();
+      }
+    }, 5000);
     return () => clearInterval(interval);
   }, [isMultiplayer, visible, currentRoom?.id]);
 
