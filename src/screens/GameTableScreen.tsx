@@ -163,39 +163,22 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [currentRoom?.id]);
 
-  // Auto-sync heartbeat: if no state change for 10s during active gameplay, refresh
-  const lastStateChangeRef = useRef(Date.now());
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Track state changes
-  useEffect(() => {
-    lastStateChangeRef.current = Date.now();
-  }, [phase, currentPlayerIndex, handNumber, currentTrick, hasAllBets]);
+  // Non-host clients: poll game_states every 3s to sync with host's authoritative state
+  // Host doesn't poll — it IS the authority
+  const isHost = useMultiplayerStore((s) => s.isHost);
 
   useEffect(() => {
-    if (!isMultiplayer || !currentRoom?.id) return;
+    if (!isMultiplayer || isHost || !currentRoom?.id) return;
     const roomId = currentRoom.id;
 
-    heartbeatRef.current = setInterval(async () => {
-      const gs = useGameStore.getState();
-      const staleDuration = Date.now() - lastStateChangeRef.current;
-      const inActivePhase = gs.phase === 'playing' || gs.phase === 'betting';
+    const pollInterval = setInterval(async () => {
+      try {
+        await refreshGameState(roomId, true);
+      } catch (_) {}
+    }, 3000);
 
-      if (inActivePhase && staleDuration > 10000) {
-        console.log('[Heartbeat] Auto-sync: phase=' + gs.phase + ' stale=' + Math.round(staleDuration / 1000) + 's cards=' + gs.players.map(p => p.hand.length).join(','));
-        try {
-          await refreshGameState(roomId, true);
-        } catch (e) {
-          console.error('[Heartbeat] refreshGameState failed:', e);
-        }
-        lastStateChangeRef.current = Date.now();
-      }
-    }, 5000);
-
-    return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    };
-  }, [isMultiplayer, currentRoom?.id]);
+    return () => clearInterval(pollInterval);
+  }, [isMultiplayer, isHost, currentRoom?.id]);
 
   // Poll for chat messages (Realtime fallback)
   useEffect(() => {
