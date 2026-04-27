@@ -12,13 +12,13 @@
 
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getSupabaseClient, isSupabaseConfigured } from './client';
+import { isSupabaseConfigured } from './client';
 import {
   getCurrentUser,
   signInAnonymously,
   signOut as supabaseSignOut,
 } from './authService';
-import type { GuestSession, DatabasePlayerSession } from './types';
+import type { GuestSession } from './types';
 
 // ============================================================
 // CONSTANTS
@@ -86,9 +86,10 @@ export async function getGuestSession(): Promise<GuestSession | null> {
     }
 
     if (user) {
-      // Upsert profile row so player_name is stored server-side
+      // Profile is created server-side by the Edge Function on first action;
+      // no client-side upsert needed since the player_sessions table was
+      // replaced by room_sessions (managed by supabase/functions/game-action).
       const playerName = await getPlayerName();
-      await upsertPlayerProfile(user.id, playerName);
 
       const session: GuestSession = {
         sessionId: user.id,
@@ -115,7 +116,12 @@ export async function getGuestSession(): Promise<GuestSession | null> {
 }
 
 /**
- * Update the current session (player name, language).
+ * Update the current session locally.
+ *
+ * Previously this also wrote to the `player_sessions` table — that table
+ * was removed in the sync redesign (replaced by `room_sessions`, managed
+ * server-side by the Edge Function). We now keep only the AsyncStorage
+ * side so player name / language preferences still persist on-device.
  */
 export async function updateGuestSession(updates: {
   playerName?: string;
@@ -124,25 +130,9 @@ export async function updateGuestSession(updates: {
   if (updates.playerName) {
     await AsyncStorage.setItem(PLAYER_NAME_KEY, updates.playerName);
   }
-
-  if (!isSupabaseConfigured()) return;
-
-  try {
-    const sessionId = await AsyncStorage.getItem(SESSION_ID_KEY);
-    if (!sessionId) return;
-
-    const updateData: Record<string, string> = {};
-    if (updates.playerName) updateData.player_name = updates.playerName;
-    if (updates.language) updateData.language = updates.language;
-
-    const supabase = getSupabaseClient();
-    await supabase
-      .from('player_sessions')
-      .update(updateData)
-      .eq('id', sessionId);
-  } catch (err) {
-    console.error('[Auth] updateGuestSession error:', err);
-  }
+  // Note: language is only used client-side (i18n); no server write needed.
+  // Server-side profile state lives in `room_sessions` and is created by
+  // the Edge Function on first action.
 }
 
 /**
@@ -192,101 +182,24 @@ export async function setPlayerName(name: string): Promise<void> {
 // ============================================================
 
 /**
- * Upsert a player_sessions row keyed by the Supabase Auth user.id.
- * This keeps the server-side profile in sync without changing room data.
+ * Deprecated: the `player_sessions` table was replaced by `room_sessions`,
+ * which is managed entirely server-side by the Edge Function (see
+ * supabase/functions/game-action). Kept as a no-op stub so any lingering
+ * callers won't crash; full removal is scheduled for Milestone 9.
  */
-async function upsertPlayerProfile(userId: string, playerName: string): Promise<void> {
-  try {
-    const supabase = getSupabaseClient();
-    const deviceId = await getDeviceId();
-
-    // Try update first (row may already exist from a previous session)
-    const { error: updateError } = await supabase
-      .from('player_sessions')
-      .update({
-        player_name: playerName,
-        last_seen_at: new Date().toISOString(),
-      })
-      .eq('id', userId);
-
-    if (updateError) {
-      // Row doesn't exist yet — insert it with explicit id = userId
-      const { error: insertError } = await supabase
-        .from('player_sessions')
-        .insert({
-          id: userId,
-          device_id: deviceId,
-          player_name: playerName,
-          language: 'en',
-        });
-
-      if (insertError) {
-        // player_sessions.id may not accept explicit values in this project —
-        // that's fine, the auth session itself is the source of truth.
-        console.warn('[Auth] Could not upsert player_sessions:', insertError.message);
-      }
-    }
-  } catch (err) {
-    // Non-fatal — session works fine without a player_sessions row
-    console.warn('[Auth] upsertPlayerProfile error:', err);
-  }
+async function upsertPlayerProfile(_userId: string, _playerName: string): Promise<void> {
+  // Deprecated: room_sessions row is created by the Edge Function.
+  return;
 }
 
 /**
- * Legacy path: look up / create a player_sessions row by device_id.
- * Used when Supabase Auth anonymous sign-in is not enabled in the dashboard.
+ * Legacy path: previously looked up / created a `player_sessions` row by
+ * device_id. The table was removed in the sync redesign — anonymous Supabase
+ * Auth is now the only path. Kept as a no-op returning null so callers fall
+ * through to the offline session.
  */
 async function getLegacyGuestSession(): Promise<GuestSession | null> {
-  try {
-    const deviceId = await getDeviceId();
-    const playerName = await getPlayerName();
-    const supabase = getSupabaseClient();
-
-    const { data: existing } = await supabase
-      .from('player_sessions')
-      .select('*')
-      .eq('device_id', deviceId)
-      .single();
-
-    if (existing) {
-      const { data: updated } = await supabase
-        .from('player_sessions')
-        .update({ last_seen_at: new Date().toISOString(), player_name: playerName })
-        .eq('id', existing.id)
-        .select()
-        .single();
-
-      const row = updated ?? existing;
-      await AsyncStorage.setItem(SESSION_ID_KEY, row.id);
-      return dbSessionToGuestSession(row);
-    }
-
-    const { data: created, error } = await supabase
-      .from('player_sessions')
-      .insert({ device_id: deviceId, player_name: playerName, language: 'en' })
-      .select()
-      .single();
-
-    if (error) return getOfflineGuestSession();
-
-    await AsyncStorage.setItem(SESSION_ID_KEY, created.id);
-    return dbSessionToGuestSession(created);
-  } catch {
-    return getOfflineGuestSession();
-  }
-}
-
-function dbSessionToGuestSession(db: DatabasePlayerSession): GuestSession {
-  return {
-    sessionId: db.id,
-    deviceId: db.device_id,
-    playerName: db.player_name || 'Guest',
-    language: db.language as 'en' | 'ru' | 'es',
-    createdAt: db.created_at,
-    lastSeenAt: db.last_seen_at,
-    isGuest: true,
-    email: null,
-  };
+  return null;
 }
 
 async function getOfflineGuestSession(): Promise<GuestSession> {
