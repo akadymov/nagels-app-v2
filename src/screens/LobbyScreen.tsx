@@ -25,8 +25,11 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useTranslation } from 'react-i18next';
 import { BotDifficulties, type BotDifficulty } from '../lib/bot/botAI';
 import { useGameStore } from '../store';
-import { useMultiplayer } from '../hooks/useMultiplayer';
-import type { GameConfig } from '../lib/supabase/types';
+import { gameClient } from '../lib/gameClient';
+import { useRoomStore } from '../store/roomStore';
+import { subscribeRoom } from '../lib/realtimeBroadcast';
+import { getCurrentUser } from '../lib/supabase/authService';
+import { setPlayerName as setPlayerNameInStorage, getPlayerName as getPlayerNameFromStorage } from '../lib/supabase/auth';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -49,7 +52,25 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const setBotDifficulty = useGameStore(state => state.setBotDifficulty);
-  const { playerName, setPlayerName, createRoom, joinRoom } = useMultiplayer();
+  const authDisplayName = useAuthStore((s) => s.displayName);
+  const [playerName, setPlayerNameState] = useState<string>(authDisplayName || 'Guest');
+
+  // Load player name from storage on mount
+  useEffect(() => {
+    getPlayerNameFromStorage().then((name) => {
+      if (name && name !== 'Guest') setPlayerNameState(name);
+    });
+  }, []);
+
+  // Sync auth display name when it changes
+  useEffect(() => {
+    if (authDisplayName) setPlayerNameState(authDisplayName);
+  }, [authDisplayName]);
+
+  const setPlayerName = useCallback(async (name: string) => {
+    await setPlayerNameInStorage(name);
+    setPlayerNameState(name);
+  }, []);
 
   const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
   const [nameInput, setNameInput] = useState(playerName || playerName);
@@ -115,6 +136,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     onQuickMatch?.(selectedDifficulty!, playerCount! - 1, nameInput.trim() || playerName);
   }, [saveName, setBotDifficulty, selectedDifficulty, playerCount, nameInput, onQuickMatch, canStartMatch]);
 
+  const setMyPlayerIdInRoomStore = (sessionId: string, players: any[]) => {
+    // Find my session_id in the snapshot players list
+    const me = players.find((p) => p.session_id === sessionId);
+    if (me) {
+      useRoomStore.getState().setMyPlayerId(me.session_id);
+    }
+  };
+
   const handleCreateRoom = useCallback(async () => {
     const currentPending = useSettingsStore.getState().pendingEmail;
     const currentUser = useAuthStore.getState().user;
@@ -126,8 +155,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     await saveName();
     setIsCreating(true);
     try {
-      const config: Partial<GameConfig> = { playerCount: playerCount ?? 4, maxCards: 10, autoStart: false };
-      await createRoom(config);
+      const displayName = (nameInput.trim() || playerName) ?? 'Guest';
+      const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10);
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to create room');
+      }
+      const user = await getCurrentUser();
+      if (user && result.state.players) {
+        setMyPlayerIdInRoomStore(user.id, result.state.players);
+      }
+      const roomId = result.state.room?.id;
+      if (roomId) subscribeRoom(roomId);
       onRoomCreated();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to create room';
@@ -135,7 +173,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     } finally {
       setIsCreating(false);
     }
-  }, [saveName, playerCount, createRoom, onRoomCreated, t]);
+  }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t]);
 
   const handleJoinRoom = useCallback(async () => {
     const code = joinCode.trim().toUpperCase();
@@ -146,21 +184,33 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     await saveName();
     setIsJoining(true);
     try {
-      await joinRoom(code);
+      const displayName = (nameInput.trim() || playerName) ?? 'Guest';
+      const result = await gameClient.joinRoom(displayName, code);
+      if (!result.ok) {
+        const err = (result as any).error || 'Failed to join room';
+        if (err.includes('not_found') || err.includes('not found')) {
+          Alert.alert(t('common.error'), t('multiplayer.roomNotFound'));
+        } else if (err.includes('full')) {
+          Alert.alert(t('common.error'), t('multiplayer.roomFull'));
+        } else {
+          Alert.alert(t('common.error'), err);
+        }
+        return;
+      }
+      const user = await getCurrentUser();
+      if (user && result.state.players) {
+        setMyPlayerIdInRoomStore(user.id, result.state.players);
+      }
+      const roomId = result.state.room?.id;
+      if (roomId) subscribeRoom(roomId);
       onRoomJoined();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to join room';
-      if (message.includes('not found')) {
-        Alert.alert(t('common.error'), t('multiplayer.roomNotFound'));
-      } else if (message.includes('full')) {
-        Alert.alert(t('common.error'), t('multiplayer.roomFull'));
-      } else {
-        Alert.alert(t('common.error'), message);
-      }
+      Alert.alert(t('common.error'), message);
     } finally {
       setIsJoining(false);
     }
-  }, [joinCode, saveName, joinRoom, onRoomJoined, t]);
+  }, [joinCode, saveName, nameInput, playerName, onRoomJoined, t]);
 
   const TabButton: React.FC<{ tab: LobbyTab; label: string; disabled?: boolean }> = ({ tab, label, disabled }) => {
     const isActive = activeTab === tab;
