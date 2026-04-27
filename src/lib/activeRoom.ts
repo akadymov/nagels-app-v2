@@ -60,6 +60,13 @@ export async function tryRestoreActiveRoom(): Promise<'WaitingRoom' | 'GameTable
     return null;
   }
 
+  // Room finished (host left or game over) — clear so the user can freely
+  // create or join a new room.
+  if (snapshot.room.phase === 'finished') {
+    await clearActiveRoom();
+    return null;
+  }
+
   // Get our session_id via SECURITY DEFINER RPC so the UI knows which
   // player row in the snapshot represents us (host detection, "your turn", etc.)
   const { data: mySession } = await supabase.rpc('get_my_session_id');
