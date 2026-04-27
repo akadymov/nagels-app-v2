@@ -32,7 +32,6 @@ import {
 } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
 import { useAuthStore } from '../store/authStore';
-import { useMultiplayerStore } from '../store/multiplayerStore';
 
 // ============================================================
 // TYPES
@@ -88,9 +87,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
       const playerName = (authUser.user_metadata?.display_name as string) || email.split('@')[0];
       setUser(authUser, false);
       setDisplayName(playerName);
-      // Refresh guest session in multiplayer store
-      const session = await getGuestSession();
-      if (session) useMultiplayerStore.getState().setGuestSession(session);
+      // Refresh guest session (anonymous → registered upgrade)
+      await getGuestSession();
       setSuccessMsg(t('auth.signedIn', { name: playerName }));
       setTimeout(handleClose, 1000);
     } catch (err: any) {
@@ -121,8 +119,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
       const playerName = trimmedName;
       setUser(authUser, false);
       setDisplayName(playerName);
-      const session = await getGuestSession();
-      if (session) useMultiplayerStore.getState().setGuestSession(session);
+      await getGuestSession();
       setSuccessMsg(t('auth.accountCreated'));
       setTimeout(handleClose, 1200);
     } catch (err: any) {
@@ -142,7 +139,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
       // Create fresh anonymous session
       const session = await getGuestSession();
       if (session) {
-        useMultiplayerStore.getState().setGuestSession(session);
         setDisplayName(session.playerName);
       }
       setUser(null, true);

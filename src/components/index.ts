@@ -30,9 +30,6 @@ export type { BettingPhaseProps } from './betting/BettingPhase';
 // Language
 export { LanguageSwitcher } from './LanguageSwitcher';
 
-// Connection Status
-export { ConnectionStatus } from './ConnectionStatus';
-
 // Auth
 export { AuthModal } from './AuthModal';
 export type { AuthModalProps } from './AuthModal';

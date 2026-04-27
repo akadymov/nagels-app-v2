@@ -18,7 +18,17 @@ import {
   signInAnonymously,
   signOut as supabaseSignOut,
 } from './authService';
-import type { GuestSession } from './types';
+
+export interface GuestSession {
+  sessionId: string;
+  deviceId: string;
+  playerName: string;
+  language: string;
+  createdAt: string;
+  lastSeenAt: string;
+  isGuest: boolean;
+  email: string | null;
+}
 
 // ============================================================
 // CONSTANTS
