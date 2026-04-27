@@ -2,12 +2,10 @@
  * Nägels Online - Betting Phase Component
  *
  * Modal for players to place their bets during the betting phase.
- * Enforces all Nägels betting rules:
- * - Bet cannot exceed cards on hand
- * - Last player cannot make total equal to cards dealt
+ * All state is read from useRoomStore.snapshot; bet actions go through gameClient.
  */
 
-import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,31 +13,24 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
   Modal,
   RefreshControl,
 } from 'react-native';
-import { GlassCard } from '../glass';
-import { GlassButton } from '../buttons/GlassButton';
-import { PlayingCard, CardHand } from '../cards';
+import { CardHand } from '../cards';
 import { LanguageSwitcher } from '../LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
-import { useGameStore } from '../../store';
-import { useMultiplayerStore } from '../../store/multiplayerStore';
+import { useRoomStore } from '../../store/roomStore';
+import { gameClient } from '../../lib/gameClient';
 import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
-import { multiplayerSendChat } from '../../lib/multiplayer/gameActions';
 import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
-import { refreshGameState } from '../../lib/multiplayer/eventHandler';
+import { getAllowedBets } from '../../../supabase/functions/_shared/engine/rules';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const ACTION_BAR_HEIGHT = SCREEN_HEIGHT * 0.05;
 
@@ -50,14 +41,15 @@ export interface BettingPhaseProps {
   onShowScore?: () => void;
 }
 
+// Convert "spades-9" → { id, suit, rank }
+function parseCard(s: string): { id: string; suit: string; rank: string | number } {
+  const [suit, rankStr] = s.split('-');
+  const rank: string | number = /^\d+$/.test(rankStr) ? parseInt(rankStr, 10) : rankStr;
+  return { id: s, suit, rank };
+}
+
 /**
  * BettingPhase - Modal for placing bets
- *
- * Shows:
- * - Current trump
- * - Cards in hand
- * - Other players' bets
- * - Available bet options (enforcing rules)
  */
 export const BettingPhase: React.FC<BettingPhaseProps> = ({
   visible,
@@ -67,27 +59,54 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
-  const {
-    players,
-    trumpSuit,
-    cardsPerPlayer,
-    handNumber,
-    totalHands,
-    bettingPlayerIndex,
-    hasAllBets,
-    myPlayerId,
-    placeBet,
-    getAllowedBets,
-    getBettingPlayer,
-  } = useGameStore();
 
-  const bettingPlayer = getBettingPlayer();
-  const isMyTurn = bettingPlayer?.id === myPlayerId;
-  const myPlayer = players.find(p => p.id === myPlayerId);
+  const snapshot = useRoomStore((s) => s.snapshot);
+  const myPlayerId = useRoomStore((s) => s.myPlayerId);
+
+  const room = snapshot?.room ?? null;
+  const players = snapshot?.players ?? [];
+  const hand = snapshot?.current_hand ?? null;
+  const handScores = snapshot?.hand_scores ?? [];
+  const myHandCards = snapshot?.my_hand ?? [];
+
+  const myPlayer = players.find((p) => p.session_id === myPlayerId) ?? null;
+  const trumpSuit = hand?.trump_suit ?? 'diamonds';
+  const cardsPerPlayer = hand?.cards_per_player ?? 0;
+  const handNumber = hand?.hand_number ?? 1;
+  const totalHands = useMemo(() => {
+    const max = room?.max_cards ?? 10;
+    // Pattern: max → 1 → max with the 1 played twice
+    return max * 2;
+  }, [room?.max_cards]);
+
+  // Whose turn to bet
+  const bettingPlayer = useMemo(() => {
+    if (!hand || hand.phase !== 'betting') return null;
+    return players.find((p) => p.seat_index === hand.current_seat) ?? null;
+  }, [hand, players]);
+
+  const isMyTurn = !!bettingPlayer && !!myPlayer && bettingPlayer.session_id === myPlayer.session_id;
+
+  // My current bet (from hand_scores)
+  const myBet = useMemo(() => {
+    if (!myPlayer) return null;
+    const row = handScores.find((s) => s.session_id === myPlayer.session_id);
+    return row ? row.bet : null;
+  }, [handScores, myPlayer]);
+
+  // Bets placed so far, by seat order
+  const playerBets = useMemo(() => {
+    return players.map((p) => {
+      const row = handScores.find((s) => s.session_id === p.session_id);
+      return { ...p, bet: row?.bet ?? null };
+    });
+  }, [players, handScores]);
+
+  const hasAllBets = playerBets.every((p) => p.bet !== null) && playerBets.length > 0;
 
   // Action bar modals / toggles
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showChat, setShowChat] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Settings & auth for in-game settings panel
   const themePreference = useSettingsStore((s) => s.themePreference);
@@ -96,159 +115,109 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
-  const hasUnreadChat = useMultiplayerStore((s) => s.hasUnreadChat);
-  const currentRoom = useMultiplayerStore((s) => s.currentRoom);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Chat state (multiplayer only)
-  const chatMessages = useMultiplayerStore((s) => s.chatMessages);
-  const clearUnreadCount = useMultiplayerStore((s) => s.clearUnreadCount);
-  const [chatInput, setChatInput] = useState('');
-  const [isSendingChat, setIsSendingChat] = useState(false);
-  const chatScrollRef = useRef<ScrollView>(null);
-
-  // Clear unread and scroll to bottom when chat visible
-  useEffect(() => {
-    if (visible && isMultiplayer) {
-      clearUnreadCount();
-      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: false }), 100);
-    }
-  }, [visible, isMultiplayer]);
-
-  // Scroll on new messages
-  useEffect(() => {
-    if (visible && isMultiplayer && chatMessages.length > 0) {
-      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 50);
-    }
-  }, [chatMessages.length]);
-
-  const handleChatSend = useCallback(async () => {
-    const text = chatInput.trim();
-    if (!text || isSendingChat || !myPlayerId || !myPlayer) return;
-    setChatInput('');
-    setIsSendingChat(true);
-    try {
-      const store = useMultiplayerStore.getState();
-      store.addChatMessage({
-        id: `local-${Date.now()}`,
-        playerId: myPlayerId,
-        playerName: myPlayer.name,
-        text,
-        timestamp: Date.now(),
-      });
-      store.clearUnreadCount();
-      await multiplayerSendChat(myPlayerId, myPlayer.name, text);
-    } catch (e) {
-      console.error('[BettingChat] send failed', e);
-    } finally {
-      setIsSendingChat(false);
-    }
-  }, [chatInput, isSendingChat, myPlayerId, myPlayer]);
 
   const handleRefresh = useCallback(async () => {
-    if (!isMultiplayer || !currentRoom?.id) return;
+    if (!room?.id) return;
     setIsRefreshing(true);
     try {
-      await refreshGameState(currentRoom.id, true);
+      await gameClient.refreshSnapshot(room.id);
     } finally {
       setIsRefreshing(false);
     }
-  }, [isMultiplayer, currentRoom?.id]);
+  }, [room?.id]);
 
-  // Poll server game_states every 2s during betting (all multiplayer clients)
-  useEffect(() => {
-    if (!isMultiplayer || !visible || !currentRoom?.id) return;
-    const roomId = currentRoom.id;
-    const interval = setInterval(async () => {
-      try {
-        await refreshGameState(roomId, true);
-      } catch (_) {}
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isMultiplayer, visible, currentRoom?.id]);
-
-  // Get allowed bets for the current betting player
+  // Allowed bets for the current betting player.
+  // Computed locally so the UI gives instant feedback; the server still validates.
   const allowedBets = useMemo(() => {
-    if (!bettingPlayer) return [];
-    return getAllowedBets(bettingPlayer.id);
-  }, [bettingPlayer, getAllowedBets]);
+    if (!bettingPlayer || !hand || hand.phase !== 'betting') return [];
+    const currentBets = handScores
+      .filter((s) => s.session_id !== bettingPlayer.session_id)
+      .map((s) => ({ playerId: s.session_id, amount: s.bet }));
+    const placedCount = handScores.length;
+    const isLastPlayer = placedCount === players.length - 1;
+    return getAllowedBets({
+      playerCount: players.length,
+      cardsPerPlayer,
+      currentBets,
+      isLastPlayer,
+    });
+  }, [bettingPlayer, hand, handScores, players.length, cardsPerPlayer]);
 
-  // Get trump symbol
+  const allBets = useMemo(
+    () => Array.from({ length: cardsPerPlayer + 1 }, (_, i) => i),
+    [cardsPerPlayer]
+  );
+  const blockedBets = useMemo(
+    () => allBets.filter((b) => !allowedBets.includes(b)),
+    [allBets, allowedBets]
+  );
+
+  // Smart hint: count trumps and aces in hand
+  const smartHint = useMemo(() => {
+    if (!myHandCards.length) return null;
+    const cards = myHandCards.map(parseCard);
+    const trumpCount = trumpSuit === 'notrump' ? 0 : cards.filter((c) => c.suit === trumpSuit).length;
+    const aceCount = cards.filter((c) => c.rank === 'A').length;
+    const bidsSoFar = handScores.reduce((sum, s) => sum + s.bet, 0);
+    return { trumpCount, aceCount, bidsSoFar };
+  }, [myHandCards, trumpSuit, handScores]);
+
+  // Get trump symbol / color
   const getTrumpSymbol = (trump: string): string => {
     if (trump === 'notrump') return 'NT';
     return SuitSymbols[trump as keyof typeof SuitSymbols] || trump;
   };
-
-  // Get trump color
   const getTrumpColor = (trump: string): string => {
     if (trump === 'notrump') return Colors.textMuted;
     return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
   };
 
-  // All possible bets 0..cardsPerPlayer
-  const allBets = useMemo(() => {
-    return Array.from({ length: cardsPerPlayer + 1 }, (_, i) => i);
-  }, [cardsPerPlayer]);
-
-  // Blocked bets (for explanation)
-  const blockedBets = useMemo(() => {
-    return allBets.filter(b => !allowedBets.includes(b) && b <= cardsPerPlayer);
-  }, [allBets, allowedBets, cardsPerPlayer]);
-
-  // Smart hint: count trumps and aces in hand
-  const smartHint = useMemo(() => {
-    if (!myPlayer) return null;
-    const hand = myPlayer.hand;
-    const trumpCount = trumpSuit === 'notrump' ? 0 : hand.filter(c => c.suit === trumpSuit).length;
-    const aceCount = hand.filter(c => c.rank === 'A').length;
-    const bidsSoFar = players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
-    return { trumpCount, aceCount, bidsSoFar };
-  }, [myPlayer, trumpSuit, players]);
+  const handleBet = useCallback(
+    async (bet: number) => {
+      if (!room?.id || !hand?.id) return;
+      if (!allowedBets.includes(bet)) return;
+      betPlacedHaptic();
+      try {
+        await gameClient.placeBet(room.id, hand.id, bet);
+      } catch (err) {
+        console.error('[BettingPhase] placeBet failed:', err);
+      }
+    },
+    [room?.id, hand?.id, allowedBets]
+  );
 
   const renderBetChip = (bet: number) => {
     const isAllowed = allowedBets.includes(bet);
-    const isSelected = myPlayer?.bet === bet;
+    const isSelected = myBet === bet;
     const isDisabled = !isSelected && (!isMyTurn || !isAllowed);
-
-    const handleBetPress = () => {
-      if (myPlayerId && isAllowed) {
-        betPlacedHaptic();
-        placeBet(myPlayerId, bet);
-      }
-    };
 
     const chipBg = isSelected
       ? colors.success
       : isDisabled
-        ? colors.bidChipDisabled
-        : colors.accent;
+      ? colors.bidChipDisabled
+      : colors.accent;
 
-    const chipBorder = isSelected
-      ? '#2AA555'
-      : isDisabled
-        ? 'transparent'
-        : colors.accentSecondary;
-
+    const chipBorder = isSelected ? '#2AA555' : isDisabled ? 'transparent' : colors.accentSecondary;
     const chipTextColor = isSelected ? '#ffffff' : isDisabled ? colors.bidChipDisabledText : '#ffffff';
 
     return (
       <Pressable
         key={bet}
-        onPress={handleBetPress}
+        onPress={() => handleBet(bet)}
         disabled={isDisabled}
         testID={`bet-btn-${bet}`}
       >
-        <View style={[
-          styles.betChip,
-          {
-            backgroundColor: chipBg,
-            borderColor: chipBorder,
-            opacity: isDisabled ? 0.5 : 1,
-          },
-        ]}>
-          <Text style={[styles.betChipText, { color: chipTextColor }]}>
-            {bet}
-          </Text>
+        <View
+          style={[
+            styles.betChip,
+            {
+              backgroundColor: chipBg,
+              borderColor: chipBorder,
+              opacity: isDisabled ? 0.5 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.betChipText, { color: chipTextColor }]}>{bet}</Text>
         </View>
       </Pressable>
     );
@@ -257,21 +226,27 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   if (!visible) return null;
 
   return (
-    <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' }]}>
-      <View style={styles.gradient} pointerEvents="none" />
-
+    <View
+      style={[
+        styles.overlay,
+        { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' },
+      ]}
+    >
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator
         refreshControl={
-          isMultiplayer ? (
-            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-          ) : undefined
+          isMultiplayer ? <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} /> : undefined
         }
       >
-        {/* Header — matches Figma: Hand info left, Trump badge center, icons right */}
-        <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
+        {/* Header */}
+        <View
+          style={[
+            styles.topBar,
+            { backgroundColor: colors.surface, borderBottomColor: colors.glassLight },
+          ]}
+        >
           <View style={{ alignItems: 'center', paddingVertical: 2 }}>
             <GameLogo size="xs" />
           </View>
@@ -279,60 +254,90 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
               {t('game.hand')} {handNumber}/{totalHands}
             </Text>
-            <View style={[styles.trumpBadge, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
+            <View
+              style={[
+                styles.trumpBadge,
+                {
+                  backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)',
+                  borderColor: colors.accent,
+                },
+              ]}
+            >
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
                 {getTrumpSymbol(trumpSuit)} {t('game.trump')}
               </Text>
             </View>
           </View>
           <View style={styles.topBarRow2}>
-            <Pressable onPress={onClose} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
+            <Pressable
+              onPress={onClose}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+              ]}
+              hitSlop={8}
+            >
               <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
             </Pressable>
-            <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
+            <Pressable
+              onPress={() => setShowSettingsModal(true)}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+              ]}
+              hitSlop={8}
+            >
               <Text style={styles.iconBtnEmoji}>⚙️</Text>
             </Pressable>
             {isMultiplayer && (
               <Pressable
                 onPress={handleRefresh}
                 disabled={isRefreshing}
-                style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight, opacity: isRefreshing ? 0.5 : 1 }]}
+                style={[
+                  styles.iconBtn,
+                  {
+                    backgroundColor: colors.iconButtonBg,
+                    borderWidth: 1,
+                    borderColor: colors.glassLight,
+                    opacity: isRefreshing ? 0.5 : 1,
+                  },
+                ]}
                 hitSlop={8}
                 testID="betting-btn-sync"
               >
                 <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
               </Pressable>
             )}
-            <Pressable onPress={onShowScore} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight }]} hitSlop={8}>
+            <Pressable
+              onPress={onShowScore}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+              ]}
+              hitSlop={8}
+            >
               <Text style={styles.iconBtnEmoji}>🏆</Text>
-            </Pressable>
-            <Pressable onPress={() => setShowChat(v => !v)} style={[styles.iconBtn, { backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.accent }]} hitSlop={8} testID="betting-btn-chat">
-              <Text style={styles.iconBtnEmoji}>💬</Text>
-              {isMultiplayer && hasUnreadChat && !showChat && (
-                <View style={styles.chatBadgeDot} />
-              )}
             </Pressable>
           </View>
         </View>
 
-        {/* Title */}
         <Text style={[styles.bettingTitle, { color: colors.accent }]}>{t('game.placeBets')}</Text>
 
-        {/* Players grid — adaptive layout */}
+        {/* Players grid */}
         <View style={styles.playersGrid}>
-          {players.map((player, index) => {
-            const isBetting = index === bettingPlayerIndex;
+          {playerBets.map((player, index) => {
+            const isBetting = bettingPlayer?.session_id === player.session_id;
             const hasBet = player.bet !== null && player.bet !== undefined;
-            const isMe = player.id === myPlayerId;
+            const isMe = player.session_id === myPlayerId;
             const displayName = isMe
               ? t('game.you')
-              : players.filter(other => other.name === player.name).length > 1
-                ? `${player.name} #${index + 1}`
-                : player.name;
+              : playerBets.filter((other) => other.display_name === player.display_name).length > 1
+              ? `${player.display_name} #${index + 1}`
+              : player.display_name;
 
             return (
               <View
-                key={player.id}
+                key={player.session_id}
                 style={[
                   styles.playerCard,
                   { backgroundColor: colors.surface, borderColor: colors.glassLight },
@@ -340,13 +345,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   isMe && { borderColor: colors.accent, borderWidth: 2 },
                 ]}
               >
-                <Text style={[styles.playerCardName, { color: isMe ? colors.accent : colors.textPrimary }]} numberOfLines={1}>
+                <Text
+                  style={[styles.playerCardName, { color: isMe ? colors.accent : colors.textPrimary }]}
+                  numberOfLines={1}
+                >
                   {displayName}
                 </Text>
-                <Text style={[
-                  styles.playerCardBet,
-                  { color: hasBet ? colors.success : colors.textMuted },
-                ]}>
+                <Text
+                  style={[
+                    styles.playerCardBet,
+                    { color: hasBet ? colors.success : colors.textMuted },
+                  ]}
+                >
                   {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') + '...' : '...'}
                 </Text>
               </View>
@@ -355,72 +365,81 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         </View>
 
         {/* Bids summary */}
-        <View style={[styles.betsSummary, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}>
+        <View
+          style={[
+            styles.betsSummary,
+            { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight },
+          ]}
+        >
           <Text style={[styles.betsSummaryValue, { color: colors.textPrimary }]}>
-            {t('game.totalBets')}: {players.reduce((sum, p) => sum + (p.bet ?? 0), 0)} / {cardsPerPlayer}
+            {t('game.totalBets')}: {handScores.reduce((sum, s) => sum + s.bet, 0)} / {cardsPerPlayer}
           </Text>
         </View>
 
         {/* Your Cards */}
-        {myPlayer && myPlayer.hand.length > 0 && (
-          <View style={[styles.handPreview, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+        {myHandCards.length > 0 && (
+          <View
+            style={[
+              styles.handPreview,
+              { backgroundColor: colors.surface, borderColor: colors.glassLight },
+            ]}
+          >
             <Text style={[styles.handLabel, { color: colors.textSecondary }]}>
               {t('game.yourCards', 'Your cards this round')}:
             </Text>
             <CardHand
-              cards={myPlayer.hand.map(c => ({
-                id: c.id,
-                suit: c.suit,
-                rank: c.rank,
-              }))}
+              cards={myHandCards.map(parseCard) as any}
               size="tiny"
               horizontal
-              cardOverlap={myPlayer.hand.length}
+              cardOverlap={myHandCards.length}
             />
           </View>
         )}
 
         {/* Smart hint */}
-        {isMyTurn && smartHint && !myPlayer?.bet && (
-          <View style={[styles.smartHint, { backgroundColor: isDark ? 'rgba(93,194,252,0.1)' : 'rgba(19,66,143,0.07)' }]}>
+        {isMyTurn && smartHint && myBet === null && (
+          <View
+            style={[
+              styles.smartHint,
+              { backgroundColor: isDark ? 'rgba(93,194,252,0.1)' : 'rgba(19,66,143,0.07)' },
+            ]}
+          >
             <Text style={[styles.smartHintText, { color: isDark ? colors.textPrimary : colors.accent }]}>
-              💡 {t('game.trumpsCount', { count: smartHint.trumpCount })} ({getTrumpSymbol(trumpSuit)}), {t('game.acesCount', { count: smartHint.aceCount })}. {t('game.bidsSoFar')}: {smartHint.bidsSoFar}/{cardsPerPlayer}
+              💡 {t('game.trumpsCount', { count: smartHint.trumpCount })} ({getTrumpSymbol(trumpSuit)}),{' '}
+              {t('game.acesCount', { count: smartHint.aceCount })}. {t('game.bidsSoFar')}: {smartHint.bidsSoFar}/
+              {cardsPerPlayer}
             </Text>
           </View>
         )}
 
-        {/* Bet chips — poker style (show all, disabled = gray) */}
-        {isMyTurn && !myPlayer?.bet && (
-          <View style={[styles.betButtonsContainer, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-            <Text style={[styles.betPrompt, { color: colors.textPrimary }]}>
-              {t('game.bet')}:
-            </Text>
+        {/* Bet chips */}
+        {isMyTurn && myBet === null && (
+          <View
+            style={[
+              styles.betButtonsContainer,
+              { backgroundColor: colors.surface, borderColor: colors.glassLight },
+            ]}
+          >
+            <Text style={[styles.betPrompt, { color: colors.textPrimary }]}>{t('game.bet')}:</Text>
 
-            <View style={styles.betButtons}>
-              {allBets.map(renderBetChip)}
-            </View>
+            <View style={styles.betButtons}>{allBets.map(renderBetChip)}</View>
 
             {allowedBets.length === 0 && (
-              <Text style={[styles.noBetsText, { color: colors.error }]}>
-                No valid bets available
-              </Text>
+              <Text style={[styles.noBetsText, { color: colors.error }]}>No valid bets available</Text>
             )}
 
-            {/* Blocked bets explanation */}
             {blockedBets.length > 0 && blockedBets.length < allBets.length && (
               <Text style={[styles.blockedText, { color: colors.error }]}>
-                {blockedBets.map(b => t('game.bidBlocked', { bid: b, total: cardsPerPlayer })).join('\n')}
+                {blockedBets.map((b) => t('game.bidBlocked', { bid: b, total: cardsPerPlayer })).join('\n')}
               </Text>
             )}
           </View>
         )}
 
-        {/* All bets placed - show status */}
+        {/* All bets placed */}
         {hasAllBets && (
           <View style={styles.readyContainer}>
-            <Text style={styles.readyText}>
-              ✓ All bets placed!
-            </Text>
+            <Text style={styles.readyText}>✓ All bets placed!</Text>
           </View>
         )}
 
@@ -430,89 +449,16 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Text style={styles.waitingPlayerText}>
               {(() => {
                 if (!bettingPlayer) return t('game.waiting');
-                const bpIdx = players.findIndex(p => p.id === bettingPlayer.id);
-                const isDup = players.filter(p => p.name === bettingPlayer.name).length > 1;
-                const displayName = isDup ? `${bettingPlayer.name} #${bpIdx + 1}` : bettingPlayer.name;
+                const bpIdx = players.findIndex((p) => p.session_id === bettingPlayer.session_id);
+                const isDup =
+                  players.filter((p) => p.display_name === bettingPlayer.display_name).length > 1;
+                const displayName = isDup ? `${bettingPlayer.display_name} #${bpIdx + 1}` : bettingPlayer.display_name;
                 return `${t('game.waiting').replace('...', '')} ${displayName}...`;
               })()}
             </Text>
           </View>
         )}
       </ScrollView>
-
-      {/* Inline Chat - multiplayer only, toggled by action bar */}
-      {isMultiplayer && myPlayer && showChat && (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={[styles.chatSection, { backgroundColor: colors.surface, borderTopColor: colors.glassLight }]}
-        >
-          <View style={[styles.chatHeader, { backgroundColor: colors.background, borderBottomColor: colors.glassLight }]}>
-            <Text style={[styles.chatHeaderText, { color: colors.textMuted }]}>Chat</Text>
-          </View>
-
-          <ScrollView
-            ref={chatScrollRef}
-            style={styles.chatMessages}
-            contentContainerStyle={styles.chatMessagesContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {chatMessages.length === 0 ? (
-              <Text style={[styles.chatEmpty, { color: colors.textMuted }]}>{t('game.chatEmpty')}</Text>
-            ) : (
-              chatMessages.map((msg) => {
-                const isMe = msg.playerId === myPlayerId;
-                return (
-                  <View key={msg.id} style={[styles.chatMsgRow, isMe && styles.chatMsgRowMe]}>
-                    {!isMe && (
-                      <View style={[styles.chatAvatar, { backgroundColor: colors.accentMuted }]}>
-                        <Text style={styles.chatAvatarText}>{msg.playerName[0]?.toUpperCase()}</Text>
-                      </View>
-                    )}
-                    <View style={[
-                      styles.chatBubble,
-                      { backgroundColor: colors.glassDark, borderColor: colors.glassLight },
-                      isMe && { backgroundColor: colors.accent, borderColor: colors.accent },
-                    ]}>
-                      {!isMe && <Text style={[styles.chatSender, { color: colors.textMuted }]}>{msg.playerName}</Text>}
-                      <Text style={[styles.chatMsgText, { color: colors.textPrimary }, isMe && styles.chatMsgTextMe]}>{msg.text}</Text>
-                    </View>
-                  </View>
-                );
-              })
-            )}
-          </ScrollView>
-
-          <View style={[styles.chatInputRow, { borderTopColor: colors.glassLight }]}>
-            <TextInput
-              style={[styles.chatInput, { color: colors.textPrimary, backgroundColor: colors.glassDark, borderColor: colors.glassLight }]}
-              value={chatInput}
-              onChangeText={setChatInput}
-              placeholder={t('game.chatPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              onSubmitEditing={handleChatSend}
-              returnKeyType="send"
-              maxLength={200}
-              multiline={false}
-              autoCorrect={false}
-              testID="betting-chat-input"
-            />
-            <Pressable
-              style={[styles.chatSendBtn, (!chatInput.trim() || isSendingChat) && styles.chatSendBtnDisabled]}
-              onPress={handleChatSend}
-              disabled={!chatInput.trim() || isSendingChat}
-              testID="betting-chat-send"
-            >
-              {isSendingChat
-                ? <ActivityIndicator size="small" color="#ffffff" />
-                : <Text style={styles.chatSendText}>↑</Text>
-              }
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      )}
-
-      {/* Bottom action bar removed — all buttons are in top bar icons */}
 
       {/* Settings modal */}
       <Modal
@@ -522,7 +468,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         onRequestClose={() => setShowSettingsModal(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
-          <Pressable onPress={() => {}} style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Pressable
+            onPress={() => {}}
+            style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+          >
             <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
 
             {!isGuest && (
@@ -541,11 +490,27 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
               <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
                 {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
-                  const labels: Record<string, string> = { system: t('settings.system'), light: t('settings.light'), dark: t('settings.dark') };
+                  const labels: Record<string, string> = {
+                    system: t('settings.system'),
+                    light: t('settings.light'),
+                    dark: t('settings.dark'),
+                  };
                   const isActive = themePreference === opt;
                   return (
-                    <Pressable key={opt} style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]} onPress={() => setThemePreference(opt)}>
-                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>{labels[opt]}</Text>
+                    <Pressable
+                      key={opt}
+                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                      onPress={() => setThemePreference(opt)}
+                    >
+                      <Text
+                        style={[
+                          styles.settingsPillText,
+                          { color: colors.textSecondary },
+                          isActive && { color: '#fff', fontWeight: '700' },
+                        ]}
+                      >
+                        {labels[opt]}
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -558,8 +523,20 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 {[false, true].map((fc) => {
                   const isActive = fourColorDeck === fc;
                   return (
-                    <Pressable key={String(fc)} style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]} onPress={() => setFourColorDeck(fc)}>
-                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>{fc ? t('settings.fourColor') : t('settings.classic')}</Text>
+                    <Pressable
+                      key={String(fc)}
+                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                      onPress={() => setFourColorDeck(fc)}
+                    >
+                      <Text
+                        style={[
+                          styles.settingsPillText,
+                          { color: colors.textSecondary },
+                          isActive && { color: '#fff', fontWeight: '700' },
+                        ]}
+                      >
+                        {fc ? t('settings.fourColor') : t('settings.classic')}
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -586,14 +563,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232, 232, 232, 0.97)',
     zIndex: 100,
   },
-  gradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-  },
   container: {
     flex: 1,
   },
@@ -601,7 +570,6 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     paddingBottom: 160,
   },
-  // Top bar — 2 rows matching Figma
   topBar: {
     borderBottomWidth: 1,
     borderRadius: Radius.md,
@@ -659,9 +627,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: Spacing.sm,
-  },
-  spacer: {
-    height: Spacing.sm,
   },
   handPreview: {
     marginBottom: Spacing.sm,
@@ -724,7 +689,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
-  // Players grid — 3 per row for 5-6, 2 per row for 2-4
   playersGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -750,7 +714,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  // Smart hint
   smartHint: {
     borderRadius: Radius.md,
     padding: Spacing.sm,
@@ -760,7 +723,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  // Blocked bets
   blockedText: {
     fontSize: 11,
     textAlign: 'center',
@@ -798,104 +760,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontStyle: 'italic',
   },
-  screenSubtitle: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginTop: Spacing.xs,
-    marginBottom: Spacing.sm,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase' as const,
-    fontWeight: '600' as const,
-  },
-  playersContainer: {
-    marginTop: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  playerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glassLight,
-  },
-  playerRowActive: {
-    backgroundColor: 'rgba(19, 66, 143, 0.04)',
-    borderRadius: Radius.sm,
-    borderBottomColor: 'transparent',
-    marginBottom: 1,
-  },
-  playerRowMe: {
-    // subtle distinction for "You" row
-  },
-  playerRowLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginRight: Spacing.sm,
-  },
-  bettingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.accent,
-    flexShrink: 0,
-  },
-  playerRowName: {
-    ...TextStyles.body,
-    color: Colors.textSecondary,
-    fontWeight: '600' as const,
-    flexShrink: 1,
-  },
-  playerRowNameActive: {
-    color: Colors.accent,
-    fontWeight: '700' as const,
-  },
-  playerRowNameMe: {
-    color: Colors.textPrimary,
-  },
-  bettingIndicator: {
-    ...TextStyles.small,
-    color: Colors.accent,
-    fontStyle: 'italic' as const,
-    flexShrink: 0,
-  },
-  playerRowBetBadge: {
-    minWidth: 36,
-    minHeight: 36,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playerRowBetBadgeConfirmed: {
-    backgroundColor: 'rgba(82, 183, 136, 0.12)',
-    borderColor: Colors.success,
-  },
-  playerRowBetText: {
-    ...TextStyles.h3,
-    color: Colors.textMuted,
-    fontWeight: '700' as const,
-  },
-  playerRowBetTextConfirmed: {
-    color: Colors.success,
-  },
   betsSummary: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -904,179 +768,16 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
   },
-  betsSummaryLabel: {
-    ...TextStyles.small,
-    color: Colors.textSecondary,
-  },
   betsSummaryValue: {
     fontSize: 14,
     fontWeight: '700',
   },
-
-  // ── Inline Chat ──────────────────────────────────────────────
-  chatSection: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassLight,
-    backgroundColor: '#ffffff',
-    maxHeight: 220,
-  },
-  chatHeader: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.glassLight,
-    backgroundColor: Colors.background,
-  },
-  chatHeaderText: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chatMessages: {
+  modalOverlay: {
     flex: 1,
-    maxHeight: 130,
-  },
-  chatMessagesContent: {
-    padding: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  chatEmpty: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    paddingVertical: Spacing.sm,
-  },
-  chatMsgRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.xs,
-    marginBottom: 2,
-  },
-  chatMsgRowMe: {
-    justifyContent: 'flex-end',
-  },
-  chatAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.accentMuted,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  chatAvatarText: {
-    fontSize: 11,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  chatBubble: {
-    maxWidth: '75%',
-    backgroundColor: Colors.background,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-  },
-  chatBubbleMe: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  chatSender: {
-    ...TextStyles.small,
-    color: Colors.textMuted,
-    fontSize: 9,
-    marginBottom: 1,
-  },
-  chatMsgText: {
-    ...TextStyles.caption,
-    color: Colors.textPrimary,
-    fontSize: 13,
-  },
-  chatMsgTextMe: {
-    color: '#ffffff',
-  },
-  chatInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    paddingBottom: Platform.OS === 'web' ? 40 : Spacing.xs,
-    gap: Spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassLight,
-  },
-  chatInput: {
-    flex: 1,
-    ...TextStyles.body,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    fontSize: 14,
-  },
-  chatSendBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatSendBtnDisabled: {
-    opacity: 0.4,
-  },
-  chatSendText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  // Action bar — identical to GameTableScreen
-  actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassLight,
-    height: ACTION_BAR_HEIGHT,
-  },
-  actionButton: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: Radius.sm,
-  },
-  actionLabel: {
-    ...TextStyles.caption,
-    color: Colors.accent,
-    fontSize: 11,
-    fontWeight: '600' as const,
-  },
-  actionLabelDisabled: {
-    color: Colors.textMuted,
-    opacity: 0.5,
-  },
-  actionLabelActive: {
-    color: Colors.accent,
-    fontWeight: '700' as const,
-    textDecorationLine: 'underline' as const,
-  },
-  chatBadgeDot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.error,
+    padding: Spacing.xl,
   },
   settingsPanel: {
     width: '100%',
@@ -1131,13 +832,6 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: '#ffffff',
     fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
   },
 });
 
