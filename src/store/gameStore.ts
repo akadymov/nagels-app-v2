@@ -34,9 +34,6 @@ import {
   type PlayContext,
   sortHand,
 } from '../game';
-import { multiplayerPlaceBet, multiplayerPlayCard } from '../lib/multiplayer/gameActions';
-import { seededShuffle, createSeededRandom } from '../lib/multiplayer/seededRandom';
-import { useMultiplayerStore } from './multiplayerStore';
 import { trickWonHaptic } from '../utils/haptics';
 import { getBotStrategy, type BotDifficulty, type BettingContext as BotBettingContext, type PlayingContext as BotPlayingContext } from '../lib/bot/botAI';
 
@@ -197,30 +194,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const maxCards = getMaxCards(playerCount);
     const totalHands = getTotalHands(maxCards);
 
-    // Shuffle players for random seating order
-    // In multiplayer, use seeded random for consistency across all clients
-    let shuffledPlayers: typeof players;
-    let randomStartingPlayer: number;
-
-    if (get().isMultiplayer) {
-      const multiplayerStore = useMultiplayerStore.getState();
-      const roomId = multiplayerStore.currentRoom?.id || 'default';
-      const seed = `${roomId}-init`;
-
-      // First sort by ID to ensure all clients have same input order
-      const sortedPlayers = [...players].sort((a, b) => a.id.localeCompare(b.id));
-
-      console.log('[GameStore] Using seeded random for multiplayer init:', seed);
-      console.log('[GameStore] Players before shuffle:', sortedPlayers.map(p => p.name).join(', '));
-      shuffledPlayers = seededShuffle(sortedPlayers, seed);
-
-      // Use seeded random for starting player too
-      const random = createSeededRandom(seed + '-starting');
-      randomStartingPlayer = Math.floor(random() * playerCount);
-    } else {
-      shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-      randomStartingPlayer = Math.floor(Math.random() * playerCount);
-    }
+    // Single-player only: random shuffle
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+    const randomStartingPlayer = Math.floor(Math.random() * playerCount);
 
     const gamePlayers: GamePlayer[] = shuffledPlayers.map((p, i) => ({
       ...p,
@@ -261,56 +237,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   startBetting: () => {
     const state = get();
-    const { cardsPerPlayer, playerCount, handNumber, trumpSuit, isMultiplayer } = state;
+    const { cardsPerPlayer, playerCount, trumpSuit } = state;
 
-    // Create deck
+    // Single-player only: shuffle and deal
     const deck = createDeck();
-
-    // Shuffle deck (use seeded random in multiplayer)
-    let shuffledDeck: Card[];
-    if (isMultiplayer) {
-      // Get room ID for seeding
-      const multiplayerStore = useMultiplayerStore.getState();
-      const roomId = multiplayerStore.currentRoom?.id || 'default';
-      const seed = `${roomId}-hand-${handNumber}`;
-      console.log('[GameStore] Using seeded random for multiplayer deck:', seed);
-      shuffledDeck = seededShuffle(deck, seed);
-    } else {
-      shuffledDeck = shuffleDeck(deck);
-    }
-
-    // Deal cards to players
-    // In multiplayer, deal to actual player IDs; otherwise use dealCards helper
-    let hands: Map<string, Card[]>;
-    if (isMultiplayer) {
-      // Deal directly to actual players in their shuffled order
-      hands = new Map();
-      const playerIds = state.players.map(p => p.id);
-
-      // Initialize empty hands
-      for (const playerId of playerIds) {
-        hands.set(playerId, []);
-      }
-
-      // Deal cards one at a time to each player
-      let cardIndex = 0;
-      for (let i = 0; i < cardsPerPlayer; i++) {
-        for (const playerId of playerIds) {
-          if (cardIndex < shuffledDeck.length) {
-            hands.get(playerId)!.push(shuffledDeck[cardIndex++]);
-          }
-        }
-      }
-
-      // Sort each player's hand
-      for (const playerId of playerIds) {
-        const hand = hands.get(playerId)!;
-        hands.set(playerId, sortHand(hand, trumpSuit));
-      }
-    } else {
-      // Use dealCards helper for single-player
-      hands = dealCards(shuffledDeck, playerCount, cardsPerPlayer, trumpSuit);
-    }
+    const shuffledDeck = shuffleDeck(deck);
+    const hands = dealCards(shuffledDeck, playerCount, cardsPerPlayer, trumpSuit);
 
     // Update players with their hands
     const updatedPlayers = state.players.map(p => ({
@@ -376,14 +308,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hasAllBets,
     });
 
-    // In multiplayer mode, also call the Edge Function.
-    // The server response (via forceRemoteState in gameActions) will
-    // overwrite local state, ensuring server is the source of truth.
-    if (state.isMultiplayer && playerId === state.myPlayerId) {
-      multiplayerPlaceBet(playerId, bet).catch(err => {
-        console.error('[GameStore] Failed to sync bet:', err);
-      });
-    }
   },
 
   /**
@@ -501,14 +425,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    // In multiplayer mode, also call the Edge Function.
-    // The server response (via forceRemoteState in gameActions) will
-    // overwrite local state, ensuring server is the source of truth.
-    if (state.isMultiplayer && playerId === state.myPlayerId) {
-      multiplayerPlayCard(playerId, card.id).catch(err => {
-        console.error('[GameStore] Failed to sync card play:', err);
-      });
-    }
   },
 
   /**

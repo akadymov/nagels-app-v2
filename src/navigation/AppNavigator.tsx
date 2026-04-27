@@ -13,8 +13,6 @@ import {
   LobbyScreen,
   GameTableScreen,
   WaitingRoomScreen,
-  CreateRoomScreen,
-  JoinRoomScreen,
   SettingsScreen,
   AuthScreen,
   ProfileScreen,
@@ -24,10 +22,7 @@ import { ResetPasswordScreen } from '../screens/ResetPasswordScreen';
 import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
-import { tryRejoin } from '../lib/multiplayer/rejoinManager';
-import { loadRoom } from '../lib/multiplayer/roomManager';
 import { useAuthStore } from '../store/authStore';
-import { useMultiplayerStore } from '../store/multiplayerStore';
 
 export type RootStackParamList = {
   Welcome: {
@@ -39,8 +34,6 @@ export type RootStackParamList = {
     onSkip?: () => void;
   };
   Lobby: undefined;
-  CreateRoom: { playerCount?: number } | undefined;
-  JoinRoom: { code?: string } | undefined;
   WaitingRoom: {
     roomCode?: string;
   };
@@ -83,12 +76,6 @@ const linking = {
   ],
   config: {
     screens: {
-      JoinRoom: {
-        path: 'join/:code',
-        parse: {
-          code: (code: string) => code.toUpperCase(),
-        },
-      },
       EmailConfirmed: 'auth/callback',
       ResetPassword: 'reset-password',
     },
@@ -111,11 +98,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   useEffect(() => {
     // Ensure a session exists (creates anonymous if needed)
-    getGuestSession().then((session) => {
-      if (session) {
-        useMultiplayerStore.getState().setGuestSession(session);
-      }
-    }).catch(() => {});
+    getGuestSession().catch(() => {});
 
     // Subscribe to auth state changes (Supabase fires this on mount with current session)
     const unsubscribe = onAuthStateChange(async (user, isGuest, event) => {
@@ -123,7 +106,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       // PASSWORD_RECOVERY event — navigate to reset password screen
       if (event === 'PASSWORD_RECOVERY') {
-        // Store flag so RejoinGuard can navigate after init
         (global as any).__passwordRecovery = true;
       }
 
@@ -131,7 +113,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       if (user?.user_metadata) {
         const { useSettingsStore } = require('../store/settingsStore');
         useSettingsStore.getState().syncFromUserMetadata(user.user_metadata);
-        // Apply language if set
         const lang = user.user_metadata.language;
         if (lang) {
           const i18n = require('../i18n/config').default;
@@ -143,7 +124,6 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       try {
         const session = await getGuestSession();
         if (session) {
-          useMultiplayerStore.getState().setGuestSession(session);
           const authName = user?.user_metadata?.display_name;
           if (!authName) {
             setDisplayName(session.playerName);
@@ -219,43 +199,8 @@ const RejoinGuard: React.FC = () => {
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
     rejoinAttempted.current = true;
-
-    const attemptRejoin = async () => {
-      try {
-        const session = await getGuestSession();
-        if (!session) return;
-
-        const result = await tryRejoin(session.sessionId);
-        if (!result.success || !result.roomId) return;
-
-        // Re-hydrate the multiplayer store with room data
-        const room = await loadRoom(result.roomId);
-        if (room) {
-          useMultiplayerStore.getState().setCurrentRoom(room);
-          useMultiplayerStore.getState().setRoomPlayers(room.players);
-          useMultiplayerStore.getState().setMyPlayerId(session.sessionId);
-
-          const myPlayer = room.players.find(p => p.playerId === session.sessionId);
-          if (myPlayer) {
-            useMultiplayerStore.getState().setMyPlayerIndex(myPlayer.playerIndex);
-            useMultiplayerStore.getState().setIsHost(room.hostId === session.sessionId);
-          }
-        }
-
-        // Navigate to appropriate screen
-        if (result.screen === 'GameTable') {
-          navigation.navigate('GameTable', { isMultiplayer: true });
-        } else {
-          navigation.navigate('WaitingRoom', { roomCode: result.roomCode });
-        }
-
-        console.log('[RejoinGuard] Rejoined room', result.roomCode, '→', result.screen);
-      } catch (err) {
-        console.warn('[RejoinGuard] Rejoin failed:', err);
-      }
-    };
-
-    attemptRejoin();
+    // Rejoin path is being rebuilt on top of the new server-authoritative
+    // pipeline (see plan §M8). For now, just no-op.
   }, [isInitialized]);
 
   return null;
@@ -383,28 +328,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   onRoomCreated={() => (props.navigation as any).navigate('WaitingRoom')}
                   onRoomJoined={() => (props.navigation as any).navigate('WaitingRoom')}
                   onSettings={() => (props.navigation as any).navigate('Settings')}
-                />
-              )}
-            </Stack.Screen>
-
-            <Stack.Screen name="CreateRoom">
-              {(props) => (
-                <CreateRoomScreen
-                  initialPlayerCount={(props.route?.params as any)?.playerCount}
-                  onRoomCreated={(roomCode) => {
-                    (props.navigation as any).replace('WaitingRoom', { roomCode });
-                  }}
-                  onBack={() => (props.navigation as any).goBack()}
-                />
-              )}
-            </Stack.Screen>
-
-            <Stack.Screen name="JoinRoom">
-              {(props) => (
-                <JoinRoomScreen
-                  initialCode={(props.route?.params as any)?.code}
-                  onRoomJoined={() => (props.navigation as any).replace('WaitingRoom')}
-                  onBack={() => (props.navigation as any).goBack()}
                 />
               )}
             </Stack.Screen>

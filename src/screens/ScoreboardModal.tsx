@@ -83,10 +83,9 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   // Derive history from server snapshot if no explicit history passed in.
   const snapshot = useRoomStore((s) => s.snapshot);
   const derivedHistory: HandResult[] = React.useMemo(() => {
-    if (scoreHistory && effectiveHistory.length > 0) return scoreHistory;
+    if (scoreHistory && scoreHistory.length > 0) return scoreHistory;
     const sh = snapshot?.score_history ?? [];
     if (!sh.length) return [];
-    const playersList = snapshot?.players ?? [];
     return sh.map((h) => ({
       handNumber: h.hand_number,
       startingPlayerIndex: 0,
@@ -95,12 +94,12 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         bet: row.bet,
         tricksWon: row.taken_tricks,
         points: row.hand_score,
-        // bonus is bet+10 if exact match: per-rules, >0 hand_score with tricksWon === bet
         bonus: row.bet === row.taken_tricks ? 10 : 0,
       })),
     }));
   }, [scoreHistory, snapshot]);
-  const effectiveHistory: HandResult[] = scoreHistory && effectiveHistory.length > 0 ? scoreHistory : derivedHistory;
+  const effectiveHistory: HandResult[] =
+    scoreHistory && scoreHistory.length > 0 ? scoreHistory : derivedHistory;
 
   // Sort players by score
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
