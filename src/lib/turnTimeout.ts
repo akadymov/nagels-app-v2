@@ -12,7 +12,9 @@ import { useEffect, useRef } from 'react';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from './gameClient';
 
-const TURN_TIMEOUT_MS = 30_000;
+// Effectively disabled for now — was causing premature auto-bet=0 during real
+// play. Re-enable as a server-side cron later (5+ minutes of inactivity).
+const TURN_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function useTurnTimeout(): void {
   const roomId   = useRoomStore((s) => s.snapshot?.room?.id);
