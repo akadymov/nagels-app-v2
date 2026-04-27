@@ -172,17 +172,31 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       }
       onRoomCreated();
     } catch (error: unknown) {
+      console.error('[Lobby] create threw:', error);
       const message = error instanceof Error ? error.message : 'Failed to create room';
-      Alert.alert(t('common.error'), message);
+      if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+        (window as any).alert(`Error\n\n${message}`);
+      } else {
+        Alert.alert(t('common.error'), message);
+      }
     } finally {
       setIsCreating(false);
     }
   }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t]);
 
   const handleJoinRoom = useCallback(async () => {
+    const showMsg = (title: string, body: string) => {
+      if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+        (window as any).alert(`${title}\n\n${body}`);
+      } else {
+        Alert.alert(title, body);
+      }
+    };
+
+    console.log('[Lobby] join pressed', { code: joinCode });
     const code = joinCode.trim().toUpperCase();
     if (code.length !== 6) {
-      Alert.alert(t('common.error'), t('multiplayer.invalidCode'));
+      showMsg(t('common.error'), t('multiplayer.invalidCode'));
       return;
     }
     await saveName();
@@ -190,15 +204,16 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     try {
       const displayName = (nameInput.trim() || playerName) ?? 'Guest';
       const result = await gameClient.joinRoom(displayName, code);
+      console.log('[Lobby] joinRoom response', result);
       if (!result.ok) {
         const err = (result as any).error || 'Failed to join room';
-        if (err.includes('not_found') || err.includes('not found')) {
-          Alert.alert(t('common.error'), t('multiplayer.roomNotFound'));
-        } else if (err.includes('full')) {
-          Alert.alert(t('common.error'), t('multiplayer.roomFull'));
-        } else {
-          Alert.alert(t('common.error'), err);
-        }
+        const errMap: Record<string, string> = {
+          unknown_room: t('multiplayer.roomNotFound'),
+          room_full: t('multiplayer.roomFull'),
+          room_in_progress: 'Game already in progress.',
+          seat_taken: 'Seat already taken — try again.',
+        };
+        showMsg(t('common.error'), errMap[err] ?? err);
         return;
       }
       const user = await getCurrentUser();
@@ -213,8 +228,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       }
       onRoomJoined();
     } catch (error: unknown) {
+      console.error('[Lobby] join threw:', error);
       const message = error instanceof Error ? error.message : 'Failed to join room';
-      Alert.alert(t('common.error'), message);
+      showMsg(t('common.error'), message);
     } finally {
       setIsJoining(false);
     }
