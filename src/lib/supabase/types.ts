@@ -1,246 +1,519 @@
 /**
- * Nägels Online - Supabase Type Definitions
+ * Nägels Online — Supabase Type Definitions
  *
- * TypeScript types matching the Supabase database schema
+ * Auto-generated from the Supabase schema via the MCP tool
+ * `mcp__claude_ai_Supabase__generate_typescript_types`.
+ * Regenerate after every migration.
  */
 
-// ============================================================
-// DATABASE TABLES
-// ============================================================
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-/**
- * rooms table - Game rooms
- */
-export interface DatabaseRoom {
-  id: string;
-  room_code: string;
-  host_id: string;
-  status: RoomStatus;
-  player_count: number;
-  max_players: number;
-  game_config: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  last_activity_at: string;
+export type Database = {
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      dealt_cards: {
+        Row: {
+          card: string
+          hand_id: string
+          session_id: string
+        }
+        Insert: {
+          card: string
+          hand_id: string
+          session_id: string
+        }
+        Update: {
+          card?: string
+          hand_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dealt_cards_hand_id_fkey"
+            columns: ["hand_id"]
+            isOneToOne: false
+            referencedRelation: "hands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealt_cards_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_events: {
+        Row: {
+          created_at: string
+          hand_id: string | null
+          id: number
+          kind: string
+          payload: Json
+          room_id: string
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          hand_id?: string | null
+          id?: number
+          kind: string
+          payload?: Json
+          room_id: string
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          hand_id?: string | null
+          id?: number
+          kind?: string
+          payload?: Json
+          room_id?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_events_hand_id_fkey"
+            columns: ["hand_id"]
+            isOneToOne: false
+            referencedRelation: "hands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_events_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hand_scores: {
+        Row: {
+          bet: number
+          hand_id: string
+          hand_score: number
+          session_id: string
+          taken_tricks: number
+        }
+        Insert: {
+          bet: number
+          hand_id: string
+          hand_score?: number
+          session_id: string
+          taken_tricks?: number
+        }
+        Update: {
+          bet?: number
+          hand_id?: string
+          hand_score?: number
+          session_id?: string
+          taken_tricks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hand_scores_hand_id_fkey"
+            columns: ["hand_id"]
+            isOneToOne: false
+            referencedRelation: "hands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hand_scores_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hands: {
+        Row: {
+          cards_per_player: number
+          closed_at: string | null
+          current_seat: number
+          deck_seed: string
+          hand_number: number
+          id: string
+          phase: string
+          room_id: string
+          started_at: string
+          starting_seat: number
+          trump_suit: string
+        }
+        Insert: {
+          cards_per_player: number
+          closed_at?: string | null
+          current_seat: number
+          deck_seed: string
+          hand_number: number
+          id?: string
+          phase?: string
+          room_id: string
+          started_at?: string
+          starting_seat: number
+          trump_suit: string
+        }
+        Update: {
+          cards_per_player?: number
+          closed_at?: string | null
+          current_seat?: number
+          deck_seed?: string
+          hand_number?: number
+          id?: string
+          phase?: string
+          room_id?: string
+          started_at?: string
+          starting_seat?: number
+          trump_suit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hands_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_players: {
+        Row: {
+          is_connected: boolean
+          is_ready: boolean
+          last_seen_at: string
+          room_id: string
+          seat_index: number
+          session_id: string
+        }
+        Insert: {
+          is_connected?: boolean
+          is_ready?: boolean
+          last_seen_at?: string
+          room_id: string
+          seat_index: number
+          session_id: string
+        }
+        Update: {
+          is_connected?: boolean
+          is_ready?: boolean
+          last_seen_at?: string
+          room_id?: string
+          seat_index?: number
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_players_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_sessions: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          display_name: string
+          id: string
+        }
+        Insert: {
+          auth_user_id: string
+          created_at?: string
+          display_name: string
+          id?: string
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          current_hand_id: string | null
+          host_session_id: string
+          id: string
+          max_cards: number
+          phase: string
+          player_count: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_hand_id?: string | null
+          host_session_id: string
+          id?: string
+          max_cards?: number
+          phase?: string
+          player_count: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_hand_id?: string | null
+          host_session_id?: string
+          id?: string
+          max_cards?: number
+          phase?: string
+          player_count?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_current_hand_fk"
+            columns: ["current_hand_id"]
+            isOneToOne: false
+            referencedRelation: "hands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rooms_host_session_id_fkey"
+            columns: ["host_session_id"]
+            isOneToOne: false
+            referencedRelation: "room_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trick_cards: {
+        Row: {
+          card: string
+          played_at: string
+          seat_index: number
+          trick_id: string
+        }
+        Insert: {
+          card: string
+          played_at?: string
+          seat_index: number
+          trick_id: string
+        }
+        Update: {
+          card?: string
+          played_at?: string
+          seat_index?: number
+          trick_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trick_cards_trick_id_fkey"
+            columns: ["trick_id"]
+            isOneToOne: false
+            referencedRelation: "tricks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tricks: {
+        Row: {
+          closed_at: string | null
+          hand_id: string
+          id: string
+          lead_seat: number
+          trick_number: number
+          winner_seat: number | null
+        }
+        Insert: {
+          closed_at?: string | null
+          hand_id: string
+          id?: string
+          lead_seat: number
+          trick_number: number
+          winner_seat?: number | null
+        }
+        Update: {
+          closed_at?: string | null
+          hand_id?: string
+          id?: string
+          lead_seat?: number
+          trick_number?: number
+          winner_seat?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tricks_hand_id_fkey"
+            columns: ["hand_id"]
+            isOneToOne: false
+            referencedRelation: "hands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      get_my_hand: {
+        Args: { p_hand_id: string; p_session_id: string }
+        Returns: Json
+      }
+      get_room_state: { Args: { p_room_id: string }; Returns: Json }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-export type RoomStatus = 'waiting' | 'playing' | 'finished' | 'abandoned';
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-/**
- * room_players table - Players in a room
- */
-export interface DatabaseRoomPlayer {
-  id: string;
-  room_id: string;
-  player_id: string;
-  player_name: string;
-  player_index: number; // 0-3 for seating position
-  is_bot: boolean;
-  is_ready: boolean;
-  connected_at: string;
-  last_seen_at: string;
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
-/**
- * game_states table - Authoritative game state
- */
-export interface DatabaseGameState {
-  id: string;
-  room_id: string;
-  hand_number: number;
-  phase: GamePhase;
-  current_player_index: number;
-  trump_suit: string;
-  cards_per_player: number;
-  players: unknown; // JSONB - serialized Player[]
-  current_trick: unknown; // JSONB - serialized Trick
-  tricks: unknown; // JSONB - serialized Trick[]
-  deck: unknown; // JSONB - serialized Card[]
-  version: number;
-  game_state?: unknown; // JSONB - Optional extended game state for remote sync
-  created_at: string;
-  updated_at: string;
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
-export type GamePhase = 'lobby' | 'betting' | 'playing' | 'scoring' | 'finished';
-
-/**
- * game_events table - Event log for reconciliation
- */
-export interface DatabaseGameEvent {
-  id: string;
-  room_id: string;
-  event_type: GameEventType;
-  event_data: Record<string, unknown>;
-  player_id: string;
-  version: number;
-  created_at: string;
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
-export type GameEventType =
-  | 'player_joined'
-  | 'player_left'
-  | 'player_ready'
-  | 'game_started'
-  | 'betting_started'
-  | 'bet_placed'
-  | 'playing_started'
-  | 'card_played'
-  | 'trick_completed'
-  | 'hand_completed'
-  | 'game_finished'
-  | 'chat_message';
-
-/**
- * player_sessions table - Guest authentication
- */
-export interface DatabasePlayerSession {
-  id: string;
-  device_id: string;
-  player_name: string | null;
-  language: string;
-  created_at: string;
-  last_seen_at: string;
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
-// ============================================================
-// SUPABASE TABLE TYPES (for select queries)
-// ============================================================
-
-export type Tables = {
-  rooms: {
-    Row: DatabaseRoom;
-    Insert: Omit<DatabaseRoom, 'id' | 'created_at' | 'updated_at' | 'last_activity_at'>;
-    Update: Partial<DatabaseRoom>;
-  };
-  room_players: {
-    Row: DatabaseRoomPlayer;
-    Insert: Omit<DatabaseRoomPlayer, 'id' | 'connected_at' | 'last_seen_at'>;
-    Update: Partial<DatabaseRoomPlayer>;
-  };
-  game_states: {
-    Row: DatabaseGameState;
-    Insert: Omit<DatabaseGameState, 'id' | 'created_at' | 'updated_at'>;
-    Update: Partial<DatabaseGameState>;
-  };
-  game_events: {
-    Row: DatabaseGameEvent;
-    Insert: Omit<DatabaseGameEvent, 'id' | 'created_at'>;
-    Update: Partial<DatabaseGameEvent>;
-  };
-  player_sessions: {
-    Row: DatabasePlayerSession;
-    Insert: Omit<DatabasePlayerSession, 'id' | 'created_at' | 'last_seen_at'>;
-    Update: Partial<DatabasePlayerSession>;
-  };
-};
-
-// ============================================================
-// APPLICATION TYPES
-// ============================================================
-
-/**
- * Room - Combined room data with players
- */
-export interface Room {
-  id: string;
-  roomCode: string;
-  hostId: string;
-  status: RoomStatus;
-  playerCount: number;
-  maxPlayers: number;
-  players: RoomPlayer[];
-  gameConfig: GameConfig;
-  createdAt: string;
-  lastActivityAt: string;
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
-export interface GameConfig {
-  playerCount: number;
-  maxCards: number;
-  autoStart: boolean;
-}
-
-/**
- * RoomPlayer - Player in a room (application level)
- */
-export interface RoomPlayer {
-  id: string;
-  roomId: string;
-  playerId: string;
-  playerName: string;
-  playerIndex: number;
-  isBot: boolean;
-  isReady: boolean;
-  isConnected: boolean;
-}
-
-/**
- * Guest Session - Current player's session
- */
-export interface GuestSession {
-  sessionId: string;   // Supabase Auth user.id (or legacy player_sessions.id)
-  deviceId: string;
-  playerName: string;
-  language: 'en' | 'ru' | 'es';
-  createdAt: string;
-  lastSeenAt: string;
-  isGuest: boolean;    // true = anonymous; false = registered email account
-  email: string | null;
-}
-
-/**
- * Game Event - Real-time game event
- */
-export interface GameEvent {
-  id: string;
-  roomId: string;
-  type: GameEventType;
-  data: Record<string, unknown>;
-  playerId: string;
-  version: number;
-  timestamp: string;
-}
-
-/**
- * Sync Status - Multiplayer sync state
- */
-export type SyncStatus = 'connected' | 'syncing' | 'disconnected';
-
-/**
- * Multiplayer State - Application multiplayer state
- */
-export interface MultiplayerState {
-  currentRoom: Room | null;
-  myPlayerId: string | null;
-  myPlayerIndex: number | null;
-  isHost: boolean;
-  syncStatus: SyncStatus;
-  error: string | null;
-}
-
-// ============================================================
-// RPC FUNCTION TYPES
-// ============================================================
-
-export interface PlaceBetParams {
-  room_id: string;
-  player_id: string;
-  bet: number;
-  version: number;
-}
-
-export interface PlayCardParams {
-  room_id: string;
-  player_id: string;
-  card_id: string;
-  version: number;
-}
-
-export interface StartGameParams {
-  room_id: string;
-}
-
-export interface NextHandParams {
-  room_id: string;
-}
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
