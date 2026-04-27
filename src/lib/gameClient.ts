@@ -101,7 +101,20 @@ export const gameClient = {
           p_hand_id: handId,
           p_session_id: mySession,
         });
-        snapshot.my_hand = (myHand as unknown as string[]) ?? [];
+        const fetched = (myHand as unknown as string[]) ?? [];
+        // Only overwrite if we actually got cards back. If the fetch returned
+        // empty for an active hand, prefer the existing local my_hand to
+        // avoid the "cards disappear" flicker.
+        const local = useRoomStore.getState().snapshot;
+        const localHandId = local?.current_hand?.id;
+        if (fetched.length > 0 || localHandId !== handId) {
+          snapshot.my_hand = fetched;
+        } else {
+          snapshot.my_hand = local?.my_hand ?? [];
+        }
+      } else {
+        // No session yet — preserve whatever we had so far.
+        snapshot.my_hand = useRoomStore.getState().snapshot?.my_hand ?? [];
       }
     }
 
