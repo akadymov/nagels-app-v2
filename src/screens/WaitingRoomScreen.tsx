@@ -85,20 +85,28 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   }, [room?.id, amIReady]);
 
   const handleStartGame = useCallback(async () => {
-    if (!room?.id) return;
-    // No client-side guard — server validates everything. Show toast on error
-    // so the host knows why nothing happened.
-    const r = await gameClient.startGame(room.id);
-    if (!r.ok) {
-      const msgMap: Record<string, string> = {
-        not_all_seats_filled: t('multiplayer.errorNotAllSeats', 'Wait for all players to join.'),
-        not_all_ready: t('multiplayer.errorNotAllReady', 'Wait for all players to mark ready.'),
-        host_only: t('multiplayer.errorHostOnly', 'Only the host can start the game.'),
-        unknown_room: t('common.error'),
-      };
-      Alert.alert(t('common.error'), msgMap[r.error] ?? r.error);
+    console.log('[WaitingRoom] start game pressed', { roomId: room?.id });
+    if (!room?.id) {
+      Alert.alert('Error', 'Room not loaded yet — try refresh.');
+      return;
     }
-  }, [room?.id, t]);
+    try {
+      const r = await gameClient.startGame(room.id);
+      console.log('[WaitingRoom] startGame response', r);
+      if (!r.ok) {
+        const msgMap: Record<string, string> = {
+          not_all_seats_filled: 'Wait for all players to join.',
+          not_all_ready: 'Wait for all players to mark ready.',
+          host_only: 'Only the host can start the game.',
+          unknown_room: 'Room not found.',
+        };
+        Alert.alert('Cannot start', msgMap[r.error] ?? `Server error: ${r.error}`);
+      }
+    } catch (err) {
+      console.error('[WaitingRoom] startGame threw:', err);
+      Alert.alert('Error', String((err as Error)?.message ?? err));
+    }
+  }, [room?.id]);
 
   const handleLeave = useCallback(async () => {
     const roomId = room?.id;
