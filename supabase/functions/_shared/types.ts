@@ -40,10 +40,44 @@ export interface RoomSnapshot {
     is_connected: boolean;
     last_seen_at: string;
   }>;
-  current_hand: any | null;
-  hand_scores: any[];
-  current_trick: any | null;
-  score_history: any[];
+  current_hand: {
+    id: string;
+    room_id: string;
+    hand_number: number;
+    cards_per_player: number;
+    trump_suit: string;
+    starting_seat: number;
+    current_seat: number;
+    phase: 'betting' | 'playing' | 'scoring' | 'closed';
+    deck_seed: string;
+    started_at: string;
+    closed_at: string | null;
+  } | null;
+  hand_scores: Array<{
+    hand_id: string;
+    session_id: string;
+    bet: number;
+    taken_tricks: number;
+    hand_score: number;
+  }>;
+  current_trick: {
+    id: string;
+    trick_number: number;
+    lead_seat: number;
+    winner_seat: number | null;
+    cards: Array<{ seat: number; card: string }>;
+  } | null;
+  score_history: Array<{
+    hand_number: number;
+    closed_at: string | null;
+    scores: Array<{
+      hand_id: string;
+      session_id: string;
+      bet: number;
+      taken_tricks: number;
+      hand_score: number;
+    }>;
+  }>;
   my_hand?: string[];
 }
 

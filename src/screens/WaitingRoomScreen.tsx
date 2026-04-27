@@ -1,10 +1,11 @@
 /**
  * Nägels Online - Waiting Room Screen
  *
- * Pre-game lobby where players gather before starting a game
+ * Pre-game lobby where players gather before starting a game.
+ * Reads server-authoritative state from useRoomStore; mutations go through gameClient.
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,15 +20,13 @@ import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../components/glass';
 import { GlassButton } from '../components/buttons';
-import { ConnectionStatus } from '../components/ConnectionStatus';
 import { GameLogo } from '../components/GameLogo';
 import { Colors, Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
-import { useMultiplayer } from '../hooks/useMultiplayer';
-import { useMultiplayerStore } from '../store/multiplayerStore';
-import { onGameStarted, clearGameStartedCallback } from '../lib/multiplayer/eventHandler';
-import { addBotToRoom, removeBotFromRoom } from '../lib/multiplayer/roomManager';
+import { useRoomStore } from '../store/roomStore';
+import { gameClient } from '../lib/gameClient';
+import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { buildInviteLink } from '../utils/inviteLink';
 
 export interface WaitingRoomScreenProps {
@@ -38,12 +37,6 @@ export interface WaitingRoomScreenProps {
 
 /**
  * WaitingRoomScreen - Pre-game lobby
- *
- * Shows:
- * - Room code (for sharing)
- * - List of players in room
- * - Ready status for each player
- * - Start Game button (host only)
  */
 export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   onGameStart,
@@ -52,116 +45,68 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const {
-    roomPlayers,
-    currentRoom,
-    myPlayerId,
-    isHost,
-    amIReady,
-    playerCount,
-    readyCount,
-    canStartGame,
-    syncStatus,
-    isReconnecting,
-    error,
-    setReady,
-    startGame,
-    leaveRoom,
-  } = useMultiplayer();
 
-  // Register callback for when host starts the game
-  // Note: GameTableScreen handles game initialization when it mounts
+  const snapshot = useRoomStore((s) => s.snapshot);
+  const myPlayerId = useRoomStore((s) => s.myPlayerId);
+  const connState = useRoomStore((s) => s.connState);
+
+  const room = snapshot?.room ?? null;
+  const players = snapshot?.players ?? [];
+  const myPlayer = useMemo(
+    () => players.find((p) => p.session_id === myPlayerId) ?? null,
+    [players, myPlayerId]
+  );
+  const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
+  const amIReady = myPlayer?.is_ready ?? false;
+  const playerCount = players.length;
+  const readyCount = players.filter((p) => p.is_ready).length;
+  // Host is implicitly ready: only count non-host ready players for "canStart"
+  const nonHostPlayers = players.filter((p) => p.session_id !== room?.host_session_id);
+  const canStartGame =
+    isHost && playerCount >= 2 && nonHostPlayers.every((p) => p.is_ready);
+
+  // Ensure subscription is active when this screen is mounted
   useEffect(() => {
-    // Register the callback
-    onGameStarted(() => {
-      console.log('[WaitingRoom] Game started callback triggered!');
-      onGameStart();
-    });
+    if (room?.id) {
+      subscribeRoom(room.id);
+    }
+  }, [room?.id]);
 
-    // Cleanup on unmount
-    return () => {
-      clearGameStartedCallback();
-    };
-  }, [onGameStart]);
-
-  // Poll for room updates (players + ready status + game start)
+  // Watch for the server transitioning to "playing" — navigate to GameTable.
   useEffect(() => {
-    if (!currentRoom?.id) return;
-
-    const headers = {
-      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-      'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''}`,
-    };
-
-    const poll = async () => {
-      try {
-        // Poll room status
-        const roomRes = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/rooms?id=eq.${currentRoom.id}&select=*`,
-          { headers }
-        );
-        if (roomRes.ok) {
-          const rooms = await roomRes.json();
-          if (rooms?.[0]?.status === 'playing') {
-            console.log('[WaitingRoom] Game started!');
-            onGameStart();
-            return;
-          }
-        }
-
-        // Always poll players (catches joins, leaves, ready changes)
-        const playersRes = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/room_players?room_id=eq.${currentRoom.id}&select=*&order=player_index`,
-          { headers }
-        );
-        if (playersRes.ok) {
-          const players = await playersRes.json();
-          if (players) {
-            const store = useMultiplayerStore.getState();
-            const mappedPlayers = players.map((p: any) => ({
-              id: p.id,
-              roomId: p.room_id,
-              playerId: p.player_id,
-              playerName: p.player_name || 'Guest',
-              playerIndex: p.player_index ?? 0,
-              isBot: p.is_bot || false,
-              isReady: p.is_ready || false,
-              isConnected: true,
-            }));
-            // Always update — syncs count, ready status, new players
-            store.setRoomPlayers(mappedPlayers);
-          }
-        }
-      } catch (error) {
-        console.error('[WaitingRoom] Polling error:', error);
-      }
-    };
-
-    // Poll immediately on mount + every 2 seconds
-    poll();
-    const interval = setInterval(poll, 2000);
-    return () => clearInterval(interval);
-  }, [currentRoom?.id, onGameStart]);
-
-  const handleToggleReady = async () => {
-    await setReady(!amIReady);
-  };
-
-  const handleStartGame = async () => {
-    if (canStartGame) {
-      await startGame();
+    if (room?.phase === 'playing') {
       onGameStart();
     }
-  };
+  }, [room?.phase, onGameStart]);
 
-  const handleLeave = async () => {
-    await leaveRoom();
+  const handleToggleReady = useCallback(async () => {
+    if (!room?.id) return;
+    await gameClient.setReady(room.id, !amIReady);
+  }, [room?.id, amIReady]);
+
+  const handleStartGame = useCallback(async () => {
+    if (!room?.id || !canStartGame) return;
+    await gameClient.startGame(room.id);
+    // Navigation happens via useEffect above watching room.phase.
+  }, [room?.id, canStartGame]);
+
+  const handleLeave = useCallback(async () => {
+    const roomId = room?.id;
+    if (roomId) {
+      try {
+        await gameClient.leaveRoom(roomId);
+      } catch (err) {
+        console.error('[WaitingRoom] leaveRoom failed:', err);
+      }
+    }
+    unsubscribeRoom();
+    useRoomStore.getState().reset();
     onLeave();
-  };
+  }, [room?.id, onLeave]);
 
   const handleShare = useCallback(async () => {
-    if (!currentRoom) return;
-    const link = buildInviteLink(currentRoom.roomCode);
+    if (!room) return;
+    const link = buildInviteLink(room.code);
     const message = `${t('multiplayer.shareMessage')}\n${link}`;
     try {
       await Share.share(
@@ -172,19 +117,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       await Clipboard.setStringAsync(link);
       Alert.alert(t('multiplayer.codeCopied'), link);
     }
-  }, [currentRoom, t]);
-
-  const getReadyText = () => {
-    return t(`multiplayer.${amIReady ? 'ready' : 'notReady'}`);
-  };
-
-  const getReadyButtonVariant = () => {
-    return amIReady ? 'secondary' : 'primary';
-  };
+  }, [room, t]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ConnectionStatus />
       <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
         <View style={{ width: 36 }} />
         <GameLogo size="sm" />
@@ -201,10 +137,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         contentContainerStyle={styles.scrollContent}
       >
         {/* Room Code Card */}
-        {currentRoom && (
+        {room && (
           <GlassCard style={styles.roomCodeCard}>
             <Text style={[styles.roomCodeLabel, { color: colors.textSecondary }]}>{t('multiplayer.roomCode')}</Text>
-            <Text style={[styles.roomCode, { color: colors.accent }]} testID="room-code">{currentRoom.roomCode}</Text>
+            <Text style={[styles.roomCode, { color: colors.accent }]} testID="room-code">{room.code}</Text>
             <Pressable
               style={styles.shareButton}
               onPress={handleShare}
@@ -219,85 +155,69 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
         {/* Players List */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          {t('multiplayer.playersInRoom', { count: playerCount, max: currentRoom?.maxPlayers ?? '?' })}
+          {t('multiplayer.playersInRoom', { count: playerCount, max: room?.player_count ?? '?' })}
         </Text>
 
         <View style={styles.playersList}>
-          {roomPlayers.map((player, index) => {
-            const isDuplicate = roomPlayers.filter(p => p.playerName === player.playerName).length > 1;
+          {players.map((player, index) => {
+            const isDuplicate = players.filter(p => p.display_name === player.display_name).length > 1;
+            const isMe = player.session_id === myPlayerId;
+            const isHostPlayer = player.session_id === room?.host_session_id;
             return (
-            <GlassCard
-              key={player.playerId}
-              style={[
-                styles.playerCard,
-                { backgroundColor: colors.surface },
-                player.playerId === myPlayerId && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
-              ]}
-            >
-              <View style={[styles.seatBadge, { backgroundColor: colors.surfaceSecondary }]}>
-                <Text style={[styles.seatNumber, { color: colors.textMuted }]}>{index + 1}</Text>
-              </View>
-              <View style={styles.playerInfo}>
-                <Text style={[styles.playerName, { color: colors.textPrimary }]}>
-                  {player.playerName}
-                  {isDuplicate && (
-                    <Text style={styles.seatSuffix}> #{index + 1}</Text>
+              <GlassCard
+                key={player.session_id}
+                style={[
+                  styles.playerCard,
+                  { backgroundColor: colors.surface },
+                  isMe && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
+                ]}
+              >
+                <View style={[styles.seatBadge, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Text style={[styles.seatNumber, { color: colors.textMuted }]}>{index + 1}</Text>
+                </View>
+                <View style={styles.playerInfo}>
+                  <Text style={[styles.playerName, { color: colors.textPrimary }]}>
+                    {player.display_name}
+                    {isDuplicate && (
+                      <Text style={styles.seatSuffix}> #{index + 1}</Text>
+                    )}
+                    {isMe && (
+                      <Text style={styles.youBadge}> ({t('multiplayer.you')})</Text>
+                    )}
+                  </Text>
+                  {isHostPlayer && (
+                    <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
                   )}
-                  {player.playerId === myPlayerId && (
-                    <Text style={styles.youBadge}> ({t('multiplayer.you')})</Text>
-                  )}
-                </Text>
-                {player.isBot && (
-                  <Text style={[styles.botBadge, { color: colors.textMuted }]}> {t('multiplayer.bot')}</Text>
-                )}
-                {player.playerId === currentRoom?.hostId && (
-                  <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
-                )}
-                {player.isBot && isHost && (
-                  <Pressable
-                    onPress={async () => {
-                      try {
-                        await removeBotFromRoom(player.playerId);
-                      } catch (err: any) {
-                        console.error('[WaitingRoom] Remove bot failed:', err);
-                      }
-                    }}
-                    hitSlop={8}
-                    style={styles.removeBotBtn}
-                  >
-                    <Text style={styles.removeBotText}>✕</Text>
-                  </Pressable>
-                )}
-              </View>
-              <View style={[
-                styles.readyIndicator,
-                { backgroundColor: colors.surfaceSecondary },
-                player.isReady && styles.readyIndicatorReady,
-              ]}>
-                <Text style={[
-                  styles.readyText,
-                  { color: colors.textMuted },
-                  player.isReady && styles.readyTextReady,
+                </View>
+                <View style={[
+                  styles.readyIndicator,
+                  { backgroundColor: colors.surfaceSecondary },
+                  player.is_ready && styles.readyIndicatorReady,
                 ]}>
-                  {player.isReady ? '✓' : '○'}
-                </Text>
-              </View>
-            </GlassCard>
+                  <Text style={[
+                    styles.readyText,
+                    { color: colors.textMuted },
+                    player.is_ready && styles.readyTextReady,
+                  ]}>
+                    {player.is_ready ? '✓' : '○'}
+                  </Text>
+                </View>
+              </GlassCard>
             );
           })}
         </View>
 
         {/* Sync Status */}
-        {isReconnecting && (
+        {connState === 'reconnecting' && (
           <View style={styles.statusBar}>
             <ActivityIndicator size="small" color={Colors.accent} />
             <Text style={styles.statusText}>{t('multiplayer.reconnecting')}</Text>
           </View>
         )}
 
-        {error && (
+        {connState === 'error' && (
           <View style={[styles.statusBar, styles.statusBarError]}>
-            <Text style={styles.statusError}>{error}</Text>
+            <Text style={styles.statusError}>Connection error</Text>
           </View>
         )}
 
@@ -306,7 +226,6 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           // Non-host: ready confirmation UI
           <>
             {amIReady ? (
-              // Ready state: green confirmation banner
               <View style={styles.readyBanner}>
                 <Text style={styles.readyBannerIcon}>✓</Text>
                 <Text style={styles.readyBannerText}>{t('multiplayer.youAreReady')}</Text>
@@ -315,7 +234,6 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                 </Pressable>
               </View>
             ) : (
-              // Not ready state: prominent call-to-action
               <>
                 <Text style={styles.readyHintText}>
                   {t('multiplayer.readyToPlayHint')}
@@ -334,35 +252,13 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             <Text style={styles.waitingText}>
               {t('multiplayer.waitingForReady', {
                 count: readyCount,
-                total: roomPlayers.filter(p => !p.isBot).length,
+                total: players.length,
               })}
             </Text>
           </>
         ) : (
-          // Host: Add Bot + Start Game
+          // Host: Start Game
           <>
-            {playerCount < (currentRoom?.maxPlayers ?? 6) && (
-              <GlassButton
-                title={`🤖 ${t('multiplayer.addBot', 'Add Bot')}`}
-                onPress={async () => {
-                  try {
-                    console.log('[WaitingRoom] Adding bot...');
-                    await addBotToRoom();
-                    console.log('[WaitingRoom] Bot added successfully');
-                  } catch (err: any) {
-                    console.error('[WaitingRoom] Add bot failed:', err);
-                    const store = useMultiplayerStore.getState();
-                    store.setError(err.message);
-                    setTimeout(() => store.setError(null), 5000);
-                  }
-                }}
-                size="medium"
-                variant="secondary"
-                accentColor={Colors.accent}
-                style={styles.actionButton}
-                testID="btn-add-bot"
-              />
-            )}
             <GlassButton
               title={t('multiplayer.startGame')}
               onPress={handleStartGame}
@@ -376,8 +272,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             {!canStartGame && (
               <Text style={styles.waitingText}>
                 {t('multiplayer.waitingForReady', {
-                  count: roomPlayers.filter(p => p.playerId !== myPlayerId && p.isReady).length,
-                  total: roomPlayers.filter(p => p.playerId !== myPlayerId).length,
+                  count: nonHostPlayers.filter((p) => p.is_ready).length,
+                  total: nonHostPlayers.length,
                 })}
               </Text>
             )}
@@ -473,20 +369,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.accent,
   },
-  removeBotBtn: {
-    marginLeft: Spacing.xs,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors.error,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeBotText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-  },
   seatBadge: {
     width: 24,
     height: 24,
@@ -515,10 +397,6 @@ const styles = StyleSheet.create({
   youBadge: {
     ...TextStyles.caption,
     color: Colors.accent,
-  },
-  botBadge: {
-    ...TextStyles.caption,
-    color: Colors.textMuted,
   },
   hostBadge: {
     ...TextStyles.caption,
