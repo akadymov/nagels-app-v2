@@ -159,8 +159,12 @@ export async function playCard(
       const { data: scores } = await svc.from('hand_scores')
         .select('session_id, bet, taken_tricks').eq('hand_id', hand.id);
       for (const row of scores ?? []) {
-        const score = calculateHandScore(row.bet, row.taken_tricks);
-        await svc.from('hand_scores').update({ hand_score: score })
+        const { points, bonus } = calculateHandScore({
+          playerId: row.session_id,
+          bet: row.bet,
+          tricksWon: row.taken_tricks,
+        });
+        await svc.from('hand_scores').update({ hand_score: points + bonus })
           .eq('hand_id', hand.id).eq('session_id', row.session_id);
       }
       await svc.from('hands').update({
