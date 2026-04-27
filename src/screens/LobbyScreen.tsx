@@ -165,7 +165,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         setMyPlayerIdInRoomStore(user.id, result.state.players);
       }
       const roomId = result.state.room?.id;
-      if (roomId) subscribeRoom(roomId);
+      if (roomId) {
+        const { setActiveRoom } = await import('../lib/activeRoom');
+        await setActiveRoom(roomId);
+        subscribeRoom(roomId);
+      }
       onRoomCreated();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to create room';
@@ -202,7 +206,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         setMyPlayerIdInRoomStore(user.id, result.state.players);
       }
       const roomId = result.state.room?.id;
-      if (roomId) subscribeRoom(roomId);
+      if (roomId) {
+        const { setActiveRoom } = await import('../lib/activeRoom');
+        await setActiveRoom(roomId);
+        subscribeRoom(roomId);
+      }
       onRoomJoined();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to join room';
