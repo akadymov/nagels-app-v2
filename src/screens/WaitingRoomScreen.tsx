@@ -5,7 +5,7 @@
  * Reads server-authoritative state from useRoomStore; mutations go through gameClient.
  */
 
-import React, { useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const { t } = useTranslation();
   const { colors } = useTheme();
 
+  const [startFeedback, setStartFeedback] = useState<string>('');
+
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const connState = useRoomStore((s) => s.connState);
@@ -84,10 +86,21 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     await gameClient.setReady(room.id, !amIReady);
   }, [room?.id, amIReady]);
 
+  const showMessage = (title: string, body: string) => {
+    // Alert.alert is unreliable on react-native-web. Use window.alert directly.
+    if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+      (window as any).alert(`${title}\n\n${body}`);
+    } else {
+      Alert.alert(title, body);
+    }
+  };
+
   const handleStartGame = useCallback(async () => {
     console.log('[WaitingRoom] start game pressed', { roomId: room?.id });
+    setStartFeedback('Starting…');
     if (!room?.id) {
-      Alert.alert('Error', 'Room not loaded yet — try refresh.');
+      setStartFeedback('No room');
+      showMessage('Error', 'Room not loaded yet — try refresh.');
       return;
     }
     try {
@@ -100,11 +113,17 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           host_only: 'Only the host can start the game.',
           unknown_room: 'Room not found.',
         };
-        Alert.alert('Cannot start', msgMap[r.error] ?? `Server error: ${r.error}`);
+        const msg = msgMap[r.error] ?? `Server error: ${r.error}`;
+        setStartFeedback(msg);
+        showMessage('Cannot start', msg);
+      } else {
+        setStartFeedback('Started!');
       }
     } catch (err) {
       console.error('[WaitingRoom] startGame threw:', err);
-      Alert.alert('Error', String((err as Error)?.message ?? err));
+      const msg = String((err as Error)?.message ?? err);
+      setStartFeedback(`Error: ${msg}`);
+      showMessage('Error', msg);
     }
   }, [room?.id]);
 
@@ -286,7 +305,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               style={styles.actionButton}
               testID="btn-start-game"
             />
-            {!canStartGame && (
+            {!!startFeedback && (
+              <Text style={[styles.waitingText, { color: Colors.highlight, fontWeight: '600' }]}>
+                {startFeedback}
+              </Text>
+            )}
+            {!canStartGame && !startFeedback && (
               <Text style={styles.waitingText}>
                 {t('multiplayer.waitingForReady', {
                   count: nonHostPlayers.filter((p) => p.is_ready).length,
