@@ -51,7 +51,7 @@ export async function startGame(
 
   const handNumber = 1;
   const cardsPerPlayer = getHandCards(handNumber, room.max_cards);
-  const trumpSuit = getTrumpForHand(handNumber, room.max_cards);
+  const trumpSuit = getTrumpForHand(handNumber);
   const startingSeat = 0;
   const seed = crypto.randomUUID();
 
