@@ -12,9 +12,10 @@ import { useEffect, useRef } from 'react';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from './gameClient';
 
-// Effectively disabled for now — was causing premature auto-bet=0 during real
-// play. Re-enable as a server-side cron later (5+ minutes of inactivity).
-const TURN_TIMEOUT_MS = 30 * 60 * 1000;
+// 5 minutes per turn. Anything shorter caused premature auto-bet=0 during
+// real-paced play. After this, any client may post `request_timeout`; the
+// server idempotently auto-advances (bet 0 / lowest legal card).
+const TURN_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function useTurnTimeout(): void {
   const roomId   = useRoomStore((s) => s.snapshot?.room?.id);
