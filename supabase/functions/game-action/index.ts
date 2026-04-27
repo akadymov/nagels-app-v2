@@ -50,18 +50,20 @@ Deno.serve(async (req: Request) => {
     } else if (action.kind === 'join_room') {
       result = await joinRoom(svc, actor, action);
     } else {
-      result = await withRoomLock(svc, room_id, async () => {
-        switch (action.kind) {
-          case 'leave_room':      return leaveRoom(svc, actor, action);
-          case 'ready':           return setReady(svc, actor, action);
-          case 'start_game':      return startGame(svc, actor, action);
-          case 'place_bet':       return placeBet(svc, actor, action);
-          case 'play_card':       return playCard(svc, actor, action);
-          case 'continue_hand':   return continueHand(svc, actor, action);
-          case 'request_timeout': return requestTimeout(svc, actor, action);
-          default:                throw new Error('unknown_action');
-        }
-      });
+      // No JS-level advisory lock: session-level pg_advisory_lock is unreliable
+      // through Supabase's pooled connections. Atomicity comes from:
+      //   - placeBet/playCard: their own PL/pgSQL functions with pg_advisory_xact_lock
+      //   - other handlers: UNIQUE constraints + last-writer-wins semantics
+      switch (action.kind) {
+        case 'leave_room':      result = await leaveRoom(svc, actor, action); break;
+        case 'ready':           result = await setReady(svc, actor, action); break;
+        case 'start_game':      result = await startGame(svc, actor, action); break;
+        case 'place_bet':       result = await placeBet(svc, actor, action); break;
+        case 'play_card':       result = await playCard(svc, actor, action); break;
+        case 'continue_hand':   result = await continueHand(svc, actor, action); break;
+        case 'request_timeout': result = await requestTimeout(svc, actor, action); break;
+        default:                throw new Error('unknown_action');
+      }
     }
   } catch (err) {
     console.error('[game-action] handler threw:', err);
@@ -78,18 +80,3 @@ Deno.serve(async (req: Request) => {
   // in the players list (auth.users.id ≠ room_sessions.id).
   return jsonResponse({ ...result, me_session_id: actor.session_id });
 });
-
-async function withRoomLock<T>(
-  svc: any,
-  room_id: string | null,
-  fn: () => Promise<T>,
-): Promise<T> {
-  if (!room_id) return fn();
-  const { error } = await svc.rpc('acquire_room_lock', { p_room_id: room_id });
-  if (error) throw error;
-  try {
-    return await fn();
-  } finally {
-    await svc.rpc('release_room_lock', { p_room_id: room_id });
-  }
-}
