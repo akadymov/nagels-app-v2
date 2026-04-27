@@ -264,6 +264,34 @@ const NavigatorGuard: React.FC = () => {
       navigation.navigate('ResetPassword');
       return;
     }
+
+    // Invite-link deep link: /join/ABCDEF — extract the code, auto-join.
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const m = window.location.pathname.match(/^\/join\/([A-Z0-9]{4,8})/i);
+      if (m) {
+        const code = m[1].toUpperCase();
+        // Strip the path so refresh doesn't loop.
+        window.history.replaceState(null, '', '/');
+        (async () => {
+          try {
+            const { gameClient } = await import('../lib/gameClient');
+            const { setActiveRoom } = await import('../lib/activeRoom');
+            const { subscribeRoom } = await import('../lib/realtimeBroadcast');
+            const displayName = useAuthStore.getState().displayName || 'Guest';
+            const result = await gameClient.joinRoom(displayName, code);
+            if (result.ok && result.state.room?.id) {
+              await setActiveRoom(result.state.room.id);
+              subscribeRoom(result.state.room.id);
+              navigation.navigate('WaitingRoom');
+            } else if (typeof window !== 'undefined') {
+              (window as any).alert(`Couldn't join ${code}: ${(result as any).error ?? 'unknown error'}`);
+            }
+          } catch (err) {
+            console.error('[NavigatorGuard] auto-join failed:', err);
+          }
+        })();
+      }
+    }
   }, [isLoading, isInitialized, navigation]);
 
   return null;
