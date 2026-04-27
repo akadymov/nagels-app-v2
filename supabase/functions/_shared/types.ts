@@ -82,5 +82,5 @@ export interface RoomSnapshot {
 }
 
 export type ActionResult =
-  | { ok: true; state: RoomSnapshot; version: number }
-  | { ok: false; error: string; state: RoomSnapshot; version: number };
+  | { ok: true; state: RoomSnapshot; version: number; me_session_id?: string }
+  | { ok: false; error: string; state: RoomSnapshot; version: number; me_session_id?: string };

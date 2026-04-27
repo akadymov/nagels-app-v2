@@ -74,7 +74,9 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  return jsonResponse(result);
+  // Always include the actor's session_id so the client can identify itself
+  // in the players list (auth.users.id ≠ room_sessions.id).
+  return jsonResponse({ ...result, me_session_id: actor.session_id });
 });
 
 async function withRoomLock<T>(

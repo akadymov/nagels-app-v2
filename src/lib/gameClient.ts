@@ -33,6 +33,12 @@ async function postAction(
       (json as any).version ?? 0,
     );
   }
+  // Server-supplied identity: room_sessions.id of the actor.
+  // Client cannot derive this from auth.user.id (different UUIDs).
+  const me = (json as any).me_session_id as string | undefined;
+  if (me) {
+    useRoomStore.getState().setMyPlayerId(me);
+  }
   return json;
 }
 
