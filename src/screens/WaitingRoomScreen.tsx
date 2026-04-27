@@ -85,10 +85,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   }, [room?.id, amIReady]);
 
   const handleStartGame = useCallback(async () => {
-    if (!room?.id || !canStartGame) return;
+    if (!room?.id) return;
+    // No client-side guard — server validates "all ready" / "all seats filled".
+    // Idempotent error responses include current snapshot, so wrong-state
+    // clicks just refresh the UI rather than producing user-visible errors.
     await gameClient.startGame(room.id);
-    // Navigation happens via useEffect above watching room.phase.
-  }, [room?.id, canStartGame]);
+  }, [room?.id]);
 
   const handleLeave = useCallback(async () => {
     const roomId = room?.id;
