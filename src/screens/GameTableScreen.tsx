@@ -28,6 +28,7 @@ import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
+import { useTurnTimeout } from '../lib/turnTimeout';
 import { gameClient } from '../lib/gameClient';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
@@ -84,6 +85,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // ── Multiplayer state ──────────────────────────────────────
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
+
+  // Turn timeout watcher — any client posts request_timeout after 30s
+  // of no progress; the Edge Function idempotently auto-advances.
+  useTurnTimeout();
 
   const room = snapshot?.room ?? null;
   const mpPlayers = snapshot?.players ?? [];
