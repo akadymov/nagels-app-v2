@@ -86,11 +86,19 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
   const handleStartGame = useCallback(async () => {
     if (!room?.id) return;
-    // No client-side guard — server validates "all ready" / "all seats filled".
-    // Idempotent error responses include current snapshot, so wrong-state
-    // clicks just refresh the UI rather than producing user-visible errors.
-    await gameClient.startGame(room.id);
-  }, [room?.id]);
+    // No client-side guard — server validates everything. Show toast on error
+    // so the host knows why nothing happened.
+    const r = await gameClient.startGame(room.id);
+    if (!r.ok) {
+      const msgMap: Record<string, string> = {
+        not_all_seats_filled: t('multiplayer.errorNotAllSeats', 'Wait for all players to join.'),
+        not_all_ready: t('multiplayer.errorNotAllReady', 'Wait for all players to mark ready.'),
+        host_only: t('multiplayer.errorHostOnly', 'Only the host can start the game.'),
+        unknown_room: t('common.error'),
+      };
+      Alert.alert(t('common.error'), msgMap[r.error] ?? r.error);
+    }
+  }, [room?.id, t]);
 
   const handleLeave = useCallback(async () => {
     const roomId = room?.id;
@@ -267,7 +275,6 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               size="large"
               variant="primary"
               accentColor={Colors.highlight}
-              disabled={!canStartGame}
               style={styles.actionButton}
               testID="btn-start-game"
             />
