@@ -1,18 +1,17 @@
 /**
  * Nägels Online - Game Table Screen
- * Main play interface with cards and opponents
- * Connected to Zustand game store
+ *
+ * Multiplayer mode: server-authoritative state via useRoomStore + gameClient.
+ * Single-player mode: legacy useGameStore engine (bots, no network).
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
-  Alert,
   Modal,
-  Platform,
   Dimensions,
   ScrollView,
   RefreshControl,
@@ -24,18 +23,20 @@ import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
 import { ScoreboardModal } from './ScoreboardModal';
 import { PlayingCard, CardHand } from '../components/cards';
-import { ConnectionStatus } from '../components/ConnectionStatus';
-import { ChatPanel, ChatButton } from '../components/ChatPanel';
-import { refreshGameState } from '../lib/multiplayer/eventHandler';
-import { multiplayerContinueHand, multiplayerStartGame } from '../lib/multiplayer/gameActions';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
-import { useMultiplayerStore } from '../store/multiplayerStore';
+import { useRoomStore } from '../store/roomStore';
+import { gameClient } from '../lib/gameClient';
+import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
+import {
+  isCardPlayable,
+  getPlayableCards as engineGetPlayableCards,
+} from '../../supabase/functions/_shared/engine/rules';
 import type { PlayerScore } from './ScoreboardModal';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -48,31 +49,18 @@ export interface GameTableScreenProps {
   botCount?: number;
 }
 
-/**
- * GameTableScreen - Main game interface
- *
- * Features:
- * - Connected to Zustand game store
- * - Betting phase modal
- * - Card play with rule validation
- * - Player cards showing bet AND tricks won
- * - Center trick area with player-positioned cards
- * - Turn indicator highlighting active player
- * - Scoreboard modal between hands
- */
-// Bot nicknames reflect common Nägels player archetypes, inspired by
-// the classic Microsoft Hearts bots (Pauline, Michelle, etc.) but with
-// a gameplay twist.  Each name hints at a bidding/play style:
-//   Перебор / Overkill / Farol     — always overbids
-//   Нулёвый / Nil      / Cero      — hunts for zero bets
-//   Козырной/ Trumpster/ Triunfo   — trump-card fanatic
-//   Авось   / Longshot / Temerario — plays on pure luck
-//   Хитрец  / Trickster/ Artero    — counts tricks, plays sly
 const BOT_NAMES_BY_LANG: Record<string, string[]> = {
   ru: ['Перебор', 'Нулёвый', 'Козырной', 'Авось', 'Хитрец'],
   en: ['Overkill', 'Nil', 'Trumpster', 'Longshot', 'Trickster'],
   es: ['Farol', 'Cero', 'Triunfo', 'Temerario', 'Artero'],
 };
+
+// Convert "spades-9" → { id, suit, rank } for components that expect Card-like objects.
+function parseCard(s: string): { id: string; suit: any; rank: any } {
+  const [suit, rankStr] = s.split('-');
+  const rank: string | number = /^\d+$/.test(rankStr) ? parseInt(rankStr, 10) : rankStr;
+  return { id: s, suit, rank };
+}
 
 export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   onExit,
@@ -85,9 +73,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const { colors, isDark } = useTheme();
   const botNames = BOT_NAMES_BY_LANG[i18n.language] ?? BOT_NAMES_BY_LANG.en;
 
-  // Multiplayer store for multiplayer mode
-  const multiplayerStore = useMultiplayerStore();
-
   // Settings & auth for in-game settings panel
   const themePreference = useSettingsStore((s) => s.themePreference);
   const setThemePreference = useSettingsStore((s) => s.setThemePreference);
@@ -96,453 +81,403 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
 
-  // Game store selectors
-  const {
-    phase,
-    handNumber,
-    totalHands,
-    playerCount,
-    players,
-    trumpSuit,
-    cardsPerPlayer,
-    currentPlayerIndex,
-    startingPlayerIndex,
-    bettingPlayerIndex,
-    currentTrick,
-    tricks,
-    hasAllBets,
-    myPlayerId,
-    initGame,
-    startBetting,
-    placeBet,
-    placeBotBet,
-    startPlaying,
-    playCard,
-    playBotCard,
-    completeHand,
-    nextHand,
-    endGame,
-    reset,
-    setMultiplayerMode,
-    setBotDifficulty,
-    getCurrentPlayer,
-    getMyPlayer,
-    getPlayableCards,
-    canPlayCard,
-    isBotTurn,
-  } = useGameStore();
+  // ── Multiplayer state ──────────────────────────────────────
+  const snapshot = useRoomStore((s) => s.snapshot);
+  const myPlayerId = useRoomStore((s) => s.myPlayerId);
 
-  // Scoreboard state
-  const [showScoreboard, setShowScoreboard] = React.useState(false);
-  const [isViewingScores, setIsViewingScores] = React.useState(false); // mid-game view
+  const room = snapshot?.room ?? null;
+  const mpPlayers = snapshot?.players ?? [];
+  const hand = snapshot?.current_hand ?? null;
+  const handScores = snapshot?.hand_scores ?? [];
+  const currentTrick = snapshot?.current_trick ?? null;
+  const myHandStrings = snapshot?.my_hand ?? [];
 
-  // Last trick modal state
-  const [showLastTrick, setShowLastTrick] = React.useState(false);
+  // ── Single-player state (legacy engine for bots) ───────────
+  const sp = useGameStore();
 
-  // Selected card for playing
-  const [selectedCard, setSelectedCard] = React.useState<string | null>(null);
+  // Subscribe / unsubscribe to the room channel for the lifetime of GameTable.
+  useEffect(() => {
+    if (!isMultiplayer) return;
+    const roomId = room?.id;
+    if (!roomId) return;
+    subscribeRoom(roomId);
+    return () => {
+      unsubscribeRoom();
+    };
+  }, [isMultiplayer, room?.id]);
 
-  // Chat state
-  const [showChat, setShowChat] = React.useState(false);
-  const hasUnreadChat = useMultiplayerStore((s) => s.hasUnreadChat);
-
-  // Language modal
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  // Sync state
-  const [isSyncing, setIsSyncing] = useState(false);
-  const currentRoom = useMultiplayerStore((s) => s.currentRoom);
-
+  // Pull-to-refresh
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handlePullRefresh = useCallback(async () => {
-    if (!currentRoom?.id) return;
+    if (!isMultiplayer || !room?.id) return;
     setIsRefreshing(true);
     try {
-      await refreshGameState(currentRoom.id, true);
+      await gameClient.refreshSnapshot(room.id);
     } finally {
       setIsRefreshing(false);
     }
-  }, [currentRoom?.id]);
+  }, [isMultiplayer, room?.id]);
 
-  // Poll server game_states every 2s in multiplayer to stay in sync.
-  // The Edge Function is the single source of truth.
+  // ── Single-player init (unchanged behavior) ────────────────
   useEffect(() => {
-    if (!isMultiplayer || !currentRoom?.id) return;
-    const roomId = currentRoom.id;
-
-    const interval = setInterval(async () => {
-      try {
-        await refreshGameState(roomId, true);
-      } catch (_) {}
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isMultiplayer, currentRoom?.id]);
-
-  // Poll for chat messages (Realtime fallback)
-  useEffect(() => {
-    if (!isMultiplayer || !currentRoom?.id) return;
-    const headers = {
-      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-      'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''}`,
-    };
-    const pollChat = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/rest/v1/game_events?room_id=eq.${currentRoom.id}&event_type=eq.chat_message&select=*&order=created_at.desc&limit=20`,
-          { headers }
-        );
-        if (!res.ok) return;
-        const events = await res.json();
-        if (!events?.length) return;
-        const store = useMultiplayerStore.getState();
-        for (const e of events.reverse()) {
-          const data = e.event_data;
-          if (!data) continue;
-          store.addChatMessage({
-            id: e.id,
-            playerId: data.player_id,
-            playerName: data.player_name,
-            text: data.text,
-            timestamp: data.timestamp,
-          });
-        }
-      } catch { /* ignore */ }
-    };
-    const interval = setInterval(pollChat, 5000);
-    return () => clearInterval(interval);
-  }, [isMultiplayer, currentRoom?.id]);
-
-  const handleSync = async () => {
-    if (!isMultiplayer || isSyncing) return;
-    const roomId = currentRoom?.id;
-    if (!roomId) return;
-    setIsSyncing(true);
-    try {
-      const { subscribeToRoomEvents } = await import('../lib/multiplayer/eventHandler');
-      // Re-subscribe to refresh room/player data and the realtime channel
-      subscribeToRoomEvents(roomId);
-      // Force-refresh game state from server
-      await refreshGameState(roomId, true);
-    } catch (e) {
-      console.error('[Sync] Failed:', e);
-    } finally {
-      setTimeout(() => setIsSyncing(false), 1500);
-    }
-  };
-
-  // "X to give / X to fight" banner — shown when all bets are in
-  const [showBetBanner, setShowBetBanner] = React.useState(false);
-  const totalBets = players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
-  const tricksDiff = totalBets - cardsPerPlayer; // negative = to give, positive = to fight
-
-  // Show banner automatically when all bets placed, auto-hide after 3s
-  useEffect(() => {
-    if (hasAllBets && phase === 'betting') {
-      setShowBetBanner(true);
-      const t = setTimeout(() => setShowBetBanner(false), 3000);
-      return () => clearTimeout(t);
-    } else if (phase === 'playing') {
-      setShowBetBanner(false);
-    }
-  }, [hasAllBets, phase]);
-
-  // Initialize game on mount
-  useEffect(() => {
-    // Skip if already initialized
-    if (players.length > 0) {
-      return;
-    }
-
-    if (isMultiplayer) {
-      // Multiplayer mode: use players from multiplayerStore
-      const { roomPlayers, myPlayerId } = multiplayerStore;
-
-      if (roomPlayers.length >= 2 && myPlayerId) {
-        // Set multiplayer mode in gameStore
-        setMultiplayerMode(true);
-
-        // Convert RoomPlayer to Player format
-        const gamePlayers = roomPlayers.map((rp) => ({
-          id: rp.playerId,
-          name: rp.playerName,
-          isBot: rp.isBot,
-        }));
-
-        console.log('[GameTable] Initializing multiplayer game with players:', gamePlayers.map(p => p.name));
-        initGame(gamePlayers, myPlayerId);
-
-        // Initialize game state on server via Edge Function
-        // The server deals cards and sets phase=betting
-        multiplayerStartGame(gamePlayers, 0).catch(e => {
-          console.error('[GameTable] Failed to start game on server:', e);
-        });
-      } else {
-        console.log('[GameTable] Waiting for players...', roomPlayers.length, '/ 2');
-      }
-    } else {
-      // Single-player mode: create bot players (botCount bots + 1 human)
-      const totalPlayers = botCount + 1;
-      const gamePlayers = Array.from({ length: totalPlayers }, (_, i) => ({
-        id: `player-${i}`,
-        name: i === 0 ? playerName : botNames[i - 1],
-        isBot: i !== 0,
-      }));
-
-      // Set bot difficulty for single-player mode
-      setBotDifficulty(botDifficulty);
-
-      initGame(gamePlayers, 'player-0');
-
-      // Start first hand
-      setTimeout(() => {
-        startBetting();
-      }, 500);
-    }
-
+    if (isMultiplayer) return;
+    if (sp.players.length > 0) return;
+    const totalPlayers = botCount + 1;
+    const gamePlayers = Array.from({ length: totalPlayers }, (_, i) => ({
+      id: `player-${i}`,
+      name: i === 0 ? playerName : botNames[i - 1],
+      isBot: i !== 0,
+    }));
+    sp.setBotDifficulty(botDifficulty);
+    sp.initGame(gamePlayers, 'player-0');
+    setTimeout(() => sp.startBetting(), 500);
     return () => {
-      reset();
+      sp.reset();
     };
-  }, [isMultiplayer, multiplayerStore.roomPlayers.length]);
+  }, [isMultiplayer]);
 
   // Single-player: start betting when game is ready
   useEffect(() => {
-    if (!isMultiplayer && phase === 'lobby' && players.length > 0 && handNumber === 1) {
-      setTimeout(() => startBetting(), 500);
+    if (isMultiplayer) return;
+    if (sp.phase === 'lobby' && sp.players.length > 0 && sp.handNumber === 1) {
+      setTimeout(() => sp.startBetting(), 500);
     }
-  }, [isMultiplayer, phase, players.length, handNumber]);
+  }, [isMultiplayer, sp.phase, sp.players.length, sp.handNumber]);
 
   // Single-player: start betting for hands 2+
   useEffect(() => {
-    if (!isMultiplayer && phase === 'lobby' && handNumber > 1 && players.length > 0) {
-      const timer = setTimeout(() => startBetting(), 300);
+    if (isMultiplayer) return;
+    if (sp.phase === 'lobby' && sp.handNumber > 1 && sp.players.length > 0) {
+      const timer = setTimeout(() => sp.startBetting(), 300);
       return () => clearTimeout(timer);
     }
-  }, [isMultiplayer, phase, handNumber]);
+  }, [isMultiplayer, sp.phase, sp.handNumber]);
 
   // Single-player: auto-start playing when all bets are placed
-  // In multiplayer, server auto-transitions to playing when last bet is placed
   useEffect(() => {
     if (isMultiplayer) return;
-    const allBetsPlaced = players.every(p => p.bet !== null);
-    if (phase === 'betting' && allBetsPlaced) {
-      setTimeout(() => startPlaying(), 1000);
+    const allBetsPlaced = sp.players.every((p) => p.bet !== null);
+    if (sp.phase === 'betting' && allBetsPlaced) {
+      setTimeout(() => sp.startPlaying(), 1000);
     }
-  }, [isMultiplayer, players, phase]);
+  }, [isMultiplayer, sp.players, sp.phase]);
 
-  // Show scoreboard when hand scoring or game finished
+  // Single-player: bot betting
   useEffect(() => {
-    if (phase === 'scoring' || phase === 'finished') {
+    if (isMultiplayer) return;
+    if (sp.phase === 'betting' && sp.isBotTurn()) {
+      const timer = setTimeout(() => sp.placeBotBet(), 1000 + Math.random() * 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isMultiplayer, sp.phase, sp.bettingPlayerIndex]);
+
+  // Single-player: bot card play
+  useEffect(() => {
+    if (isMultiplayer) return;
+    const botTurn = sp.isBotTurn();
+    const currentPlayer = sp.getCurrentPlayer();
+    if (!currentPlayer || currentPlayer.hand.length === 0) return;
+    const trickCompleting = sp.currentTrick && sp.currentTrick.cards.length >= sp.playerCount;
+    if (sp.phase === 'playing' && botTurn && !trickCompleting) {
+      const timer = setTimeout(() => sp.playBotCard(), 800 + Math.random() * 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isMultiplayer, sp.phase, sp.currentTrick, sp.currentPlayerIndex]);
+
+  // ── Unified view-model ─────────────────────────────────────
+  type VMPlayer = {
+    id: string;
+    name: string;
+    seatIndex: number;
+    isBot: boolean;
+    bet: number | null;
+    tricksWon: number;
+    score: number;
+    bonus: number;
+    hand: Array<{ id: string; suit: any; rank: any }>;
+  };
+
+  const vm = useMemo(() => {
+    if (isMultiplayer) {
+      const players: VMPlayer[] = mpPlayers.map((p) => {
+        const score = handScores.find((s) => s.session_id === p.session_id);
+        // Aggregated history-derived totals
+        const history = snapshot?.score_history ?? [];
+        let total = 0;
+        for (const h of history) {
+          const row = h.scores?.find((s) => s.session_id === p.session_id);
+          if (row) total += row.hand_score;
+        }
+        return {
+          id: p.session_id,
+          name: p.display_name,
+          seatIndex: p.seat_index,
+          isBot: false,
+          bet: score?.bet ?? null,
+          tricksWon: score?.taken_tricks ?? 0,
+          score: total,
+          bonus: 0,
+          hand: p.session_id === myPlayerId ? myHandStrings.map(parseCard) : [],
+        };
+      });
+      players.sort((a, b) => a.seatIndex - b.seatIndex);
+
+      const phase: 'lobby' | 'betting' | 'playing' | 'scoring' | 'finished' = (() => {
+        if (!hand) return 'lobby';
+        if (room?.phase === 'finished') return 'finished';
+        if (hand.phase === 'closed' || hand.phase === 'scoring') return 'scoring';
+        if (hand.phase === 'playing') return 'playing';
+        return 'betting';
+      })();
+
+      const currentPlayer = hand
+        ? players.find((p) => p.seatIndex === hand.current_seat) ?? null
+        : null;
+      const myPlayer = players.find((p) => p.id === myPlayerId) ?? null;
+
+      const totalHands = (room?.max_cards ?? 10) * 2;
+      const handNumber = hand?.hand_number ?? 1;
+      const cardsPerPlayer = hand?.cards_per_player ?? 0;
+      const trumpSuit = (hand?.trump_suit ?? 'diamonds') as any;
+
+      // Trick translation: server uses {seat, card} → ui needs {playerId, card}
+      const trickCards = (currentTrick?.cards ?? []).map((c) => {
+        const seatPlayer = players.find((p) => p.seatIndex === c.seat);
+        return {
+          playerId: seatPlayer?.id ?? '',
+          card: parseCard(c.card),
+        };
+      });
+      const trickWinnerId =
+        currentTrick?.winner_seat != null
+          ? players.find((p) => p.seatIndex === currentTrick.winner_seat)?.id ?? ''
+          : '';
+
+      const startingSeat = hand?.starting_seat ?? 0;
+
+      return {
+        phase,
+        handNumber,
+        totalHands,
+        cardsPerPlayer,
+        trumpSuit,
+        playerCount: players.length,
+        startingPlayerIndex: startingSeat,
+        currentPlayer,
+        myPlayer,
+        players,
+        currentTrick: trickCards.length || trickWinnerId
+          ? { cards: trickCards, winnerId: trickWinnerId, leadSuit: (trickCards[0]?.card.suit as any) ?? 'diamonds' }
+          : null,
+        // For history modal — we don't track full per-trick history server-side, so leave empty
+        tricks: [] as Array<{
+          cards: Array<{ playerId: string; card: { suit: any; rank: any } }>;
+          winnerId: string;
+        }>,
+      };
+    }
+
+    // Single-player: map sp store into the same shape
+    const players: VMPlayer[] = sp.players.map((p, i) => ({
+      id: p.id,
+      name: p.name,
+      seatIndex: i,
+      isBot: !!p.isBot,
+      bet: p.bet,
+      tricksWon: p.tricksWon,
+      score: p.score,
+      bonus: p.bonus,
+      hand: p.hand,
+    }));
+    return {
+      phase: sp.phase,
+      handNumber: sp.handNumber,
+      totalHands: sp.totalHands,
+      cardsPerPlayer: sp.cardsPerPlayer,
+      trumpSuit: sp.trumpSuit,
+      playerCount: sp.playerCount,
+      startingPlayerIndex: sp.startingPlayerIndex,
+      currentPlayer: sp.getCurrentPlayer()
+        ? players.find((p) => p.id === sp.getCurrentPlayer()!.id) ?? null
+        : null,
+      myPlayer: sp.getMyPlayer() ? players.find((p) => p.id === sp.getMyPlayer()!.id) ?? null : null,
+      players,
+      currentTrick: sp.currentTrick
+        ? {
+            cards: sp.currentTrick.cards,
+            winnerId: sp.currentTrick.winnerId,
+            leadSuit: sp.currentTrick.leadSuit,
+          }
+        : null,
+      tricks: sp.tricks,
+    };
+  }, [isMultiplayer, snapshot, room, mpPlayers, hand, handScores, currentTrick, myHandStrings, myPlayerId, sp]);
+
+  // ── UI state ───────────────────────────────────────────────
+  const [showScoreboard, setShowScoreboard] = useState(false);
+  const [isViewingScores, setIsViewingScores] = useState(false);
+  const [showLastTrick, setShowLastTrick] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showBetBanner, setShowBetBanner] = useState(false);
+
+  const totalBets = vm.players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
+  const tricksDiff = totalBets - vm.cardsPerPlayer;
+  const hasAllBets =
+    vm.players.length > 0 && vm.players.every((p) => p.bet !== null);
+
+  useEffect(() => {
+    if (hasAllBets && vm.phase === 'betting') {
+      setShowBetBanner(true);
+      const t = setTimeout(() => setShowBetBanner(false), 3000);
+      return () => clearTimeout(t);
+    } else if (vm.phase === 'playing') {
+      setShowBetBanner(false);
+    }
+  }, [hasAllBets, vm.phase]);
+
+  useEffect(() => {
+    if (vm.phase === 'scoring' || vm.phase === 'finished') {
       setShowScoreboard(true);
       setIsViewingScores(false);
     }
-  }, [phase]);
+  }, [vm.phase]);
 
-  // Stuck detection: if all cards played but still in playing phase, force completeHand
-  useEffect(() => {
-    if (!isMultiplayer || phase !== 'playing') return;
-    const allCardsPlayed = players.every(p => p.hand.length === 0);
-    if (!allCardsPlayed || currentTrick) return;
-
-    // All cards gone, no active trick, still in playing — we're stuck
-    const timer = setTimeout(() => {
-      const currentState = useGameStore.getState();
-      if (currentState.phase === 'playing' && currentState.players.every(p => p.hand.length === 0) && !currentState.currentTrick) {
-        console.log('[StuckDetect] All cards played, no trick, forcing completeHand');
-        currentState.completeHand();
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [isMultiplayer, phase, players, currentTrick]);
-
-  // Bot betting automation (skip in multiplayer)
-  useEffect(() => {
-    if (!isMultiplayer && phase === 'betting' && isBotTurn()) {
-      const timer = setTimeout(() => {
-        placeBotBet();
-      }, 1000 + Math.random() * 500); // 1-1.5s delay for realism
-      return () => clearTimeout(timer);
-    }
-  }, [isMultiplayer, phase, bettingPlayerIndex, isBotTurn, placeBotBet]);
-
-  // Bot card play automation (skip in multiplayer)
-  useEffect(() => {
-    if (isMultiplayer) return; // Skip bot automation in multiplayer
-
-    const botTurn = isBotTurn();
-    const currentPlayer = getCurrentPlayer();
-
-    // Don't trigger if bot has no cards left
-    if (!currentPlayer || currentPlayer.hand.length === 0) {
-      return;
-    }
-
-    console.log('[BotAutomation] phase:', phase, 'isBotTurn:', botTurn, 'currentPlayerIndex:', currentPlayerIndex);
-
-    // Don't trigger if trick is completing (has 4 cards but hasn't been cleared yet)
-    const trickCompleting = currentTrick && currentTrick.cards.length >= playerCount;
-
-    if (phase === 'playing' && botTurn && !trickCompleting) {
-      const timer = setTimeout(() => {
-        console.log('[BotAutomation] Triggering playBotCard');
-        playBotCard();
-      }, 800 + Math.random() * 400); // 0.8-1.2s delay for realism
-      return () => clearTimeout(timer);
-    }
-  }, [phase, currentTrick, currentPlayerIndex, isBotTurn, playBotCard, getCurrentPlayer]);
-
-  // Get current player
-  const currentPlayer = getCurrentPlayer();
-  const myPlayer = getMyPlayer();
-
-  // Get turn label text
-  const getTurnLabel = (): string => {
-    if (!currentPlayer) return t('game.waiting');
-    if (currentPlayer.id === myPlayerId) return t('game.yourTurn');
-    return t('game.playerTurn', { name: currentPlayer.name }); // e.g., "Ivan's turn"
-  };
-
-  // Get playable cards for my player
+  // Compute playable cards
   const playableCards = useMemo(() => {
-    if (!myPlayer) return [];
-    return getPlayableCards(myPlayer.id);
-  }, [myPlayer, getPlayableCards]);
+    if (!vm.myPlayer || vm.phase !== 'playing') return [];
+    if (vm.myPlayer.hand.length === 0) return [];
 
-  // Handle card play — two-tap confirmation to avoid misclicks on mobile
-  const handleCardPress = (cardId: string) => {
-    if (!myPlayer || phase !== 'playing') return;
-
-    // Check if it's my turn
-    if (currentPlayer?.id !== myPlayer.id) return;
-
-    const card = myPlayer.hand.find(c => c.id === cardId);
-    if (!card) return;
-
-    // Check if card is playable — silently ignore invalid picks
-    // (playable cards are already visually highlighted; no need for an alert)
-    if (!canPlayCard(myPlayer.id, card)) {
-      setSelectedCard(null);
-      return;
+    if (isMultiplayer) {
+      const leadCard = vm.currentTrick?.cards[0]?.card ?? null;
+      try {
+        const cards = engineGetPlayableCards(vm.myPlayer.hand as any, {
+          leadCard: leadCard as any,
+          trumpSuit: vm.trumpSuit,
+          playedCards: (vm.currentTrick?.cards as any) ?? [],
+        });
+        return cards;
+      } catch {
+        return vm.myPlayer.hand;
+      }
     }
+    return sp.getPlayableCards(vm.myPlayer.id);
+  }, [isMultiplayer, vm.myPlayer, vm.phase, vm.currentTrick, vm.trumpSuit, sp]);
 
-    if (selectedCard === cardId) {
-      // Second tap on the same card — confirm and play
-      playCard(myPlayer.id, card);
-      setSelectedCard(null);
-    } else {
-      // First tap — select the card (highlight it)
-      setSelectedCard(cardId);
-    }
-  };
+  const isMyTurnPlaying =
+    vm.phase === 'playing' && vm.currentPlayer?.id === vm.myPlayer?.id;
 
-  // Handle scoreboard continue
+  // Card press handler: two-tap confirmation
+  const handleCardPress = useCallback(
+    (cardId: string) => {
+      const myPlayer = vm.myPlayer;
+      if (!myPlayer || vm.phase !== 'playing') return;
+      if (vm.currentPlayer?.id !== myPlayer.id) return;
+      if (vm.currentTrick?.winnerId) return; // trick already complete
+
+      const card = myPlayer.hand.find((c) => c.id === cardId);
+      if (!card) return;
+
+      // Validate playability
+      const leadCard = vm.currentTrick?.cards[0]?.card ?? null;
+      const playable = isCardPlayable(card as any, {
+        handCards: myPlayer.hand as any,
+        leadCard: leadCard as any,
+        trumpSuit: vm.trumpSuit as any,
+        playedCards: (vm.currentTrick?.cards as any) ?? [],
+      });
+      if (!playable.playable) {
+        setSelectedCard(null);
+        return;
+      }
+
+      if (selectedCard === cardId) {
+        // Confirm play
+        setSelectedCard(null);
+        if (isMultiplayer) {
+          if (room?.id && hand?.id) {
+            gameClient
+              .playCard(room.id, hand.id, cardId)
+              .catch((err) => console.error('[GameTable] playCard failed:', err));
+          }
+        } else {
+          sp.playCard(myPlayer.id, card as any);
+        }
+      } else {
+        setSelectedCard(cardId);
+      }
+    },
+    [vm, selectedCard, isMultiplayer, room?.id, hand?.id, sp]
+  );
+
+  // Continue from scoreboard
   const handleScoreboardContinue = () => {
-    const wasViewingScores = isViewingScores; // capture before async setter
+    const wasViewingScores = isViewingScores;
     setShowScoreboard(false);
     setIsViewingScores(false);
 
-    if (wasViewingScores) {
-      // Just viewing scores mid-game - don't advance
-      return;
-    }
+    if (wasViewingScores) return;
 
     if (isMultiplayer) {
-      // In multiplayer, tell the server to advance to next hand (or finish).
-      // The server response will update local state via forceRemoteState.
-      multiplayerContinueHand().catch(err => {
-        console.error('[GameTable] Continue hand failed:', err);
-      });
-    } else if (handNumber >= totalHands) {
-      // Game over (single-player)
-      endGame();
+      if (room?.id && hand?.id) {
+        gameClient
+          .continueHand(room.id, hand.id)
+          .catch((err) => console.error('[GameTable] continueHand failed:', err));
+      }
+    } else if (sp.handNumber >= sp.totalHands) {
+      sp.endGame();
     } else {
-      // Next hand (single-player)
-      nextHand();
-      // startBetting() is triggered by the useEffect watching phase === 'lobby'
+      sp.nextHand();
     }
   };
 
-  // Handle scoreboard close (for mid-game viewing)
   const handleScoreboardClose = () => {
     setShowScoreboard(false);
     setIsViewingScores(false);
   };
 
-  // Get trump symbol and color
+  // Trump display helpers
   const getTrumpSymbol = (trump: string): string => {
     if (trump === 'notrump') return 'NT';
     return SuitSymbols[trump as keyof typeof SuitSymbols] || trump;
   };
-
   const getTrumpColor = (trump: string): string => {
     if (trump === 'notrump') return Colors.textMuted;
     return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
   };
 
-  // Get player position for circular layout around the table
-  // Returns the position of a player in the circle (excluding YOU)
+  // Player positioning around the table
   const getPlayerPosition = (playerIndex: number, totalPlayers: number) => {
-    // Find where YOU is in the players array
-    const myIndex = players.findIndex(p => p.id === myPlayerId);
+    const myIndex = vm.players.findIndex((p) => p.id === vm.myPlayer?.id);
     if (myIndex === -1) return playerIndex;
-
-    // Calculate relative position (YOU is always at position 6 - bottom/6 o'clock)
-    // Other players are positioned clockwise around the table
-    const relativeIndex = (playerIndex - myIndex + totalPlayers) % totalPlayers;
-
-    // Map relative position to clock position (0-11, where 6 is YOU at bottom)
-    // For 2 players: opponent at 12 o'clock (position 0)
-    // For 3 players: opponents at 10 o'clock (position 4), 2 o'clock (position 8)
-    // For 4 players: opponents at 9, 12, 3 o'clock (positions 3, 0, 9)
-    // etc.
-    return relativeIndex;
+    return (playerIndex - myIndex + totalPlayers) % totalPlayers;
   };
 
-  // Check if a player is YOU (should be rendered separately at bottom)
-  const isMe = (player: typeof players[0]) => player.id === myPlayerId;
+  const opponents = vm.players.filter((p) => p.id !== vm.myPlayer?.id);
 
-  // Get only opponents (not YOU)
-  const opponents = players.filter(p => p.id !== myPlayerId);
-
-  // Calculate position style for each opponent on a clock face
-  // YOU is always at 6 o'clock (bottom), opponents are arranged clockwise
   const getOpponentClockPosition = (relativeIndex: number, totalPlayers: number) => {
-    // Map relative index to clock position (0-11, where 6 is YOU)
-    // Start from position above YOU and go clockwise
-    // Positions go screen-CCW from YOU (clock 6 = bottom), matching the
-    // CCW trick-pile spiral.  Each step subtracts 360/N degrees so that
-    // the seating order around the table is identical to the turn order.
     const clockPositions: Record<number, number[]> = {
-      2: [0],            // 12 o'clock
-      3: [2, 10],        // upper-right, upper-left (120° apart)
-      4: [3, 0, 9],      // right, top, left (90° apart)
-      5: [3, 1, 11, 9],  // right, upper-right, upper-left, left (≈72° apart)
-      6: [4, 2, 0, 10, 8], // lower-right, upper-right, top, upper-left, lower-left (60° apart)
+      2: [0],
+      3: [2, 10],
+      4: [3, 0, 9],
+      5: [3, 1, 11, 9],
+      6: [4, 2, 0, 10, 8],
     };
-
     const positions = clockPositions[totalPlayers as keyof typeof clockPositions] || [0];
     return positions[relativeIndex - 1] || 0;
   };
 
-  // Convert clock position (0-11) to screen coordinates
-  // Profile card dimensions for centering
   const PROFILE_W = 110;
   const PROFILE_H = 90;
-
   const clockToScreen = (clockPosition: number) => {
     const angle = (clockPosition * 30 - 90) * (Math.PI / 180);
     const radius = 38;
-
     let top = 50 + radius * Math.sin(angle);
     let left = 50 + radius * Math.cos(angle);
-
-    // Clamp so profile doesn't overflow screen edges
-    // Convert % to consider profile size relative to screen
     const halfWPct = (PROFILE_W / 2 / SCREEN_WIDTH) * 100;
     const halfHPct = (PROFILE_H / 2 / SCREEN_HEIGHT) * 100;
     left = Math.max(halfWPct + 1, Math.min(100 - halfWPct - 1, left));
     top = Math.max(halfHPct, Math.min(100 - halfHPct, top));
-
     return {
       top: `${top}%`,
       left: `${left}%`,
@@ -551,31 +486,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     };
   };
 
-  // Get position number for display (1=first player after YOU in clockwise order)
-  const getPlayerNumber = (relativeIndex: number) => {
-    if (relativeIndex === 0) return ''; // YOU has no number
-    return relativeIndex.toString();
-  };
-
-  /**
-   * Returns the (dx, dy) offset for a card played by `playerId`.
-   * The card is placed in the direction of the player's seat on the table,
-   * so a player sitting at upper-right will always have their card in the
-   * upper-right quadrant of the trick pile — regardless of play order.
-   *
-   * For 6 players we use equal vertical spacing (13 px steps) so every
-   * card's rank+suit corner stays visible even at top and bottom seats.
-   */
   const getPlayerCardOffset = (playerId: string): { dx: number; dy: number } => {
     const RADIUS = 40;
-
-    const playerIdx = players.findIndex(p => p.id === playerId);
-    const myIndex   = players.findIndex(p => p.id === myPlayerId);
+    const playerIdx = vm.players.findIndex((p) => p.id === playerId);
+    const myIndex = vm.players.findIndex((p) => p.id === vm.myPlayer?.id);
     if (playerIdx === -1 || myIndex === -1) return { dx: 0, dy: 0 };
-
-    const relativeIndex = (playerIdx - myIndex + playerCount) % playerCount;
-
-    // Same clockPositions table used for seating layout
+    const relativeIndex = (playerIdx - myIndex + vm.playerCount) % vm.playerCount;
     const clockPositions: Record<number, number[]> = {
       2: [0],
       3: [2, 10],
@@ -583,23 +499,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       5: [3, 1, 11, 9],
       6: [4, 2, 0, 10, 8],
     };
-
     let clockPos: number;
     if (relativeIndex === 0) {
-      clockPos = 6; // ME = bottom
+      clockPos = 6;
     } else {
-      const positions = clockPositions[playerCount as keyof typeof clockPositions] || [0];
+      const positions = clockPositions[vm.playerCount as keyof typeof clockPositions] || [0];
       clockPos = positions[relativeIndex - 1] ?? 0;
     }
-
     const angleRad = (clockPos * 30 - 90) * (Math.PI / 180);
     const dx = Math.round(Math.cos(angleRad) * RADIUS);
-
     let dy: number;
-    if (playerCount === 6) {
-      // Equal vertical spacing: 4 levels with 26 px gaps
-      // Indexed by CCW-from-top position: 0=top, 1=upper-left, 2=lower-left,
-      //   3=bottom, 4=lower-right, 5=upper-right
+    if (vm.playerCount === 6) {
       const S = 18;
       const equalDY = [-3 * S, -S, S, 3 * S, S, -S];
       const ccwPos = ((12 - clockPos) / 2 + 6) % 6;
@@ -607,37 +517,38 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     } else {
       dy = Math.round(Math.sin(angleRad) * RADIUS);
     }
-
     return { dx, dy };
   };
 
   // Convert players to scoreboard format
   const scoreboardPlayers: PlayerScore[] = useMemo(() => {
-    return players
+    return vm.players
       .map((p, i) => {
-        // Calculate points earned in last hand (tricks + potential bonus)
-        const lastHandBonus = (p.bet !== null && p.tricksWon === p.bet) ? 10 : 0;
+        const lastHandBonus = p.bet !== null && p.tricksWon === p.bet ? 10 : 0;
         const lastHandPoints = p.tricksWon + lastHandBonus;
-
-        // Disambiguate duplicate names by appending seat index
-        const isDuplicate = players.filter(other => other.name === p.name).length > 1;
+        const isDuplicate = vm.players.filter((other) => other.name === p.name).length > 1;
         const displayName = isDuplicate ? `${p.name} #${i + 1}` : p.name;
-
         return {
           id: p.id,
           name: displayName,
           rank: i + 1,
-          totalScore: p.score + p.bonus, // Total score includes both points and bonus
+          totalScore: p.score + p.bonus,
           lastBet: p.bet || 0,
           lastTricks: p.tricksWon,
-          lastBonus: lastHandBonus, // Bonus from last hand only
-          lastPoints: lastHandPoints, // Points from last hand (tricks + bonus)
+          lastBonus: lastHandBonus,
+          lastPoints: lastHandPoints,
           madeBet: p.bet !== null && p.tricksWon === p.bet,
         };
       })
       .sort((a, b) => b.totalScore - a.totalScore)
       .map((p, i) => ({ ...p, rank: i + 1 }));
-  }, [players]);
+  }, [vm.players]);
+
+  const getTurnLabel = (): string => {
+    if (!vm.currentPlayer) return t('game.waiting');
+    if (vm.currentPlayer.id === vm.myPlayer?.id) return t('game.yourTurn');
+    return t('game.playerTurn', { name: vm.currentPlayer.name });
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
@@ -646,462 +557,474 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         contentContainerStyle={{ flexGrow: 1 }}
         scrollEnabled={false}
         refreshControl={
-          isMultiplayer ? (
-            <RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} />
-          ) : undefined
+          isMultiplayer ? <RefreshControl refreshing={isRefreshing} onRefresh={handlePullRefresh} /> : undefined
         }
       >
-
-      {/* Connection Status (multiplayer only) */}
-      {isMultiplayer && <ConnectionStatus />}
-
-      {/* Top Bar — two rows: logo centered, hand info below */}
-      <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
-        {/* Row 1: logo centered */}
-        <View style={styles.topBarRow1}>
-          <GameLogo size="xs" />
-        </View>
-        {/* Row 2: hand info + trump */}
-        <View style={styles.topBarRow2}>
-          <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
-            {t('game.hand')} {handNumber}/{totalHands}
-          </Text>
-          <View style={[styles.trumpBadgeGame, { backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)', borderColor: colors.accent }]}>
-            <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
-              {getTrumpSymbol(trumpSuit)} {t('game.trump')}
-            </Text>
+        {/* Top Bar */}
+        <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
+          <View style={styles.topBarRow1}>
+            <GameLogo size="xs" />
           </View>
-        </View>
-        {/* Row 3: icon buttons */}
-        <View style={styles.topBarRow3}>
-          <Pressable onPress={onExit} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]} testID="game-btn-exit">
-            <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
-          </Pressable>
-          <Pressable onPress={() => setShowSettingsModal(true)} style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]} testID="game-btn-settings">
-            <Text style={styles.iconBtnEmoji}>⚙️</Text>
-          </Pressable>
-          {isMultiplayer && (
-            <Pressable
-              onPress={handlePullRefresh}
-              disabled={isRefreshing}
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: isRefreshing ? 0.5 : 1 }]}
-              testID="game-btn-sync"
-            >
-              <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
-            </Pressable>
-          )}
-          <Pressable
-            onPress={() => { if (tricks.length > 0) setShowLastTrick(true); }}
-            disabled={tricks.length === 0}
-            style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: tricks.length === 0 ? 0.3 : 1 }]}
-            testID="game-btn-last-trick"
-          >
-            <Text style={styles.iconBtnEmoji}>↩</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => { setIsViewingScores(true); setShowScoreboard(true); }}
-            style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
-            testID="game-btn-scores"
-          >
-            <Text style={styles.iconBtnEmoji}>🏆</Text>
-          </Pressable>
-          <Pressable
-            onPress={isMultiplayer ? () => setShowChat(true) : undefined}
-            disabled={!isMultiplayer}
-            style={[styles.iconBtn, { backgroundColor: isMultiplayer ? colors.accent : colors.iconButtonBg, borderColor: isMultiplayer ? colors.accent : colors.glassLight, opacity: isMultiplayer ? 1 : 0.3 }]}
-            testID="game-btn-chat"
-          >
-            <Text style={styles.iconBtnEmoji}>💬</Text>
-            {isMultiplayer && hasUnreadChat && (
-              <View style={styles.chatBadgeDot} />
-            )}
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Main Game Area - Circular layout for card table */}
-      <View style={styles.gameArea}>
-        {/* Card Table - oval green felt table */}
-        <View style={styles.cardTable}>
-          <View style={[styles.tableEdge, { backgroundColor: isDark ? colors.table : '#33734D', borderColor: isDark ? colors.tableBorder : '#4D8C63' }]} />
-          <LinearGradient
-            colors={isDark ? ['#3a3f4d', '#525868', '#3a3f4d'] : ['#003e00', '#009c00', '#005d00']}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={styles.tableFelt}
-          >
-            {/* Suit symbols in a compact centered row at top of table */}
-            <View style={styles.suitRow}>
-              {(['spades', 'hearts', 'clubs', 'diamonds'] as const).map((suit) => {
-                const isTrump = trumpSuit === suit;
-                return (
-                  <Text
-                    key={suit}
-                    style={[
-                      styles.tableSuitSymbol,
-                      isTrump
-                        ? { color: '#d0d0d0', opacity: 0.95, fontSize: 22 }
-                        : { color: '#ffffff', opacity: 0.12 },
-                    ]}
-                  >
-                    {SuitSymbols[suit]}
-                  </Text>
-                );
-              })}
-            </View>
-
-            {/* Turn info — centered on table, below suits */}
-            {phase === 'playing' && (
-              <View style={styles.tableInfoArea}>
-                {currentPlayer?.id === myPlayerId && (
-                  <View style={styles.yourTurnBadge}>
-                    <Text style={styles.yourTurnText}>▶ {t('game.yourTurn')}</Text>
-                  </View>
-                )}
-                {currentTrick && currentTrick.cards.length > 0 && (
-                  <Text style={styles.mustFollowText}>
-                    {t('game.mustFollow', 'Must follow')} {SuitSymbols[currentTrick.cards[0].card.suit]}
-                  </Text>
-                )}
-              </View>
-            )}
-          </LinearGradient>
-        </View>
-
-        {/* My profile at bottom edge of table — same style as opponents */}
-        {myPlayer && (() => {
-          const isMyTurnNow = currentPlayer?.id === myPlayer.id;
-          const isFirstPlayer = startingPlayerIndex === players.indexOf(myPlayer);
-          return (
-            <View style={styles.youLabelAtTable}>
-              <View style={[
-                styles.profileCard,
-                isMyTurnNow && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
-                !isMyTurnNow && { borderColor: colors.accent, borderWidth: 1.5 },
-              ]}>
-                {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
-                <View style={[styles.profileAvatar, { backgroundColor: colors.accent }]}>
-                  <Text style={styles.profileAvatarText}>{myPlayer.name[0]}</Text>
-                </View>
-                <Text style={styles.profileName} numberOfLines={1}>{myPlayer.name}</Text>
-                <Text style={styles.profileStats}>Bet:{myPlayer.bet ?? '-'} Won:{myPlayer.tricksWon}</Text>
-              </View>
-            </View>
-          );
-        })()}
-
-        {/* Turn order indicator - bottom-right corner */}
-        <View style={styles.turnOrderIndicator}>
-          <Text style={styles.turnOrderText}>↻</Text>
-          <Text style={styles.turnOrderLabel}>{t('game.turnOrder')}</Text>
-        </View>
-
-        {/* Opponents arranged around the table — Figma style profiles */}
-        {opponents.map((player, i) => {
-          const relativeIndex = getPlayerPosition(players.indexOf(player), playerCount);
-          const clockPosition = getOpponentClockPosition(relativeIndex, playerCount);
-          const positionStyle = clockToScreen(clockPosition);
-          const isCurrentPlayer = currentPlayer?.id === player.id;
-          const isFirstPlayer = startingPlayerIndex === players.indexOf(player);
-          const hasPlayedThisTrick = currentTrick?.cards.some(c => c.playerId === player.id);
-          // Assign avatar colors based on player index
-          const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
-          const avatarBg = avatarColors[i % avatarColors.length];
-
-          return (
+          <View style={styles.topBarRow2}>
+            <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
+              {t('game.hand')} {vm.handNumber}/{vm.totalHands}
+            </Text>
             <View
-              key={player.id}
               style={[
-                styles.opponentContainer,
-                { top: positionStyle.top, left: positionStyle.left } as any,
+                styles.trumpBadgeGame,
+                {
+                  backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)',
+                  borderColor: colors.accent,
+                },
               ]}
             >
-              <View
+              <Text style={[styles.trumpBadgeText, { color: getTrumpColor(vm.trumpSuit) }]}>
+                {getTrumpSymbol(vm.trumpSuit)} {t('game.trump')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.topBarRow3}>
+            <Pressable
+              onPress={onExit}
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              testID="game-btn-exit"
+            >
+              <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowSettingsModal(true)}
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              testID="game-btn-settings"
+            >
+              <Text style={styles.iconBtnEmoji}>⚙️</Text>
+            </Pressable>
+            {isMultiplayer && (
+              <Pressable
+                onPress={handlePullRefresh}
+                disabled={isRefreshing}
                 style={[
-                  styles.profileCard,
-                  { marginTop: positionStyle.marginTop, marginLeft: positionStyle.marginLeft },
-                  isCurrentPlayer && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                  styles.iconBtn,
+                  {
+                    backgroundColor: colors.iconButtonBg,
+                    borderColor: colors.glassLight,
+                    opacity: isRefreshing ? 0.5 : 1,
+                  },
                 ]}
+                testID="game-btn-sync"
               >
-                {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
-                <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
-                  <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
-                </View>
-                {/* Check badges removed — distracting */}
-                <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
-                <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
-              </View>
-            </View>
-          );
-        })}
-
-        {/* Center Play Area - Stacked trick cards (radial pile) */}
-        <View style={styles.playArea}>
-          {currentTrick && currentTrick.cards.length > 0 ? (
-            <View style={styles.trickPile}>
-              {currentTrick.cards.map((played, playOrder) => {
-                const { dx, dy } = getPlayerCardOffset(played.playerId);
-                return (
-                  <View
-                    key={played.playerId}
-                    style={[
-                      styles.trickCardAbsolute,
-                      {
-                        transform: [{ translateX: dx }, { translateY: dy }] as any,
-                        zIndex: playOrder + 1,
-                      },
-                    ]}
-                  >
-                    <PlayingCard
-                      suit={played.card.suit}
-                      rank={played.card.rank}
-                      size="tiny"
-                    />
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.waitingText}>
-              {getTurnLabel()}
-            </Text>
-          )}
-        </View>
-      </View>
-
-      {/* Bet balance overlay: "X to give / X to fight" */}
-      <Modal
-        visible={showBetBanner && tricksDiff !== 0}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowBetBanner(false)}
-      >
-        <View style={styles.betBannerOverlay}>
-          <View style={[styles.betBannerModal, tricksDiff > 0 ? styles.betBannerFight : styles.betBannerGive, { backgroundColor: isDark ? colors.surface : undefined }]}>
-            <Pressable style={styles.betBannerCloseBtn} onPress={() => setShowBetBanner(false)}>
-              <Text style={[styles.betBannerCloseText, { color: isDark ? colors.textMuted : undefined }]}>✕</Text>
+                <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => {
+                if (vm.tricks.length > 0) setShowLastTrick(true);
+              }}
+              disabled={vm.tricks.length === 0}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: vm.tricks.length === 0 ? 0.3 : 1 },
+              ]}
+              testID="game-btn-last-trick"
+            >
+              <Text style={styles.iconBtnEmoji}>↩</Text>
             </Pressable>
-            <Text style={[styles.betBannerText, { color: isDark ? colors.textPrimary : colors.textPrimary }]}>
-              {tricksDiff > 0
-                ? t('game.toFight', { count: tricksDiff })
-                : t('game.toGive', { count: Math.abs(tricksDiff) })}
-            </Text>
-            <Pressable style={styles.betBannerGotItBtn} onPress={() => setShowBetBanner(false)}>
-              <Text style={styles.betBannerGotItText}>{t('game.gotIt')}</Text>
+            <Pressable
+              onPress={() => {
+                setIsViewingScores(true);
+                setShowScoreboard(true);
+              }}
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              testID="game-btn-scores"
+            >
+              <Text style={styles.iconBtnEmoji}>🏆</Text>
+            </Pressable>
+            <Pressable
+              disabled
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: 0.3 }]}
+              testID="game-btn-chat"
+            >
+              <Text style={styles.iconBtnEmoji}>💬</Text>
             </Pressable>
           </View>
         </View>
-      </Modal>
 
-      {/* Your Hand - Fixed at bottom, clearly showing YOU are at the table */}
-      {myPlayer && (
-        <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent }]}>
-          {/* Your cards */}
-          <View testID="my-hand">
-            <CardHand
-              cards={myPlayer.hand.map(c => ({
-                id: c.id,
-                suit: c.suit,
-                rank: c.rank,
-              }))}
-              selectedCards={selectedCard ? [selectedCard] : []}
-              playableCards={playableCards.map(c => c.id)}
-              onCardPress={handleCardPress}
-              size="small"
-              horizontal={false}
+        {/* Main Game Area */}
+        <View style={styles.gameArea}>
+          <View style={styles.cardTable}>
+            <View
+              style={[
+                styles.tableEdge,
+                { backgroundColor: isDark ? colors.table : '#33734D', borderColor: isDark ? colors.tableBorder : '#4D8C63' },
+              ]}
             />
+            <LinearGradient
+              colors={isDark ? ['#3a3f4d', '#525868', '#3a3f4d'] : ['#003e00', '#009c00', '#005d00']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.tableFelt}
+            >
+              <View style={styles.suitRow}>
+                {(['spades', 'hearts', 'clubs', 'diamonds'] as const).map((suit) => {
+                  const isTrump = vm.trumpSuit === suit;
+                  return (
+                    <Text
+                      key={suit}
+                      style={[
+                        styles.tableSuitSymbol,
+                        isTrump
+                          ? { color: '#d0d0d0', opacity: 0.95, fontSize: 22 }
+                          : { color: '#ffffff', opacity: 0.12 },
+                      ]}
+                    >
+                      {SuitSymbols[suit]}
+                    </Text>
+                  );
+                })}
+              </View>
+
+              {vm.phase === 'playing' && (
+                <View style={styles.tableInfoArea}>
+                  {vm.currentPlayer?.id === vm.myPlayer?.id && (
+                    <View style={styles.yourTurnBadge}>
+                      <Text style={styles.yourTurnText}>▶ {t('game.yourTurn')}</Text>
+                    </View>
+                  )}
+                  {vm.currentTrick && vm.currentTrick.cards.length > 0 && (
+                    <Text style={styles.mustFollowText}>
+                      {t('game.mustFollow', 'Must follow')} {SuitSymbols[vm.currentTrick.cards[0].card.suit as keyof typeof SuitSymbols]}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </LinearGradient>
+          </View>
+
+          {/* My profile */}
+          {vm.myPlayer && (() => {
+            const isMyTurnNow = vm.currentPlayer?.id === vm.myPlayer.id;
+            const isFirstPlayer =
+              vm.startingPlayerIndex === vm.players.findIndex((p) => p.id === vm.myPlayer!.id);
+            return (
+              <View style={styles.youLabelAtTable}>
+                <View
+                  style={[
+                    styles.profileCard,
+                    isMyTurnNow && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                    !isMyTurnNow && { borderColor: colors.accent, borderWidth: 1.5 },
+                  ]}
+                >
+                  {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                  <View style={[styles.profileAvatar, { backgroundColor: colors.accent }]}>
+                    <Text style={styles.profileAvatarText}>{vm.myPlayer.name[0]}</Text>
+                  </View>
+                  <Text style={styles.profileName} numberOfLines={1}>{vm.myPlayer.name}</Text>
+                  <Text style={styles.profileStats}>Bet:{vm.myPlayer.bet ?? '-'} Won:{vm.myPlayer.tricksWon}</Text>
+                </View>
+              </View>
+            );
+          })()}
+
+          <View style={styles.turnOrderIndicator}>
+            <Text style={styles.turnOrderText}>↻</Text>
+            <Text style={styles.turnOrderLabel}>{t('game.turnOrder')}</Text>
+          </View>
+
+          {/* Opponents */}
+          {opponents.map((player, i) => {
+            const relativeIndex = getPlayerPosition(vm.players.indexOf(player), vm.playerCount);
+            const clockPosition = getOpponentClockPosition(relativeIndex, vm.playerCount);
+            const positionStyle = clockToScreen(clockPosition);
+            const isCurrentPlayer = vm.currentPlayer?.id === player.id;
+            const isFirstPlayer = vm.startingPlayerIndex === vm.players.indexOf(player);
+            const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
+            const avatarBg = avatarColors[i % avatarColors.length];
+            return (
+              <View
+                key={player.id}
+                style={[styles.opponentContainer, { top: positionStyle.top, left: positionStyle.left } as any]}
+              >
+                <View
+                  style={[
+                    styles.profileCard,
+                    { marginTop: positionStyle.marginTop, marginLeft: positionStyle.marginLeft },
+                    isCurrentPlayer && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                  ]}
+                >
+                  {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                  <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
+                    <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
+                  </View>
+                  <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
+                  <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
+                </View>
+              </View>
+            );
+          })}
+
+          {/* Center Play Area */}
+          <View style={styles.playArea}>
+            {vm.currentTrick && vm.currentTrick.cards.length > 0 ? (
+              <View style={styles.trickPile}>
+                {vm.currentTrick.cards.map((played, playOrder) => {
+                  const { dx, dy } = getPlayerCardOffset(played.playerId);
+                  return (
+                    <View
+                      key={played.playerId || playOrder}
+                      style={[
+                        styles.trickCardAbsolute,
+                        {
+                          transform: [{ translateX: dx }, { translateY: dy }] as any,
+                          zIndex: playOrder + 1,
+                        },
+                      ]}
+                    >
+                      <PlayingCard suit={played.card.suit} rank={played.card.rank} size="tiny" />
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.waitingText}>{getTurnLabel()}</Text>
+            )}
           </View>
         </View>
-      )}
 
-      {/* Action bar removed — icons are in top bar row 2 */}
-
-      {/* Chat Panel (multiplayer only) */}
-      {isMultiplayer && myPlayer && (
-        <ChatPanel
-          visible={showChat}
-          onClose={() => setShowChat(false)}
-          myPlayerId={myPlayer.id}
-          myPlayerName={myPlayer.name}
-        />
-      )}
-
-      {/* Betting Phase Modal */}
-      <BettingPhase
-        visible={phase === 'betting'}
-        isMultiplayer={isMultiplayer}
-        onClose={onExit}
-        onShowScore={() => {
-          setIsViewingScores(true);
-          setShowScoreboard(true);
-        }}
-      />
-
-      {/* Scoreboard Modal */}
-      <ScoreboardModal
-        visible={showScoreboard}
-        handNumber={handNumber}
-        totalHands={totalHands}
-        players={scoreboardPlayers}
-        scoreHistory={useGameStore.getState().scoreHistory}
-        startingPlayerIndex={startingPlayerIndex}
-        isGameOver={handNumber >= totalHands || phase === 'finished'}
-        isMidGame={isViewingScores}
-        onContinue={handleScoreboardContinue}
-        onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
-      />
-
-      {/* Last Trick Modal */}
-      <Modal
-        visible={showLastTrick}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLastTrick(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.lastTrickModal}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('game.lastTrick')}</Text>
-              <Pressable onPress={() => setShowLastTrick(false)} hitSlop={12}>
-                <Text style={[styles.modalClose, { color: colors.textMuted }]}>✕</Text>
+        {/* Bet balance overlay */}
+        <Modal
+          visible={showBetBanner && tricksDiff !== 0}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowBetBanner(false)}
+        >
+          <View style={styles.betBannerOverlay}>
+            <View
+              style={[
+                styles.betBannerModal,
+                tricksDiff > 0 ? styles.betBannerFight : styles.betBannerGive,
+                { backgroundColor: isDark ? colors.surface : undefined },
+              ]}
+            >
+              <Pressable style={styles.betBannerCloseBtn} onPress={() => setShowBetBanner(false)}>
+                <Text style={[styles.betBannerCloseText, { color: isDark ? colors.textMuted : undefined }]}>✕</Text>
+              </Pressable>
+              <Text style={[styles.betBannerText, { color: colors.textPrimary }]}>
+                {tricksDiff > 0
+                  ? t('game.toFight', { count: tricksDiff })
+                  : t('game.toGive', { count: Math.abs(tricksDiff) })}
+              </Text>
+              <Pressable style={styles.betBannerGotItBtn} onPress={() => setShowBetBanner(false)}>
+                <Text style={styles.betBannerGotItText}>{t('game.gotIt')}</Text>
               </Pressable>
             </View>
+          </View>
+        </Modal>
 
-            {tricks.length > 0 && (() => {
-              const lastTrick = tricks[tricks.length - 1];
-              // Use smaller cards and 2-column grid for 5+ players to fit on screen
-              const useLarge = playerCount <= 4;
-              return (
-                <>
-                  <ScrollView
-                    style={styles.lastTrickScroll}
-                    contentContainerStyle={[
-                      styles.lastTrickContent,
-                      !useLarge && styles.lastTrickContentGrid,
-                    ]}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    {lastTrick.cards.map((played, index) => {
-                      const player = players.find(p => p.id === played.playerId);
-                      const isWinner = lastTrick.winnerId === played.playerId;
-                      return (
-                        <View key={index} style={[
-                          styles.lastTrickCard,
-                          { backgroundColor: colors.surfaceSecondary },
-                          !useLarge && styles.lastTrickCardCompact,
-                          isWinner && styles.winnerCard,
-                        ]}>
-                          <PlayingCard
-                            suit={played.card.suit}
-                            rank={played.card.rank}
-                            size={useLarge ? 'small' : 'tiny'}
-                          />
-                          <Text style={[styles.lastTrickPlayerName, { color: colors.textSecondary }]} numberOfLines={1}>
-                            {player?.name || '?'}
-                            {isWinner && ' 👑'}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </ScrollView>
+        {/* Your Hand */}
+        {vm.myPlayer && (
+          <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent }]}>
+            <View testID="my-hand">
+              <CardHand
+                cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
+                selectedCards={selectedCard ? [selectedCard] : []}
+                playableCards={playableCards.map((c: any) => c.id)}
+                onCardPress={handleCardPress}
+                size="small"
+                horizontal={false}
+              />
+            </View>
+          </View>
+        )}
 
-                  {/* Winner info */}
-                  <Text style={styles.lastTrickWinner}>
-                    {(() => {
-                      const winner = players.find(p => p.id === lastTrick.winnerId);
-                      return winner ? `${winner.name} ${t('game.wonTrick')}` : '';
-                    })()}
-                  </Text>
-                </>
-              );
-            })()}
+        {/* Betting Phase Modal */}
+        <BettingPhase
+          visible={vm.phase === 'betting'}
+          isMultiplayer={isMultiplayer}
+          onClose={onExit}
+          onShowScore={() => {
+            setIsViewingScores(true);
+            setShowScoreboard(true);
+          }}
+        />
 
+        {/* Scoreboard Modal */}
+        <ScoreboardModal
+          visible={showScoreboard}
+          handNumber={vm.handNumber}
+          totalHands={vm.totalHands}
+          players={scoreboardPlayers}
+          startingPlayerIndex={vm.startingPlayerIndex}
+          isGameOver={vm.handNumber >= vm.totalHands || vm.phase === 'finished'}
+          isMidGame={isViewingScores}
+          onContinue={handleScoreboardContinue}
+          onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
+        />
+
+        {/* Last Trick Modal */}
+        <Modal
+          visible={showLastTrick}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLastTrick(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <GlassCard style={styles.lastTrickModal}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('game.lastTrick')}</Text>
+                <Pressable onPress={() => setShowLastTrick(false)} hitSlop={12}>
+                  <Text style={[styles.modalClose, { color: colors.textMuted }]}>✕</Text>
+                </Pressable>
+              </View>
+
+              {vm.tricks.length > 0 && (() => {
+                const lastTrick = vm.tricks[vm.tricks.length - 1];
+                const useLarge = vm.playerCount <= 4;
+                return (
+                  <>
+                    <ScrollView
+                      style={styles.lastTrickScroll}
+                      contentContainerStyle={[
+                        styles.lastTrickContent,
+                        !useLarge && styles.lastTrickContentGrid,
+                      ]}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {lastTrick.cards.map((played, index) => {
+                        const player = vm.players.find((p) => p.id === played.playerId);
+                        const isWinner = lastTrick.winnerId === played.playerId;
+                        return (
+                          <View
+                            key={index}
+                            style={[
+                              styles.lastTrickCard,
+                              { backgroundColor: colors.surfaceSecondary },
+                              !useLarge && styles.lastTrickCardCompact,
+                              isWinner && styles.winnerCard,
+                            ]}
+                          >
+                            <PlayingCard
+                              suit={played.card.suit as any}
+                              rank={played.card.rank as any}
+                              size={useLarge ? 'small' : 'tiny'}
+                            />
+                            <Text style={[styles.lastTrickPlayerName, { color: colors.textSecondary }]} numberOfLines={1}>
+                              {player?.name || '?'}
+                              {isWinner && ' 👑'}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+
+                    <Text style={styles.lastTrickWinner}>
+                      {(() => {
+                        const winner = vm.players.find((p) => p.id === lastTrick.winnerId);
+                        return winner ? `${winner.name} ${t('game.wonTrick')}` : '';
+                      })()}
+                    </Text>
+                  </>
+                );
+              })()}
+
+              <Pressable
+                style={styles.modalButton}
+                onPress={() => setShowLastTrick(false)}
+                testID="last-trick-close"
+              >
+                <Text style={styles.modalButtonText}>{t('common.close')}</Text>
+              </Pressable>
+            </GlassCard>
+          </View>
+        </Modal>
+
+        {/* Settings Modal */}
+        <Modal
+          visible={showSettingsModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSettingsModal(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
             <Pressable
-              style={styles.modalButton}
-              onPress={() => setShowLastTrick(false)}
-              testID="last-trick-close"
+              onPress={() => {}}
+              style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
             >
-              <Text style={styles.modalButtonText}>{t('common.close')}</Text>
-            </Pressable>
-          </GlassCard>
-        </View>
-      </Modal>
-      {/* Settings Modal */}
-      <Modal
-        visible={showSettingsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSettingsModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
-          <Pressable onPress={() => {}} style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-            <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
+              <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
 
-            {/* Profile section (logged-in users only) */}
-            {!isGuest && (
+              {!isGuest && (
+                <View style={styles.settingsSection}>
+                  <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
+                  <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>{authDisplayName}</Text>
+                </View>
+              )}
+
               <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
-                <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>
-                  {authDisplayName}
-                </Text>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
+                <LanguageSwitcher />
               </View>
-            )}
 
-            {/* Language */}
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
-              <LanguageSwitcher />
-            </View>
-
-            {/* Theme */}
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
-              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
-                  const themeLabels: Record<string, string> = { system: t('settings.system'), light: t('settings.light'), dark: t('settings.dark') };
-                  const isActive = themePreference === opt;
-                  return (
-                    <Pressable
-                      key={opt}
-                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                      onPress={() => setThemePreference(opt)}
-                    >
-                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>
-                        {themeLabels[opt]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
+                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                  {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
+                    const themeLabels: Record<string, string> = {
+                      system: t('settings.system'),
+                      light: t('settings.light'),
+                      dark: t('settings.dark'),
+                    };
+                    const isActive = themePreference === opt;
+                    return (
+                      <Pressable
+                        key={opt}
+                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                        onPress={() => setThemePreference(opt)}
+                      >
+                        <Text
+                          style={[
+                            styles.settingsPillText,
+                            { color: colors.textSecondary },
+                            isActive && { color: '#fff', fontWeight: '700' },
+                          ]}
+                        >
+                          {themeLabels[opt]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
 
-            {/* Deck Colors */}
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
-              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                {[false, true].map((fc) => {
-                  const isActive = fourColorDeck === fc;
-                  return (
-                    <Pressable
-                      key={String(fc)}
-                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                      onPress={() => setFourColorDeck(fc)}
-                    >
-                      <Text style={[styles.settingsPillText, { color: colors.textSecondary }, isActive && { color: '#fff', fontWeight: '700' }]}>
-                        {fc ? t('settings.fourColor') : t('settings.classic')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
+                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                  {[false, true].map((fc) => {
+                    const isActive = fourColorDeck === fc;
+                    return (
+                      <Pressable
+                        key={String(fc)}
+                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                        onPress={() => setFourColorDeck(fc)}
+                      >
+                        <Text
+                          style={[
+                            styles.settingsPillText,
+                            { color: colors.textSecondary },
+                            isActive && { color: '#fff', fontWeight: '700' },
+                          ]}
+                        >
+                          {fc ? t('settings.fourColor') : t('settings.classic')}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
 
-            <Pressable style={[styles.modalButton, { marginTop: Spacing.md }]} onPress={() => setShowSettingsModal(false)}>
-              <Text style={styles.modalButtonText}>{t('common.close')}</Text>
+              <Pressable style={[styles.modalButton, { marginTop: Spacing.md }]} onPress={() => setShowSettingsModal(false)}>
+                <Text style={styles.modalButtonText}>{t('common.close')}</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1123,16 +1046,6 @@ const styles = StyleSheet.create({
   topBarRow1: {
     alignItems: 'center',
     paddingVertical: 2,
-  },
-  topBarBack: {
-    width: 36,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  topBarLogoWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   topBarRow2: {
     flexDirection: 'row',
@@ -1174,36 +1087,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
-  chatBadgeDot: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.error,
-  },
-  backButton: {
-    ...TextStyles.h3,
-    color: Colors.accent,
-    fontSize: 18,
-    paddingHorizontal: Spacing.xs,
-  },
   handInfo: {
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '700' as const,
   },
-
-  // Game Area - Circular table layout
   gameArea: {
     flex: 1,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Card Table - oval green felt table (legacy-style)
   cardTable: {
     position: 'absolute',
     top: '50%',
@@ -1232,11 +1126,6 @@ const styles = StyleSheet.create({
     borderRadius: 194,
     overflow: 'hidden',
   },
-  tableCenterDecor: {
-    // kept for TS compatibility but not rendered
-    display: 'none',
-  },
-  // Compact row of 4 suit symbols at the top of the felt
   suitRow: {
     position: 'absolute',
     top: '22%',
@@ -1274,8 +1163,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
   },
-
-  // My avatar at bottom edge of table
   youLabelAtTable: {
     position: 'absolute',
     bottom: '6%',
@@ -1284,24 +1171,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 20,
   },
-  myTableAvatar: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-    width: SCREEN_WIDTH > 600 ? 40 : 32,
-    height: SCREEN_WIDTH > 600 ? 40 : 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  myTableAvatarInitial: {
-    color: '#ffffff',
-    fontSize: SCREEN_WIDTH > 600 ? 18 : 14,
-    fontWeight: '700' as const,
-  },
-
-  // Turn order indicator - bottom-right corner
   turnOrderIndicator: {
     position: 'absolute',
     bottom: Spacing.sm,
@@ -1320,14 +1189,11 @@ const styles = StyleSheet.create({
     fontSize: 8,
     textAlign: 'center',
   },
-
-  // Opponent containers - positioned absolutely around the table
   opponentContainer: {
     position: 'absolute',
     zIndex: 20,
     alignItems: 'center',
   },
-  // Figma-style profile card — dark semi-transparent, fixed size
   profileCard: {
     width: 110,
     height: 90,
@@ -1372,136 +1238,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#308552',
   },
-  profileCheckBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#308552',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileCheckText: {
-    fontSize: 8,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  positionBadge: {
-    backgroundColor: Colors.highlight,
-    width: 20,
-    height: 20,
-    borderRadius: Radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 2,
-    borderWidth: 2,
-    borderColor: Colors.textPrimary,
-  },
-  positionBadgeText: {
-    ...TextStyles.caption,
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  opponentCard: {
-    padding: SCREEN_WIDTH > 600 ? Spacing.sm : Spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: SCREEN_WIDTH > 600 ? 80 : 60,
-    backgroundColor: '#ffffff',
-  },
-
-  // Avatar styles (shared)
-  avatar: {
-    width: SCREEN_WIDTH > 600 ? 40 : 28,
-    height: SCREEN_WIDTH > 600 ? 40 : 28,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    marginBottom: 2,
-  },
-  activeAvatar: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  avatarInitial: {
-    ...TextStyles.body,
-    color: Colors.textPrimary,
-    fontSize: SCREEN_WIDTH > 600 ? 16 : 12,
-    fontWeight: '600' as const,
-  },
-
-  // Opponent specific styles
-  opponentName: {
-    ...TextStyles.small,
-    color: Colors.textPrimary,
-    fontSize: SCREEN_WIDTH > 600 ? 12 : 9,
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  opponentStats: {
-    alignItems: 'center',
-    gap: 0,
-  },
-  opponentStat: {
-    ...TextStyles.small,
-    color: Colors.textSecondary,
-    fontSize: SCREEN_WIDTH > 600 ? 11 : 8,
-  },
-  statValue: {
-    color: Colors.accent,
-    fontWeight: '600' as const,
-  },
-
-  // Active player highlight
-  activePlayer: {
-    shadowColor: '#E6BF33',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-
-  // Turn and played indicators
-  playStatus: {
-    marginTop: 2,
-    minHeight: 16,
-  },
-  turnIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  turnDot: {
-    color: Colors.accent,
-    fontSize: 10,
-  },
-  turnText: {
-    ...TextStyles.small,
-    color: Colors.accent,
-    fontWeight: '600' as const,
-    fontSize: 9,
-  },
-  playedBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playedText: {
-    fontSize: 12,
-    color: '#ffffff',
-    fontWeight: 'bold' as const,
-  },
-
-  // Trick Area - Centered on the table
   playArea: {
     position: 'absolute',
     top: '58%',
@@ -1512,10 +1248,9 @@ const styles = StyleSheet.create({
     width: '65%',
     zIndex: 5,
   },
-  // Radial trick pile — cards are absolutely positioned inside this box
   trickPile: {
-    width: 112,   // 60px card + 26px max offset × 2
-    height: 170,  // 84px card + 39px (3×13) max offset × 2 (for 6-player equal spacing)
+    width: 112,
+    height: 170,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1530,8 +1265,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-
-  // Your Hand - Fixed at bottom with YOU badge
   handSection: {
     borderTopWidth: 2,
     borderTopColor: Colors.accent,
@@ -1541,67 +1274,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     maxHeight: SCREEN_HEIGHT * 0.42,
   },
-  youBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.md,
-    padding: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-  },
-  myHandAvatar: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-    width: 28,
-    height: 28,
-    marginRight: Spacing.sm,
-  },
-  myHandAvatarInitial: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700' as const,
-  },
-  youStats: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  youStat: {
-    ...TextStyles.caption,
-    color: Colors.textSecondary,
-    fontSize: 9,
-  },
-
-  // Action Bar - Fixed height
-  actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: Colors.glassLight,
-    height: SCREEN_HEIGHT * 0.05,
-  },
-  actionButton: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: Radius.sm,
-  },
-  actionLabel: {
-    ...TextStyles.caption,
-    color: Colors.accent,
-    fontSize: 11,
-    fontWeight: '600' as const,
-  },
-  actionLabelDisabled: {
-    color: Colors.textMuted,
-    opacity: 0.5,
-  },
-
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1639,7 +1311,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingBottom: Spacing.sm,
   },
-  // 2-column grid layout for 5-6 players
   lastTrickContentGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1667,10 +1338,6 @@ const styles = StyleSheet.create({
     ...TextStyles.caption,
     color: Colors.textSecondary,
     textAlign: 'center',
-  },
-  winnerBadge: {
-    color: Colors.success,
-    fontWeight: 'bold' as const,
   },
   lastTrickWinner: {
     ...TextStyles.body,
