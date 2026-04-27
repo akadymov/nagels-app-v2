@@ -18,7 +18,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
-import type { HandResult } from '../store/gameStore';
+import { useRoomStore } from '../store/roomStore';
+
+// Compact result row for one player in a closed hand.
+export interface HandResultRow {
+  playerId: string;
+  bet: number;
+  tricksWon: number;
+  points: number;
+  bonus: number;
+}
+
+export interface HandResult {
+  handNumber: number;
+  startingPlayerIndex: number;
+  results: HandResultRow[];
+}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -53,7 +68,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   handNumber,
   totalHands,
   players,
-  scoreHistory = [],
+  scoreHistory,
   startingPlayerIndex,
   isGameOver = false,
   isMidGame = false,
@@ -64,6 +79,28 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [showFull, setShowFull] = useState(!isMidGame);
+
+  // Derive history from server snapshot if no explicit history passed in.
+  const snapshot = useRoomStore((s) => s.snapshot);
+  const derivedHistory: HandResult[] = React.useMemo(() => {
+    if (scoreHistory && effectiveHistory.length > 0) return scoreHistory;
+    const sh = snapshot?.score_history ?? [];
+    if (!sh.length) return [];
+    const playersList = snapshot?.players ?? [];
+    return sh.map((h) => ({
+      handNumber: h.hand_number,
+      startingPlayerIndex: 0,
+      results: (h.scores ?? []).map((row) => ({
+        playerId: row.session_id,
+        bet: row.bet,
+        tricksWon: row.taken_tricks,
+        points: row.hand_score,
+        // bonus is bet+10 if exact match: per-rules, >0 hand_score with tricksWon === bet
+        bonus: row.bet === row.taken_tricks ? 10 : 0,
+      })),
+    }));
+  }, [scoreHistory, snapshot]);
+  const effectiveHistory: HandResult[] = scoreHistory && effectiveHistory.length > 0 ? scoreHistory : derivedHistory;
 
   // Sort players by score
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
@@ -93,7 +130,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       ))}
 
       {/* Show History toggle */}
-      {scoreHistory.length > 0 && (
+      {effectiveHistory.length > 0 && (
         <Pressable onPress={() => setShowFull(true)} style={[styles.toggleBtn, { borderColor: colors.accent }]}>
           <Text style={[styles.toggleText, { color: colors.accent }]}>{t('scoreboard.showHistory', 'Show History')}</Text>
         </Pressable>
@@ -138,7 +175,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
 
           {/* Round rows */}
-          {scoreHistory.map((hand) => (
+          {effectiveHistory.map((hand) => (
             <View key={hand.handNumber} style={styles.tableRow}>
               <View style={[styles.tableCell, { width: roundColW }]}>
                 <Text style={[styles.roundNum, { color: colors.textMuted }]}>{hand.handNumber}</Text>
@@ -201,13 +238,14 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             </Pressable>
 
             {/* Content */}
-            {showFull && scoreHistory.length > 0 ? renderFullTable() : renderCompact()}
+            {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
 
             {/* Continue / Play Again button */}
             <View style={styles.footer}>
               <Pressable
                 style={[styles.continueBtn, { backgroundColor: colors.accent }]}
                 onPress={isGameOver && onPlayAgain ? onPlayAgain : onContinue}
+                testID="btn-continue-scoreboard"
               >
                 <Text style={styles.continueBtnText}>
                   {isGameOver ? t('scoreboard.playAgain') : t('scoreboard.continue')}
