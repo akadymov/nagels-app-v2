@@ -81,6 +81,27 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     }
   }, [room?.phase, onGameStart]);
 
+  // If the host leaves, the room ends — kick everyone out cleanly.
+  useEffect(() => {
+    if (room?.phase === 'finished') {
+      (async () => {
+        const { clearActiveRoom } = await import('../lib/activeRoom');
+        await clearActiveRoom();
+        unsubscribeRoom();
+        useRoomStore.getState().reset();
+        if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+          (window as any).alert('The host left the room — game ended.');
+        }
+        onLeave();
+      })();
+    }
+  }, [room?.phase, onLeave]);
+
+  const handleForceReady = useCallback(async (sessionId: string, value: boolean) => {
+    if (!room?.id) return;
+    await gameClient.setReady(room.id, value, sessionId);
+  }, [room?.id]);
+
   const handleToggleReady = useCallback(async () => {
     if (!room?.id) return;
     await gameClient.setReady(room.id, !amIReady);
@@ -159,7 +180,18 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
-        <View style={{ width: 36 }} />
+        <Pressable
+          onPress={async () => {
+            if (!room?.id) return;
+            const { gameClient } = await import('../lib/gameClient');
+            await gameClient.refreshSnapshot(room.id);
+          }}
+          hitSlop={8}
+          style={styles.settingsBtn}
+          testID="waiting-btn-sync"
+        >
+          <Text style={{ fontSize: 18 }}>🔄</Text>
+        </Pressable>
         <GameLogo size="sm" />
         {onSettings ? (
           <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn} testID="waiting-btn-settings">
@@ -226,11 +258,20 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                     <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
                   )}
                 </View>
-                <View style={[
-                  styles.readyIndicator,
-                  { backgroundColor: colors.surfaceSecondary },
-                  player.is_ready && styles.readyIndicatorReady,
-                ]}>
+                <Pressable
+                  onPress={() => {
+                    if (isHost || isMe) {
+                      handleForceReady(player.session_id, !player.is_ready);
+                    }
+                  }}
+                  style={[
+                    styles.readyIndicator,
+                    { backgroundColor: colors.surfaceSecondary },
+                    player.is_ready && styles.readyIndicatorReady,
+                  ]}
+                  hitSlop={8}
+                  testID={`btn-ready-${player.seat_index}`}
+                >
                   <Text style={[
                     styles.readyText,
                     { color: colors.textMuted },
@@ -238,7 +279,23 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   ]}>
                     {player.is_ready ? '✓' : '○'}
                   </Text>
-                </View>
+                </Pressable>
+                {isHost && !isMe && !isHostPlayer && room?.id && (
+                  <Pressable
+                    onPress={async () => {
+                      if (typeof window !== 'undefined' &&
+                          !(window as any).confirm(`Kick ${player.display_name}?`)) {
+                        return;
+                      }
+                      await gameClient.leaveRoom(room.id, player.session_id);
+                    }}
+                    hitSlop={8}
+                    style={{ marginLeft: 8, padding: 8 }}
+                    testID={`btn-kick-${player.seat_index}`}
+                  >
+                    <Text style={{ color: '#e74c3c', fontSize: 18, fontWeight: '700' }}>✕</Text>
+                  </Pressable>
+                )}
               </GlassCard>
             );
           })}
@@ -302,6 +359,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               size="large"
               variant="primary"
               accentColor={Colors.highlight}
+              disabled={playerCount < 2}
               style={styles.actionButton}
               testID="btn-start-game"
             />

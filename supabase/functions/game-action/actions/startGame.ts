@@ -40,13 +40,20 @@ export async function startGame(
     .eq('room_id', room.id)
     .order('seat_index', { ascending: true });
 
-  if (!players || players.length !== room.player_count) {
+  if (!players || players.length < 2) {
     const snapshot = await buildSnapshot(svc, room.id, actor.session_id);
     return { ok: false, error: 'not_all_seats_filled', state: snapshot, version: snapshot.room?.version ?? 0 };
   }
   if (!players.every((p: any) => p.is_ready)) {
     const snapshot = await buildSnapshot(svc, room.id, actor.session_id);
     return { ok: false, error: 'not_all_ready', state: snapshot, version: snapshot.room?.version ?? 0 };
+  }
+
+  // Lock the actual player count for this game in case it differs from the
+  // room.player_count target (host can start before the room is "full").
+  const actualPlayerCount = players.length;
+  if (actualPlayerCount !== room.player_count) {
+    await svc.from('rooms').update({ player_count: actualPlayerCount }).eq('id', room.id);
   }
 
   const handNumber = 1;
@@ -56,7 +63,7 @@ export async function startGame(
   const seed = crypto.randomUUID();
 
   const deck = seededShuffle(createDeck(), seed);
-  const cardsNeeded = cardsPerPlayer * room.player_count;
+  const cardsNeeded = cardsPerPlayer * actualPlayerCount;
   if (deck.length < cardsNeeded) throw new Error('not_enough_cards');
 
   const { data: hand, error: hErr } = await svc
@@ -76,7 +83,7 @@ export async function startGame(
   if (hErr) throw hErr;
 
   const dealtRows: { hand_id: string; session_id: string; card: string }[] = [];
-  for (let s = 0; s < room.player_count; s++) {
+  for (let s = 0; s < actualPlayerCount; s++) {
     const player = players[s];
     for (let c = 0; c < cardsPerPlayer; c++) {
       const card = deck[s * cardsPerPlayer + c];

@@ -7,8 +7,8 @@ export type ActionKind =
 export type Action =
   | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string }
   | { kind: 'join_room';   code: string; display_name: string }
-  | { kind: 'leave_room';  room_id: string }
-  | { kind: 'ready';       room_id: string; is_ready: boolean }
+  | { kind: 'leave_room';  room_id: string; target_session_id?: string }
+  | { kind: 'ready';       room_id: string; is_ready: boolean; target_session_id?: string }
   | { kind: 'start_game';  room_id: string }
   | { kind: 'place_bet';   room_id: string; hand_id: string; bet: number }
   | { kind: 'play_card';   room_id: string; hand_id: string; card: string }

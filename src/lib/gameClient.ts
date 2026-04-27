@@ -54,11 +54,11 @@ export const gameClient = {
   joinRoom: (displayName: string, code: string) =>
     postAction(displayName, { kind: 'join_room', display_name: displayName, code }),
 
-  leaveRoom: (room_id: string) =>
-    postAction(null, { kind: 'leave_room', room_id }),
+  leaveRoom: (room_id: string, target_session_id?: string) =>
+    postAction(null, { kind: 'leave_room', room_id, target_session_id }),
 
-  setReady: (room_id: string, is_ready: boolean) =>
-    postAction(null, { kind: 'ready', room_id, is_ready }),
+  setReady: (room_id: string, is_ready: boolean, target_session_id?: string) =>
+    postAction(null, { kind: 'ready', room_id, is_ready, target_session_id }),
 
   startGame: (room_id: string) =>
     postAction(null, { kind: 'start_game', room_id }),
