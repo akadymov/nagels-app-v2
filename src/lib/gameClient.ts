@@ -83,6 +83,28 @@ export const gameClient = {
       return;
     }
     const snapshot = data as unknown as RoomSnapshot;
+
+    // get_room_state doesn't include the caller's private hand. Pull it
+    // separately if there's an active hand and we know our session_id.
+    const handId = snapshot.current_hand?.id;
+    if (handId) {
+      let mySession = useRoomStore.getState().myPlayerId;
+      if (!mySession) {
+        const { data: sid } = await supabase.rpc('get_my_session_id');
+        if (sid) {
+          mySession = sid as string;
+          useRoomStore.getState().setMyPlayerId(mySession);
+        }
+      }
+      if (mySession) {
+        const { data: myHand } = await supabase.rpc('get_my_hand', {
+          p_hand_id: handId,
+          p_session_id: mySession,
+        });
+        snapshot.my_hand = (myHand as unknown as string[]) ?? [];
+      }
+    }
+
     useRoomStore.getState().applySnapshot(snapshot, snapshot.room?.version ?? 0);
   },
 };
