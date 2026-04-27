@@ -28,7 +28,7 @@ import {
   type Bet,
   type BettingContext,
   type PlayContext,
-} from './rules';
+} from './rules.ts';
 
 // ============================================================
 // SHUFFLE UTILITIES
