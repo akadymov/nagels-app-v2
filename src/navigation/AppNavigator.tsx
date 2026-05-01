@@ -3,10 +3,11 @@
  * Stack navigator for main app flow
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer, useNavigation, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { FeedbackButton } from '../components/FeedbackButton';
 import {
   WelcomeScreen,
   PrimerScreen,
@@ -52,6 +53,8 @@ export type RootStackParamList = {
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
 // Capture URL hash AND pathname at module load — before Supabase client and
 // React Navigation's linking system consume them. RN's linking rewrites the
@@ -321,11 +324,34 @@ const NavigatorGuard: React.FC = () => {
   return null;
 };
 
+/**
+ * Renders the global feedback FAB above every screen.
+ * Tracks the current route so submissions include screen context.
+ */
+const GlobalFeedbackOverlay: React.FC = () => {
+  const [routeName, setRouteName] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const update = () => {
+      if (navigationRef.isReady()) {
+        setRouteName(navigationRef.getCurrentRoute()?.name);
+      }
+    };
+    update();
+    const unsub = navigationRef.addListener?.('state', update);
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
+
+  return <FeedbackButton screenName={routeName} />;
+};
+
 export const AppNavigator: React.FC<AppNavigatorProps> = () => {
   const { isLoading, isInitialized } = useAuthStore();
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer ref={navigationRef} linking={linking}>
       <AuthProvider>
         <Stack.Navigator
           initialRouteName="Welcome"
@@ -458,6 +484,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
               )}
             </Stack.Screen>
           </Stack.Navigator>
+        <GlobalFeedbackOverlay />
       </AuthProvider>
     </NavigationContainer>
   );

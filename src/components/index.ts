@@ -33,3 +33,7 @@ export { LanguageSwitcher } from './LanguageSwitcher';
 // Auth
 export { AuthModal } from './AuthModal';
 export type { AuthModalProps } from './AuthModal';
+
+// Feedback
+export { FeedbackButton } from './FeedbackButton';
+export type { FeedbackButtonProps } from './FeedbackButton';
