@@ -30,17 +30,31 @@ export default function App() {
 
   useEffect(() => {
     hydrate();
-    // Fix mobile web scroll
+    // Fix mobile web scroll + viewport height
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const style = document.createElement('style');
+      // --app-height is set from JS below (visualViewport-aware).
+      // Fall back to 100dvh for browsers without visualViewport, and
+      // finally to 100vh for very old browsers.
       style.textContent = `
+        :root {
+          --app-height: 100dvh;
+        }
+        @supports not (height: 100dvh) {
+          :root { --app-height: 100vh; }
+        }
         * { -webkit-overflow-scrolling: touch !important; }
-        html, body { height: 100%; margin: 0; touch-action: pan-y !important; }
+        html, body {
+          height: var(--app-height);
+          margin: 0;
+          touch-action: pan-y !important;
+          overscroll-behavior: none;
+        }
         body { overflow: hidden !important; }
         #root {
           touch-action: pan-y !important;
           overflow: hidden;
-          height: 100vh;
+          height: var(--app-height);
           display: flex;
           flex-direction: column;
         }
@@ -52,7 +66,7 @@ export default function App() {
           flex-direction: column !important;
           flex: 1 !important;
           min-height: 0 !important;
-          max-height: 100vh !important;
+          max-height: var(--app-height) !important;
         }
         div[style*="overflow"][style*="auto"],
         div[style*="overflow"][style*="scroll"] {
@@ -61,6 +75,22 @@ export default function App() {
         }
       `;
       document.head.appendChild(style);
+
+      // Keep --app-height in sync with the *visible* viewport.
+      // visualViewport reflects the area not covered by browser UI on
+      // iOS Safari, Chrome address bar, and the on-screen keyboard.
+      const setAppHeight = () => {
+        const h =
+          (typeof window !== 'undefined' && window.visualViewport?.height) ||
+          window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${h}px`);
+      };
+
+      setAppHeight();
+      window.addEventListener('resize', setAppHeight);
+      window.addEventListener('orientationchange', setAppHeight);
+      window.visualViewport?.addEventListener('resize', setAppHeight);
+      window.visualViewport?.addEventListener('scroll', setAppHeight);
     }
   }, [hydrate]);
 
