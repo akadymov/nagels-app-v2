@@ -263,5 +263,21 @@
     "noTrumpBody": "Esta ronda no tiene triunfo. La carta más alta del palo de salida siempre gana. El triunfo vuelve la próxima ronda.",
     "scoringTitle": "Cómo se puntúa",
     "scoringBody": "Cada baza ganada = 1 punto.\nApuesta exacta = +10 de bonus.\nFallar la apuesta = sin bonus.\n\nGana quien tenga más puntos tras todas las manos."
+  },
+  "feedback": {
+    "openLabel": "Enviar comentarios",
+    "title": "Enviar comentarios",
+    "subtitle": "¿Has encontrado un fallo o tienes una idea? Cuéntanos.",
+    "namePlaceholder": "Tu nombre (opcional)",
+    "categoryBug": "Error",
+    "categoryIdea": "Idea",
+    "categoryUx": "Difícil de usar",
+    "categoryGeneral": "Otro",
+    "messagePlaceholder": "¿Qué ha pasado o qué te gustaría ver?",
+    "send": "Enviar",
+    "errorEmpty": "Escribe un mensaje antes de enviar.",
+    "errorOffline": "No se puede conectar al servidor. Inténtalo más tarde.",
+    "errorGeneric": "No se pudo enviar. Inténtalo de nuevo.",
+    "successMessage": "¡Gracias! Tus comentarios se han enviado."
   }
 }

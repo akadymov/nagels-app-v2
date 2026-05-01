@@ -1494,10 +1494,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 20,
   },
+  // Turn order indicator — shifted left so the global feedback FAB
+  // (48 px @ Spacing.md from edge) doesn't overlap.
   turnOrderIndicator: {
     position: 'absolute',
     bottom: Spacing.sm,
-    right: Spacing.sm,
+    right: Spacing.sm + 48 + Spacing.xs,
     opacity: 0.55,
     zIndex: 2,
     alignItems: 'center',

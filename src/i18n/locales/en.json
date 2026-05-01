@@ -263,5 +263,21 @@
     "noTrumpBody": "This round has no trump suit. The highest card of the lead suit always wins. Trumps return next round.",
     "scoringTitle": "How scoring works",
     "scoringBody": "Each trick won = 1 point.\nExact bid = +10 bonus.\nMiss your bid = no bonus.\n\nHighest total after all hands wins."
+  },
+  "feedback": {
+    "openLabel": "Send feedback",
+    "title": "Send feedback",
+    "subtitle": "Spotted a bug or have an idea? Let us know.",
+    "namePlaceholder": "Your name (optional)",
+    "categoryBug": "Bug",
+    "categoryIdea": "Idea",
+    "categoryUx": "Hard to use",
+    "categoryGeneral": "Other",
+    "messagePlaceholder": "What happened, or what would you like to see?",
+    "send": "Send",
+    "errorEmpty": "Please write a message before sending.",
+    "errorOffline": "Can't reach the server right now. Try again later.",
+    "errorGeneric": "Couldn't send feedback. Please try again.",
+    "successMessage": "Thanks! Your feedback has been sent."
   }
 }
