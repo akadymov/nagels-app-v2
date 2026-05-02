@@ -162,6 +162,21 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     return { trumpCount, aceCount, bidsSoFar };
   }, [myHandCards, trumpSuit, handScores]);
 
+  // Hand sorted with trump first, then S/H/C/D, descending rank within suit.
+  // Mirrors the sort used on GameTableScreen so the order stays consistent
+  // when the betting modal hands off to the table.
+  const sortedHandCards = useMemo(() => {
+    const RANK_ORDER: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+    const SUIT_ORDER: Record<string, number> = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
+    const tw = (s: string) => (s === trumpSuit ? -1 : SUIT_ORDER[s] ?? 9);
+    const cards = myHandCards.map(parseCard);
+    return cards.sort((a, b) => {
+      const ds = tw(String(a.suit)) - tw(String(b.suit));
+      if (ds !== 0) return ds;
+      return (RANK_ORDER[String(b.rank)] ?? 0) - (RANK_ORDER[String(a.rank)] ?? 0);
+    });
+  }, [myHandCards, trumpSuit]);
+
   // Get trump symbol / color
   const getTrumpSymbol = (trump: string): string => {
     if (trump === 'notrump') return 'NT';
@@ -388,7 +403,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               {t('game.yourCards', 'Your cards this round')}:
             </Text>
             <CardHand
-              cards={myHandCards.map(parseCard) as any}
+              cards={sortedHandCards as any}
               size="tiny"
               horizontal
               cardOverlap={myHandCards.length}

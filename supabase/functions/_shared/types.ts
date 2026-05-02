@@ -67,6 +67,13 @@ export interface RoomSnapshot {
     winner_seat: number | null;
     cards: Array<{ seat: number; card: string }>;
   } | null;
+  last_closed_trick: {
+    id: string;
+    trick_number: number;
+    lead_seat: number;
+    winner_seat: number | null;
+    cards: Array<{ seat: number; card: string }>;
+  } | null;
   score_history: Array<{
     hand_number: number;
     closed_at: string | null;
