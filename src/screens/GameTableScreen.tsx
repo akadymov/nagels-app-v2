@@ -281,10 +281,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       }
 
       // Trick translation: server uses {seat, card} → ui needs {playerId, card}
-      // While `holdTrickActive`, render the just-closed trick instead of the
-      // freshly-opened empty one so players see the final card for ~1.5 s.
-      const sourceTrick = holdTrickActive && lastClosedTrick ? lastClosedTrick : currentTrick;
-      const trickCards = (sourceTrick?.cards ?? []).map((c) => {
+      const trickCards = (currentTrick?.cards ?? []).map((c) => {
         const seatPlayer = players.find((p) => p.seatIndex === c.seat);
         return {
           playerId: seatPlayer?.id ?? '',
@@ -292,9 +289,21 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         };
       });
       const trickWinnerId =
-        sourceTrick?.winner_seat != null
-          ? players.find((p) => p.seatIndex === sourceTrick.winner_seat)?.id ?? ''
+        currentTrick?.winner_seat != null
+          ? players.find((p) => p.seatIndex === currentTrick.winner_seat)?.id ?? ''
           : '';
+      // Cosmetic-only: while `holdTrickActive`, render the just-closed trick
+      // on the table for ~1.5 s so players see the final card. Logic/playable
+      // checks always use the real currentTrick above.
+      const displayTrickCards = holdTrickActive && lastClosedTrick
+        ? lastClosedTrick.cards.map((c) => {
+            const seatPlayer = players.find((p) => p.seatIndex === c.seat);
+            return { playerId: seatPlayer?.id ?? '', card: parseCard(c.card) };
+          })
+        : trickCards;
+      const displayTrickWinnerId = holdTrickActive && lastClosedTrick && lastClosedTrick.winner_seat != null
+        ? players.find((p) => p.seatIndex === lastClosedTrick.winner_seat)?.id ?? ''
+        : trickWinnerId;
 
       // Last closed trick (for the "previous trick" modal). Server snapshot
       // only carries one closed trick at a time — enough for the UI button.
@@ -332,6 +341,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         currentTrick: trickCards.length || trickWinnerId
           ? { cards: trickCards, winnerId: trickWinnerId, leadSuit: (trickCards[0]?.card.suit as any) ?? 'diamonds' }
           : null,
+        // Cosmetic-only display trick: lingers the just-closed trick on the
+        // table for the hold window. Falls back to currentTrick.
+        displayTrick: displayTrickCards.length || displayTrickWinnerId
+          ? { cards: displayTrickCards, winnerId: displayTrickWinnerId, leadSuit: (displayTrickCards[0]?.card.suit as any) ?? 'diamonds' }
+          : null,
         // Snapshot carries only the most recent closed trick — enough for the
         // "previous trick" modal. Empty when no trick has closed yet this hand.
         tricks: lastTricks,
@@ -364,6 +378,14 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       myPlayer: sp.getMyPlayer() ? players.find((p) => p.id === sp.getMyPlayer()!.id) ?? null : null,
       players,
       currentTrick: sp.currentTrick
+        ? {
+            cards: sp.currentTrick.cards,
+            winnerId: sp.currentTrick.winnerId,
+            leadSuit: sp.currentTrick.leadSuit,
+          }
+        : null,
+      // Single-player has no inter-trick gap, so display = current.
+      displayTrick: sp.currentTrick
         ? {
             cards: sp.currentTrick.cards,
             winnerId: sp.currentTrick.winnerId,
@@ -824,9 +846,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
           {/* Center Play Area */}
           <View style={styles.playArea}>
-            {vm.currentTrick && vm.currentTrick.cards.length > 0 ? (
+            {vm.displayTrick && vm.displayTrick.cards.length > 0 ? (
               <View style={styles.trickPile}>
-                {vm.currentTrick.cards.map((played, playOrder) => {
+                {vm.displayTrick.cards.map((played, playOrder) => {
                   const { dx, dy } = getPlayerCardOffset(played.playerId);
                   return (
                     <View
