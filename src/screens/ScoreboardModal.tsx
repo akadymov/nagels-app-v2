@@ -232,7 +232,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         <View style={[styles.modal, { backgroundColor: colors.background }]}>
           <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
             {/* Close button */}
-            <Pressable onPress={onClose || onContinue} style={styles.closeBtn} hitSlop={12}>
+            <Pressable onPress={onClose || onContinue} style={styles.closeBtn} hitSlop={12} testID="scoreboard-close-x">
               <Text style={[styles.closeText, { color: colors.textMuted }]}>✕</Text>
             </Pressable>
 

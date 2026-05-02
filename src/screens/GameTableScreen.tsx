@@ -245,6 +245,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       const cardsPerPlayer = hand?.cards_per_player ?? 0;
       const trumpSuit = (hand?.trump_suit ?? 'diamonds') as any;
 
+      const RANK_ORDER: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+      const SUIT_ORDER: Record<string, number> = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
+      const sortMyHand = (cards: Array<{ id: string; suit: string; rank: string }>) => {
+        const tw = (s: string) => (s === trumpSuit ? -1 : SUIT_ORDER[s] ?? 9);
+        return [...cards].sort((a, b) => {
+          const ds = tw(a.suit) - tw(b.suit);
+          if (ds !== 0) return ds;
+          return (RANK_ORDER[b.rank] ?? 0) - (RANK_ORDER[a.rank] ?? 0);
+        });
+      };
+      for (const p of players) {
+        if (p.id === myPlayerId) p.hand = sortMyHand(p.hand);
+      }
+
       // Trick translation: server uses {seat, card} → ui needs {playerId, card}
       const trickCards = (currentTrick?.cards ?? []).map((c) => {
         const seatPlayer = players.find((p) => p.seatIndex === c.seat);
