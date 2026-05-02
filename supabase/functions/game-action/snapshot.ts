@@ -11,7 +11,7 @@ export async function buildSnapshot(
 
   const snapshot = (data ?? {
     room: null, players: [], current_hand: null,
-    hand_scores: [], current_trick: null, score_history: [],
+    hand_scores: [], current_trick: null, last_closed_trick: null, score_history: [],
   }) as RoomSnapshot;
 
   const handId = snapshot.current_hand?.id;

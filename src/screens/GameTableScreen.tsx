@@ -5,7 +5,7 @@
  * Single-player mode: legacy useGameStore engine (bots, no network).
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -95,7 +95,28 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const hand = snapshot?.current_hand ?? null;
   const handScores = snapshot?.hand_scores ?? [];
   const currentTrick = snapshot?.current_trick ?? null;
+  const lastClosedTrick = snapshot?.last_closed_trick ?? null;
   const myHandStrings = snapshot?.my_hand ?? [];
+
+  // After the 4th card lands, the server immediately opens a fresh empty
+  // trick — the closed one disappears from `current_trick` instantly. Hold
+  // the just-completed trick on the table for ~1.5 s so players can see
+  // the final card and who took the trick.
+  const TRICK_HOLD_MS = 1500;
+  const [trickHoldUntil, setTrickHoldUntil] = useState<number>(0);
+  const lastClosedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const closedId = lastClosedTrick?.id ?? null;
+    if (!closedId || closedId === lastClosedIdRef.current) return;
+    lastClosedIdRef.current = closedId;
+    setTrickHoldUntil(Date.now() + TRICK_HOLD_MS);
+    const t = setTimeout(() => setTrickHoldUntil(0), TRICK_HOLD_MS);
+    return () => clearTimeout(t);
+  }, [lastClosedTrick?.id]);
+  const holdTrickActive =
+    trickHoldUntil > Date.now() &&
+    !!lastClosedTrick &&
+    (currentTrick?.cards?.length ?? 0) === 0;
 
   // ── Single-player state (legacy engine for bots) ───────────
   const sp = useGameStore();
@@ -260,7 +281,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       }
 
       // Trick translation: server uses {seat, card} → ui needs {playerId, card}
-      const trickCards = (currentTrick?.cards ?? []).map((c) => {
+      // While `holdTrickActive`, render the just-closed trick instead of the
+      // freshly-opened empty one so players see the final card for ~1.5 s.
+      const sourceTrick = holdTrickActive && lastClosedTrick ? lastClosedTrick : currentTrick;
+      const trickCards = (sourceTrick?.cards ?? []).map((c) => {
         const seatPlayer = players.find((p) => p.seatIndex === c.seat);
         return {
           playerId: seatPlayer?.id ?? '',
@@ -268,9 +292,29 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         };
       });
       const trickWinnerId =
-        currentTrick?.winner_seat != null
-          ? players.find((p) => p.seatIndex === currentTrick.winner_seat)?.id ?? ''
+        sourceTrick?.winner_seat != null
+          ? players.find((p) => p.seatIndex === sourceTrick.winner_seat)?.id ?? ''
           : '';
+
+      // Last closed trick (for the "previous trick" modal). Server snapshot
+      // only carries one closed trick at a time — enough for the UI button.
+      const lastTricks = lastClosedTrick
+        ? [
+            {
+              cards: lastClosedTrick.cards.map((c) => {
+                const seatPlayer = players.find((p) => p.seatIndex === c.seat);
+                return {
+                  playerId: seatPlayer?.id ?? '',
+                  card: parseCard(c.card),
+                };
+              }),
+              winnerId:
+                lastClosedTrick.winner_seat != null
+                  ? players.find((p) => p.seatIndex === lastClosedTrick.winner_seat)?.id ?? ''
+                  : '',
+            },
+          ]
+        : [];
 
       const startingSeat = hand?.starting_seat ?? 0;
 
@@ -288,11 +332,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         currentTrick: trickCards.length || trickWinnerId
           ? { cards: trickCards, winnerId: trickWinnerId, leadSuit: (trickCards[0]?.card.suit as any) ?? 'diamonds' }
           : null,
-        // For history modal — we don't track full per-trick history server-side, so leave empty
-        tricks: [] as Array<{
-          cards: Array<{ playerId: string; card: { suit: any; rank: any } }>;
-          winnerId: string;
-        }>,
+        // Snapshot carries only the most recent closed trick — enough for the
+        // "previous trick" modal. Empty when no trick has closed yet this hand.
+        tricks: lastTricks,
       };
     }
 
@@ -330,7 +372,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         : null,
       tricks: sp.tricks,
     };
-  }, [isMultiplayer, snapshot, room, mpPlayers, hand, handScores, currentTrick, myHandStrings, myPlayerId, sp]);
+  }, [isMultiplayer, snapshot, room, mpPlayers, hand, handScores, currentTrick, lastClosedTrick, holdTrickActive, myHandStrings, myPlayerId, sp]);
 
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
