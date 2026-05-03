@@ -19,7 +19,12 @@ import { useRoomStore } from '../store/roomStore';
 import { gameClient } from './gameClient';
 
 const TURN_TIMEOUT_LONG_MS  = 5 * 60 * 1000;  // 5 min — humans thinking
-const TURN_TIMEOUT_SHORT_MS = 20 * 1000;       // 20 s — offline player
+const TURN_TIMEOUT_SHORT_MS = 3 * 60 * 1000;  // 3 min — offline player; was 20s
+                                              // but auto-advancing a dropped
+                                              // player that fast made
+                                              // accidental disconnects (tab
+                                              // backgrounded, mobile network
+                                              // hiccup) feel punitive.
 const OFFLINE_THRESHOLD_MS  = 30 * 1000;       // 30 s since last heartbeat
 
 function isPlayerOffline(lastSeenAt: string | null | undefined): boolean {
