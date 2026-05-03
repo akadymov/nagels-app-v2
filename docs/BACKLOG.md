@@ -19,7 +19,6 @@
 ### Conditional stakes — agree on stake before game, winners earn rating points, losers pay difference
 
 
-### In-game onboarding — contextual hints on first launch (bid, play, trump) shown at right moment
 
 
 ### Player stats — game history, win rate, exact bid percentage
@@ -41,10 +40,14 @@
 
 ## In Progress
 
+## Done
+
 ### Reconnect resilience — graceful disconnect, rejoin, bot takeover on timeout, fix realtime subscriptions
 
 
-## Done
+### In-game onboarding — contextual hints on first launch (bid, play, trump) shown at right moment
+
+
 
 ### Design system (Figma) — 3 pages, 11 screens, 9 components
 

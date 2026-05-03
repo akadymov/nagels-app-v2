@@ -54,19 +54,43 @@ async function find(loc, ms = WAIT) {
 async function tap(p, tid, w, ms = WAIT) {
   const l = p.locator(`[data-testid="${tid}"]`);
   if (!(await find(l, ms))) { log(w, `✗ ${tid} (${ms}ms)`); return false; }
-  try {
-    await l.click({ timeout: 5000 });
-    log(w, `✓ ${tid}`);
-    return true;
-  } catch (_) { log(w, `✗ ${tid} (click failed)`); return false; }
+  // Two attempts: first respects actionability checks, second forces.
+  // 4 parallel chromium pages hammering the Expo dev bundle frequently
+  // re-render the welcome screen mid-click → the first click sees a detached
+  // element. A short retry + force: true on the second try recovers reliably.
+  let lastErr = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await l.click({ timeout: 5000, force: attempt > 0 });
+      log(w, `✓ ${tid}${attempt ? ` (retry ${attempt})` : ''}`);
+      return true;
+    } catch (e) {
+      lastErr = (e && e.message ? e.message : String(e)).split('\n')[0].slice(0, 120);
+      if (attempt === 2) { log(w, `✗ ${tid} (click failed 3×: ${lastErr})`); return false; }
+      await sleep(400);
+      // Re-confirm visibility before retry — element may have re-mounted.
+      await find(l, 2000);
+    }
+  }
+  return false;
 }
 
 async function type(p, tid, val, w) {
   const l = p.locator(`[data-testid="${tid}"]`);
   if (!(await find(l))) throw new Error(`[${w}] missing: ${tid}`);
-  await l.click({ clickCount: 3 });
-  await l.type(val, { delay: 25 });
-  log(w, `✓ ${tid} = "${val}"`);
+  // Same retry shape as tap(): focus can fail transiently under load.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await l.click({ clickCount: 3, timeout: 5000, force: attempt > 0 });
+      await l.type(val, { delay: 25 });
+      log(w, `✓ ${tid} = "${val}"${attempt ? ` (retry ${attempt})` : ''}`);
+      return;
+    } catch (_) {
+      if (attempt === 2) throw new Error(`[${w}] type failed: ${tid}`);
+      await sleep(400);
+      await find(l, 2000);
+    }
+  }
 }
 
 async function txt(p, tid, w) {
@@ -80,8 +104,11 @@ async function txt(p, tid, w) {
 async function loadApp(p, w) {
   log(w, `open ${BASE}…`);
   await p.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await p.waitForFunction(() => document.querySelector('[data-testid]'), { timeout: 20000 }).catch(() => {});
-  await sleep(1000);
+  // Wait for the welcome screen specifically — btn-skip-to-lobby is always
+  // rendered there once Expo finishes hydration. Generic "any testid" wait
+  // returns too early because language pills mount before main buttons.
+  await p.locator('[data-testid="btn-skip-to-lobby"]').waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
+  await sleep(1500);
   log(w, '✓ loaded');
 }
 
@@ -130,10 +157,15 @@ async function goSettings(p, w) {
 }
 
 async function setAvatar(p, w, emoji) {
-  await tap(p, `avatar-${emoji}`, w, 3000);
-  await tap(p, 'settings-save', w, 3000);
+  // Honest about outcome — previously this logged "✓ avatar=🦈" even when
+  // the avatar grid wasn't rendered (the Profile section used to be gated
+  // behind isLoggedIn so guests never saw it).
+  const tapped = await tap(p, `avatar-${emoji}`, w, 3000);
+  if (!tapped) { log(w, `✗ avatar=${emoji} (button not found)`); return; }
+  const saved = await tap(p, 'settings-save', w, 3000);
   await sleep(500);
-  log(w, `✓ avatar=${emoji}`);
+  if (saved) log(w, `✓ avatar=${emoji}`);
+  else       log(w, `⚠ avatar=${emoji} picked but save button missing`);
 }
 
 async function setTheme(p, w, theme) {
@@ -144,6 +176,12 @@ async function setTheme(p, w, theme) {
 async function setLang(p, w, lang) {
   await tap(p, `lang-${lang}`, w, 3000);
   log(w, `✓ lang=${lang}`);
+}
+
+async function setDeck(p, w, style) {
+  // style: 'classic' (2-color) or 'fourColor' (default)
+  await tap(p, `deck-${style}`, w, 3000);
+  log(w, `✓ deck=${style}`);
 }
 
 async function backFromSettings(p, w) {
@@ -227,13 +265,48 @@ async function viewLastTrick(p, w) {
 
 async function tryBet(p, w) {
   try {
-    const btns = p.locator('[data-testid^="bet-btn-"]:not([disabled]):not([aria-disabled="true"])');
-    if ((await btns.count()) === 0) return false;
-    const b = btns.first();
-    const v = ((await b.textContent()) || '?').trim();
-    await b.click({ timeout: 5000 });
+    // All bet buttons (0..cardsPerPlayer), filtered to those still actionable.
+    const allBtns = p.locator('[data-testid^="bet-btn-"]');
+    const totalCount = await allBtns.count();
+    if (totalCount === 0) return false;
+    const cardsPerPlayer = totalCount - 1;
+
+    const enabled = p.locator('[data-testid^="bet-btn-"]:not([disabled]):not([aria-disabled="true"])');
+    const enabledCount = await enabled.count();
+    if (enabledCount === 0) return false;
+
+    // Collect numeric values of enabled buttons.
+    const allowed = [];
+    for (let i = 0; i < enabledCount; i++) {
+      const txt = ((await enabled.nth(i).textContent()) || '').trim();
+      const n = parseInt(txt, 10);
+      if (!Number.isNaN(n)) allowed.push(n);
+    }
+    if (allowed.length === 0) return false;
+
+    // Aim for a bet near cardsPerPlayer / playerCount, with ±1 jitter, so the
+    // 4-player sum lands around cardsPerPlayer ±2-4 (realistic bidding).
+    // PLAYERS=4 is hard-coded here matching the demo; if we ever support
+    // other counts in this file, plumb it through.
+    const PLAYERS = 4;
+    const target = cardsPerPlayer / PLAYERS;
+    const jitter = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
+    const desired = Math.max(0, Math.min(cardsPerPlayer, Math.round(target + jitter)));
+
+    // Pick the closest allowed bet to `desired`. Tie-break randomly.
+    allowed.sort((a, b) => Math.abs(a - desired) - Math.abs(b - desired) || (Math.random() - 0.5));
+    const choice = allowed[0];
+
+    const b = p.locator(`[data-testid="bet-btn-${choice}"]`);
+    const v = String(choice);
+    try {
+      await b.click({ timeout: 5000 });
+    } catch (_) {
+      // Fallback: first allowed button, force.
+      await enabled.first().click({ timeout: 5000, force: true }).catch(() => {});
+    }
     await sleep(400);
-    if (!(await btns.first().isVisible().catch(() => false))) {
+    if (!(await enabled.first().isVisible().catch(() => false))) {
       log(w, `✓ bet=${v}`);
       return true;
     }
@@ -279,14 +352,56 @@ async function gameLoop(p, w, opts = {}) {
   while (true) {
     await sleep(600);
 
-    // Game over
-    if (await p.locator('text=/Game Over|Конец игры|Fin del juego/i').first().isVisible().catch(() => false)) {
+    // Onboarding tip modals (bidding/trumpRank/noTrump/scoring) appear
+    // once per user and block everything underneath them. Find the first
+    // visible "Got it" button and dismiss it before doing anything else.
+    const tipBtn = p.locator('[data-testid^="onboarding-tip-"][data-testid$="-got-it"]').first();
+    if (await tipBtn.isVisible().catch(() => false)) {
+      try {
+        const tid = (await tipBtn.getAttribute('data-testid')) || 'onboarding-tip';
+        await tipBtn.click({ force: true, timeout: 2000 });
+        log(w, `✓ dismissed ${tid}`);
+        await sleep(200);
+        continue;
+      } catch (_) {}
+    }
+
+    // Game over — prefer testID (i18n-proof), fall back to localized text.
+    const gameOverById = p.locator('[data-testid="game-over"]');
+    const gameOverByText = p.locator('text=/Game Over|Игра окончена|Juego Terminado|Конец игры|Fin del juego/i').first();
+    if (await gameOverById.isVisible().catch(() => false) ||
+        await gameOverByText.isVisible().catch(() => false)) {
       log(w, '🏁 Game Over!');
       break;
     }
 
-    // Continue
-    const cont = p.locator('text=/Continue Playing|Продолжить|Continuar/i').first();
+    // Last Trick modal blocks every other interaction. If the player opened
+    // it and the hand has since advanced (Scoreboard or new betting), the
+    // modal stays mounted on top and the next button is unreachable.
+    // Close it first whenever it's visible.
+    const ltModal = p.locator('[data-testid="last-trick-close"]');
+    if (await ltModal.isVisible().catch(() => false)) {
+      try {
+        await ltModal.click({ force: true, timeout: 2000 });
+        log(w, '✓ closed Last Trick (was blocking)');
+        await sleep(300);
+        continue;
+      } catch (_) {
+        // Fallback: localized "Close" text
+        const close = p.locator('text=/^\\s*(Close|Закрыть|Cerrar)\\s*$/i').first();
+        if (await close.isVisible().catch(() => false)) {
+          await close.click({ force: true, timeout: 2000 }).catch(() => {});
+          log(w, '✓ closed Last Trick via text fallback');
+          await sleep(300);
+          continue;
+        }
+      }
+    }
+
+    // Continue — prefer testID, fall back to localized text.
+    const contById = p.locator('[data-testid="btn-continue-scoreboard"]');
+    const contByText = p.locator('text=/Continue Playing|Продолжить|Continuar/i').first();
+    let cont = (await contById.isVisible().catch(() => false)) ? contById : contByText;
     if (await cont.isVisible().catch(() => false)) {
       try {
         await cont.click({ timeout: 5000 });
@@ -372,7 +487,16 @@ async function main() {
 
   const browser = await chromium.launch({
     channel: 'chrome', headless: false, slowMo: SLOW_MO, devtools: DEVTOOLS,
-    args: ['--disable-features=TranslateUI', '--disable-infobars'],
+    args: [
+      '--disable-features=TranslateUI',
+      '--disable-infobars',
+      // Background tabs get throttled to ~1Hz timers by default — kills the
+      // 3 non-focused windows in this 4-pane demo. Disable all forms of
+      // background throttling so every page renders at full speed.
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
+    ],
   });
 
   const ctxs = await Promise.all([
@@ -381,15 +505,47 @@ async function main() {
     browser.newContext({ ...IPHONE, viewport: VP }),
     browser.newContext({ ...IPHONE, viewport: VP }),
   ]);
+
+  // Pre-seed localStorage so onboarding tips are already "dismissed" by the
+  // time the app hydrates. Force-clicking an RN-web Modal Pressable from
+  // Playwright is unreliable (events don't always reach the Pressable handler),
+  // and the tip then re-appears on every loop iteration. Bypassing entirely is
+  // both simpler and faster than retrying clicks.
+  await Promise.all(ctxs.map(c => c.addInitScript(() => {
+    try {
+      const raw = localStorage.getItem('nagels_settings');
+      const cur = raw ? JSON.parse(raw) : {};
+      cur.shownTips = { bidding: true, trumpRank: true, noTrump: true, scoring: true };
+      localStorage.setItem('nagels_settings', JSON.stringify(cur));
+    } catch {}
+  })));
+
   const [ap, bp, cp, dp] = await Promise.all(ctxs.map(c => c.newPage()));
 
-  // 2×2 grid
+  // Capture browser dialogs (alerts, confirms) so silent failures aren't
+  // hidden by Playwright's default auto-dismiss. Without this, the only
+  // sign of an error path is "click happened, no nav, idle timeout".
+  const NAMES = ['Alice', 'Bob', 'Carol', 'Dave'];
+  for (let i = 0; i < 4; i++) {
+    const w = NAMES[i];
+    const page = [ap, bp, cp, dp][i];
+    page.on('dialog', async (d) => {
+      log(w, `🚨 dialog (${d.type()}): ${d.message().replace(/\s+/g, ' ').slice(0, 200)}`);
+      await d.dismiss().catch(() => {});
+    });
+    page.on('pageerror', (e) => log(w, `🛑 pageerror: ${(e.message || String(e)).slice(0, 200)}`));
+    page.on('console', (m) => {
+      if (m.type() === 'error') log(w, `❌ console: ${m.text().slice(0, 200)}`);
+    });
+  }
+
+  // Single row, left → right: Alice | Bob | Carol | Dave
   const W = VP.width + 16, H = VP.height + 88;
   await Promise.all([
-    pos(ap, 0,   0,   W, H),
-    pos(bp, W+4, 0,   W, H),
-    pos(cp, 0,   H+4, W, H),
-    pos(dp, W+4, H+4, W, H),
+    pos(ap, 0,         0, W, H),
+    pos(bp, (W+4)*1,   0, W, H),
+    pos(cp, (W+4)*2,   0, W, H),
+    pos(dp, (W+4)*3,   0, W, H),
   ]);
 
   try {
@@ -397,64 +553,69 @@ async function main() {
     step('Step 1: Load apps');
     await Promise.all([loadApp(ap,'Alice'), loadApp(bp,'Bob'), loadApp(cp,'Carol'), loadApp(dp,'Dave')]);
 
-    // ── Register Alice & Bob ─────────────────────────────────────
-    step('Step 2: Alice & Bob register');
+    // ── All 4 enter as guests ────────────────────────────────────
+    // Previously Alice & Bob registered with email, but the project
+    // requires email confirmation → signUp returns user without
+    // session → all subsequent actions fail with not_signed_in.
+    // Plus /signup is rate-limited (429) so anonymous fallback
+    // collides with email signups in the same bucket. Easiest path
+    // for the gameplay demo: skip registration, all guests.
+    step('Step 2: All 4 enter as guests');
     await Promise.all([
-      register(ap, 'Alice', 'Alice', `alice-${ts}@test.nigels.online`, 'test123456'),
-      register(bp, 'Bob',   'Bob',   `bob-${ts}@test.nigels.online`,   'test123456'),
-    ]);
-
-    // ── Carol & Dave as guests ───────────────────────────────────
-    step('Step 3: Carol & Dave as guests');
-    await Promise.all([
+      guestLobby(ap, 'Alice', 'Alice'),
+      guestLobby(bp, 'Bob',   'Bob'),
       guestLobby(cp, 'Carol', 'Carol'),
       guestLobby(dp, 'Dave',  'Dave'),
     ]);
 
     // ── Profile & Settings ───────────────────────────────────────
-    step('Step 4: Customize profiles & settings');
+    step('Step 3: Customize profiles & settings');
 
-    // Alice: Settings → dark theme, avatar 🦈
+    // Alice: Settings → dark theme, 4-color deck (default), avatar 🦈
     if (await goSettings(ap, 'Alice')) {
       await setTheme(ap, 'Alice', 'dark');
+      await setDeck(ap, 'Alice', 'fourColor');
       await setAvatar(ap, 'Alice', '🦈');
       await backFromSettings(ap, 'Alice');
     }
 
-    // Bob: Settings → Russian, avatar 🐺
+    // Bob: Settings → Russian, classic 2-color deck, avatar 🐺
     if (await goSettings(bp, 'Bob')) {
       await setLang(bp, 'Bob', 'ru');
+      await setDeck(bp, 'Bob', 'classic');
       await setAvatar(bp, 'Bob', '🐺');
       await backFromSettings(bp, 'Bob');
     }
 
-    // Carol: Settings → Spanish, avatar 🦊
+    // Carol: Settings → Spanish, 4-color deck, avatar 🦊
     if (await goSettings(cp, 'Carol')) {
       await setLang(cp, 'Carol', 'es');
+      await setDeck(cp, 'Carol', 'fourColor');
       await setAvatar(cp, 'Carol', '🦊');
       await backFromSettings(cp, 'Carol');
     }
 
-    // Dave: Settings → light theme, avatar 🐻
+    // Dave: Settings → light theme, classic 2-color deck, avatar 🐻
     if (await goSettings(dp, 'Dave')) {
       await setTheme(dp, 'Dave', 'light');
+      await setDeck(dp, 'Dave', 'classic');
       await setAvatar(dp, 'Dave', '🐻');
       await backFromSettings(dp, 'Dave');
     }
 
     // ── Create & join room ───────────────────────────────────────
     // Dave (guest) creates — registered users can't create with unconfirmed email
-    step('Step 5: Dave creates room');
+    step('Step 4: Dave creates room');
     const code = await createRoom(dp, 'Dave');
 
-    step('Step 6: Others join');
+    step('Step 5: Others join');
     // Sequential joins so each player appears one by one
     await joinRoom(ap, 'Alice', code);
     await joinRoom(bp, 'Bob', code);
     await joinRoom(cp, 'Carol', code);
 
     // ── Ready & start ────────────────────────────────────────────
-    step('Step 7: Ready & start');
+    step('Step 6: Ready & start');
     await sleep(1500);
     await Promise.all([
       tap(ap, 'btn-ready', 'Alice'),
@@ -465,7 +626,7 @@ async function main() {
     await tap(dp, 'btn-start-game', 'Dave');
 
     // ── Play ─────────────────────────────────────────────────────
-    step('Step 8: Playing!');
+    step('Step 7: Playing!');
     await sleep(3000);
 
     await Promise.all([

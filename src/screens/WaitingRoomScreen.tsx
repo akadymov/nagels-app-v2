@@ -27,6 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from '../lib/gameClient';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
+import { useHeartbeat } from '../lib/heartbeat';
+import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
 
 export interface WaitingRoomScreenProps {
@@ -73,6 +75,26 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       subscribeRoom(room.id);
     }
   }, [room?.id]);
+
+  // Mark this player online every 10s so the host (and others) can see
+  // who actually has the tab open vs who closed/locked the device.
+  useHeartbeat();
+
+  // Force a fresh snapshot when the tab returns to foreground / online.
+  useReconnectOnFocus();
+
+  // Polling fallback while waiting for players. Realtime Broadcast is
+  // best-effort: if a peer joins before our channel finishes its SUBSCRIBE
+  // handshake, we miss the state_changed event and the host is stuck looking
+  // at "1/4" until they mash the sync button. A 2s refetch while in
+  // 'waiting' phase fixes that without depending on broadcast delivery.
+  useEffect(() => {
+    if (!room?.id || room?.phase !== 'waiting') return;
+    const id = setInterval(() => {
+      void gameClient.refreshSnapshot(room.id);
+    }, 2000);
+    return () => clearInterval(id);
+  }, [room?.id, room?.phase]);
 
   // Watch for the server transitioning to "playing" — navigate to GameTable.
   useEffect(() => {
@@ -232,6 +254,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             const isDuplicate = players.filter(p => p.display_name === player.display_name).length > 1;
             const isMe = player.session_id === myPlayerId;
             const isHostPlayer = player.session_id === room?.host_session_id;
+            // No heartbeat for >30s = treat as offline. Don't gray out
+            // myself — my own card always renders before my first ping lands.
+            const seenTs = player.last_seen_at ? Date.parse(player.last_seen_at) : NaN;
+            const msSince = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
+            const isOffline = !isMe && msSince > 30_000;
             return (
               <GlassCard
                 key={player.session_id}
@@ -239,6 +266,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   styles.playerCard,
                   { backgroundColor: colors.surface },
                   isMe && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
+                  isOffline && { opacity: 0.5 },
                 ]}
               >
                 <View style={[styles.seatBadge, { backgroundColor: colors.surfaceSecondary }]}>
@@ -252,6 +280,9 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                     )}
                     {isMe && (
                       <Text style={styles.youBadge}> ({t('multiplayer.you')})</Text>
+                    )}
+                    {isOffline && (
+                      <Text style={styles.seatSuffix}> · 📡</Text>
                     )}
                   </Text>
                   {isHostPlayer && (

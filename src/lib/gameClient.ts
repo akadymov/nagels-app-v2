@@ -11,9 +11,16 @@ async function postAction(
   action: Action,
 ): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  let { data: { session } } = await supabase.auth.getSession();
+  // Race: AppNavigator launches getGuestSession() fire-and-forget on mount;
+  // if the user taps a button before the anonymous sign-in completes,
+  // there is no session yet. Trigger one inline and use the resulting session.
   if (!session) {
-    throw new Error('not_signed_in');
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error || !data.session) {
+      throw new Error('not_signed_in');
+    }
+    session = data.session;
   }
 
   const res = await fetch(FN_URL, {
