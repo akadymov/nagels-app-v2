@@ -230,11 +230,14 @@ async function backFromSettings(p, w) {
 
 // ─── Room ───────────────────────────────────────────────────────────────────
 
-async function createRoom(p, w) {
+async function createRoom(p, w, playerCount = 4) {
+  // Lobby's player-count chip-row uses testIDs player-count-2..6.
+  await tap(p, `player-count-${playerCount}`, w, 5000);
+  await sleep(200);
   await tap(p, 'tab-create', w);
   await sleep(300);
   await tap(p, 'btn-create-room', w);
-  log(w, 'creating…');
+  log(w, `creating ${playerCount}-player room…`);
   await sleep(4000);
   const code = await txt(p, 'room-code', w);
   log(w, `✓ room: ${code}`);
@@ -575,49 +578,74 @@ async function pos(p, x, y, w, h) {
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
-  const ts = Date.now();
-  // Player roster:
-  //   Koshasa  — pre-registered (alice@nigels.test), logs in, joins via /join/CODE
-  //   Ryabina  — guest, walks Learn-to-Play primer
-  //   Scherbet — guest, skips straight to lobby
-  //   Guest#XXX — guest, hosts the room (random suffix per run)
-  const guestNum = 1000 + Math.floor(Math.random() * 9000);
-  const NAMES = ['Koshasa', 'Ryabina', 'Scherbet', `Guest#${guestNum}`];
+  // Player count: configurable via DEMO_PLAYERS (default 4, clamped 2..6).
+  // First 3 players get cat names (Koshasa / Ryabina / Scherbet); the
+  // rest get Guest#XXXX with a fresh random suffix each. The LAST player
+  // creates and hosts the room; the FIRST joins via /join/CODE deep-link.
+  const N = Math.max(2, Math.min(6, parseInt(process.env.DEMO_PLAYERS || '4', 10)));
+  const CAT_NAMES = ['Koshasa', 'Ryabina', 'Scherbet'];
+  const NAMES = Array.from({ length: N }, (_, i) =>
+    i < CAT_NAMES.length ? CAT_NAMES[i] : `Guest#${1000 + Math.floor(Math.random() * 9000)}`,
+  );
   const LOGIN_EMAIL = process.env.DEMO_LOGIN_EMAIL || 'alice@nigels.test';
   const LOGIN_PASS  = process.env.DEMO_LOGIN_PASS  || 'demo-pass-1234';
-  step('Nägels Online — 4-Player Full Feature Demo');
+
+  // Per-player visual preferences. Index 0 (Koshasa) is pre-configured
+  // server-side via auth user_metadata, so we skip her Settings step.
+  // Indices 1..N-1 each get a distinct lang/deck/theme/avatar so the
+  // demo exercises i18n + theming + avatar variety.
+  const PRESETS = [
+    null, // 0 — Koshasa, server-side
+    { lang: 'ru', deck: 'classic',   theme: null,    avatar: '🐺' }, // 1 — Ryabina
+    { lang: 'es', deck: 'fourColor', theme: null,    avatar: '🦊' }, // 2 — Scherbet
+    { lang: 'en', deck: 'classic',   theme: 'light', avatar: '🐻' }, // 3 — Guest
+    { lang: 'en', deck: 'fourColor', theme: 'dark',  avatar: '🦈' }, // 4 — Guest
+    { lang: 'ru', deck: 'classic',   theme: 'light', avatar: '⭐' },  // 5 — Guest
+  ];
+  const CHAT = [
+    [
+      { phase: 'bet',  text: 'Good luck everyone!' },
+      { phase: 'play', text: 'Nice trick!' },
+      { phase: 'play', text: 'GG' },
+    ],
+    [
+      { phase: 'bet',  text: 'Удачи!' },
+      { phase: 'play', text: 'Ого, красиво' },
+    ],
+    [{ phase: 'bet', text: '¡Buena suerte!' }],
+  ];
+
+  step(`Nägels Online — ${N}-Player Full Feature Demo`);
   console.log(`  URL: ${BASE}  slowMo: ${SLOW_MO}ms`);
-  console.log(`  ${NAMES[0]} (login) | ${NAMES[1]} (primer) | ${NAMES[2]} (skip) | ${NAMES[3]} (host)\n`);
+  console.log(`  ${NAMES[0]} (login → /join/CODE) | ` +
+              `${NAMES[1]} (Learn-to-Play primer) | ` +
+              `${NAMES.slice(2, -1).map(n => n + ' (skip)').join(' | ')}` +
+              `${N > 2 ? ' | ' : ''}${NAMES[N-1]} (host)\n`);
 
   const browser = await chromium.launch({
     channel: 'chrome', headless: false, slowMo: SLOW_MO, devtools: DEVTOOLS,
     args: [
       '--disable-features=TranslateUI',
       '--disable-infobars',
-      // Background tabs get throttled to ~1Hz timers by default — kills the
-      // 3 non-focused windows in this 4-pane demo. Disable all forms of
-      // background throttling so every page renders at full speed.
+      // Background tabs get throttled to ~1Hz timers by default — kills
+      // every non-focused window. Disable all background throttling so
+      // every pane renders at full speed.
       '--disable-background-timer-throttling',
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
     ],
   });
 
-  const ctxs = await Promise.all([
-    browser.newContext({ ...IPHONE, viewport: VP }),
-    browser.newContext({ ...IPHONE, viewport: VP }),
-    browser.newContext({ ...IPHONE, viewport: VP }),
-    browser.newContext({ ...IPHONE, viewport: VP }),
-  ]);
-
-  const [ap, bp, cp, dp] = await Promise.all(ctxs.map(c => c.newPage()));
+  const ctxs = await Promise.all(
+    Array.from({ length: N }, () => browser.newContext({ ...IPHONE, viewport: VP })),
+  );
+  const pages = await Promise.all(ctxs.map(c => c.newPage()));
 
   // Capture browser dialogs (alerts, confirms) so silent failures aren't
-  // hidden by Playwright's default auto-dismiss. Without this, the only
-  // sign of an error path is "click happened, no nav, idle timeout".
-  for (let i = 0; i < 4; i++) {
+  // hidden by Playwright's default auto-dismiss.
+  for (let i = 0; i < N; i++) {
     const w = NAMES[i];
-    const page = [ap, bp, cp, dp][i];
+    const page = pages[i];
     page.on('dialog', async (d) => {
       log(w, `🚨 dialog (${d.type()}): ${d.message().replace(/\s+/g, ' ').slice(0, 200)}`);
       await d.dismiss().catch(() => {});
@@ -628,111 +656,80 @@ async function main() {
     });
   }
 
-  // Single row, left → right: Alice | Bob | Carol | Dave
+  // Window grid: ≤4 players in a single row, 5–6 in two rows.
+  // Each window is iPhone-sized (VP) plus chrome (16+88 px).
   const W = VP.width + 16, H = VP.height + 88;
-  await Promise.all([
-    pos(ap, 0,         0, W, H),
-    pos(bp, (W+4)*1,   0, W, H),
-    pos(cp, (W+4)*2,   0, W, H),
-    pos(dp, (W+4)*3,   0, W, H),
-  ]);
+  const cols = N <= 4 ? N : Math.ceil(N / 2);
+  await Promise.all(pages.map((p, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return pos(p, col * (W + 4), row * (H + 4), W, H);
+  }));
 
   try {
     // ── Load all ─────────────────────────────────────────────────
     step('Step 1: Load apps');
-    await Promise.all([loadApp(ap, NAMES[0]), loadApp(bp, NAMES[1]), loadApp(cp, NAMES[2]), loadApp(dp, NAMES[3])]);
+    await Promise.all(pages.map((p, i) => loadApp(p, NAMES[i])));
 
     // ── Step 2 — entry paths ─────────────────────────────────────
-    //   Koshasa  → email login (pre-registered)
-    //   Ryabina  → Learn-to-Play primer
-    //   Scherbet → skip-to-lobby
-    //   Guest#XXX → skip-to-lobby (will host)
+    //   index 0   → email login (pre-registered Koshasa)
+    //   index 1   → Learn-to-Play primer
+    //   indices ≥2 → skip-to-lobby (guests; last one hosts)
     step('Step 2: Entry paths (login / primer / skip)');
-    await Promise.all([
-      loginAs(ap, NAMES[0], LOGIN_EMAIL, LOGIN_PASS),
-      learnToPlay(bp, NAMES[1], NAMES[1]),
-      guestLobby(cp, NAMES[2], NAMES[2]),
-      guestLobby(dp, NAMES[3], NAMES[3]),
-    ]);
+    await Promise.all(pages.map((p, i) => {
+      if (i === 0) return loginAs(p, NAMES[0], LOGIN_EMAIL, LOGIN_PASS);
+      if (i === 1) return learnToPlay(p, NAMES[1], NAMES[1]);
+      return guestLobby(p, NAMES[i], NAMES[i]);
+    }));
 
     // ── Profile & Settings ───────────────────────────────────────
-    // Koshasa already has an avatar (🐱) and language (ru) saved on the
-    // server-side account, so we don't touch her settings — exercises the
-    // metadata-restore path. The 3 guests pick their visual preferences.
+    // Skip Koshasa (index 0) — her preferences live in server-side
+    // user_metadata (set via SQL on auth.users) and are restored on
+    // login. The other players configure theme / lang / deck / avatar.
     step('Step 3: Customize guest profiles & settings');
-
-    if (await goSettings(bp, NAMES[1])) {
-      await setLang(bp, NAMES[1], 'ru');
-      await setDeck(bp, NAMES[1], 'classic');
-      await setAvatar(bp, NAMES[1], '🐺');
-      await backFromSettings(bp, NAMES[1]);
-    }
-
-    if (await goSettings(cp, NAMES[2])) {
-      await setLang(cp, NAMES[2], 'es');
-      await setDeck(cp, NAMES[2], 'fourColor');
-      await setAvatar(cp, NAMES[2], '🦊');
-      await backFromSettings(cp, NAMES[2]);
-    }
-
-    if (await goSettings(dp, NAMES[3])) {
-      await setTheme(dp, NAMES[3], 'light');
-      await setDeck(dp, NAMES[3], 'classic');
-      await setAvatar(dp, NAMES[3], '🐻');
-      await backFromSettings(dp, NAMES[3]);
+    for (let i = 1; i < N; i++) {
+      const preset = PRESETS[i] ?? PRESETS[i % PRESETS.length] ?? PRESETS[1];
+      if (!preset) continue;
+      if (await goSettings(pages[i], NAMES[i])) {
+        if (preset.theme)  await setTheme(pages[i],  NAMES[i], preset.theme);
+        if (preset.lang)   await setLang(pages[i],   NAMES[i], preset.lang);
+        if (preset.deck)   await setDeck(pages[i],   NAMES[i], preset.deck);
+        if (preset.avatar) await setAvatar(pages[i], NAMES[i], preset.avatar);
+        await backFromSettings(pages[i], NAMES[i]);
+      }
     }
 
     // ── Create & join room ───────────────────────────────────────
-    step(`Step 4: ${NAMES[3]} creates room`);
-    const code = await createRoom(dp, NAMES[3]);
+    step(`Step 4: ${NAMES[N-1]} creates ${N}-player room`);
+    const code = await createRoom(pages[N-1], NAMES[N-1], N);
 
     step('Step 5: Others join');
-    // Koshasa joins via the public invite URL (/join/CODE) — exercises the
-    // deep-link auto-join path AND verifies the deep-link picks up her
-    // already-authenticated session. Ryabina/Scherbet use the manual
-    // code-entry form so we cover both join flows in one run.
-    await joinViaDeepLink(ap, NAMES[0], code);
-    await joinRoom(bp, NAMES[1], code);
-    await joinRoom(cp, NAMES[2], code);
+    // index 0 — deep-link auto-join (verifies invite link picks up the
+    //          authenticated session from login).
+    // 1..N-2 — manual code-entry form.
+    await joinViaDeepLink(pages[0], NAMES[0], code);
+    for (let i = 1; i < N - 1; i++) {
+      await joinRoom(pages[i], NAMES[i], code);
+    }
 
     // ── Ready & start ────────────────────────────────────────────
     step('Step 6: Ready & start');
     await sleep(1500);
-    await Promise.all([
-      tap(ap, 'btn-ready', NAMES[0]),
-      tap(bp, 'btn-ready', NAMES[1]),
-      tap(cp, 'btn-ready', NAMES[2]),
-    ]);
+    await Promise.all(
+      pages.slice(0, N - 1).map((p, i) => tap(p, 'btn-ready', NAMES[i])),
+    );
     await sleep(2500);
-    await tap(dp, 'btn-start-game', NAMES[3]);
+    await tap(pages[N-1], 'btn-start-game', NAMES[N-1]);
 
     // ── Play ─────────────────────────────────────────────────────
     step('Step 7: Playing!');
     await sleep(3000);
-
-    await Promise.all([
-      gameLoop(ap, NAMES[0], {
-        chat: [
-          { phase: 'bet', text: 'Good luck everyone!' },
-          { phase: 'play', text: 'Nice trick!' },
-          { phase: 'play', text: 'GG' },
-        ],
-      }),
-      gameLoop(bp, NAMES[1], {
-        chat: [
-          { phase: 'bet', text: 'Удачи!' },
-          { phase: 'play', text: 'Ого, красиво' },
-        ],
-      }),
-      gameLoop(cp, NAMES[2], {
-        chat: [
-          { phase: 'bet', text: '¡Buena suerte!' },
-        ],
-      }),
-      gameLoop(dp, NAMES[3], {
-        viewTricks: true,
-      }),
-    ]);
+    await Promise.all(pages.map((p, i) => {
+      // Host (last player) views the last trick periodically; the rest
+      // chat in their language for the first few moves and then just play.
+      if (i === N - 1) return gameLoop(p, NAMES[i], { viewTricks: true });
+      return gameLoop(p, NAMES[i], { chat: CHAT[i] ?? [] });
+    }));
 
     step('✅ Done! Closing in 10s…');
     await sleep(10000);
