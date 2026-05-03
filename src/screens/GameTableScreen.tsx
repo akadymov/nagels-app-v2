@@ -290,14 +290,19 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       const cardsPerPlayer = hand?.cards_per_player ?? 0;
       const trumpSuit = (hand?.trump_suit ?? 'diamonds') as any;
 
-      const RANK_ORDER: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+      // Within the trump suit Nägels promotes Jack to the very top and
+      // Nine to second — so a left-to-right sort within trump goes
+      // J · 9 · A · K · Q · 10 · 8 …, not A · K · Q · J · 10 · 9 …
+      const NORMAL_RANK: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+      const TRUMP_RANK:  Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '10': 7, Q: 8, K: 9, A: 10, '9': 11, J: 12 };
       const SUIT_ORDER: Record<string, number> = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
       const sortMyHand = (cards: Array<{ id: string; suit: string; rank: string }>) => {
         const tw = (s: string) => (s === trumpSuit ? -1 : SUIT_ORDER[s] ?? 9);
         return [...cards].sort((a, b) => {
           const ds = tw(a.suit) - tw(b.suit);
           if (ds !== 0) return ds;
-          return (RANK_ORDER[b.rank] ?? 0) - (RANK_ORDER[a.rank] ?? 0);
+          const map = a.suit === trumpSuit ? TRUMP_RANK : NORMAL_RANK;
+          return (map[b.rank] ?? 0) - (map[a.rank] ?? 0);
         });
       };
       for (const p of players) {
