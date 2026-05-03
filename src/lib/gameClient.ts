@@ -15,12 +15,29 @@ async function postAction(
   // Race: AppNavigator launches getGuestSession() fire-and-forget on mount;
   // if the user taps a button before the anonymous sign-in completes,
   // there is no session yet. Trigger one inline and use the resulting session.
+  //
+  // We retry with exponential backoff because supabase's /signup endpoint
+  // is project-wide rate-limited (30/hour). When several fresh contexts
+  // hit it at once (e.g. the multi-player demo, or simply a busy lobby),
+  // some get 429 and would otherwise throw 'not_signed_in' to the user.
   if (!session) {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error || !data.session) {
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 5 && !session; attempt++) {
+      if (attempt > 0) {
+        // 600ms, 1.2s, 2.4s, 4.8s
+        await new Promise((r) => setTimeout(r, 300 * Math.pow(2, attempt)));
+      }
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (!error && data.session) {
+        session = data.session;
+        break;
+      }
+      lastErr = error;
+    }
+    if (!session) {
+      console.warn('[gameClient] signInAnonymously failed after retries:', lastErr);
       throw new Error('not_signed_in');
     }
-    session = data.session;
   }
 
   const res = await fetch(FN_URL, {

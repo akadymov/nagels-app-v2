@@ -668,8 +668,14 @@ async function main() {
 
   try {
     // ── Load all ─────────────────────────────────────────────────
+    // Stagger the loads so the project-wide /signup rate limit
+    // (30/hour, shared with the anonymous fallback) doesn't 429 a few
+    // pages on a 6-player run. 800 ms between starts is enough to keep
+    // us under the burst threshold without inflating the demo runtime.
     step('Step 1: Load apps');
-    await Promise.all(pages.map((p, i) => loadApp(p, NAMES[i])));
+    await Promise.all(pages.map((p, i) =>
+      sleep(i * 800).then(() => loadApp(p, NAMES[i]))
+    ));
 
     // ── Step 2 — entry paths ─────────────────────────────────────
     //   index 0   → email login (pre-registered Koshasa)
