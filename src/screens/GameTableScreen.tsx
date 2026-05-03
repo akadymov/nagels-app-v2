@@ -573,6 +573,43 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     setIsViewingScores(false);
   };
 
+  // "Play Again" — host-only, available on the game-over scoreboard.
+  // Asks the server to wipe hand history and flip phase=waiting; every
+  // client (including the host) then auto-routes from GameTable back to
+  // WaitingRoom via the phase-change effect below.
+  const handleScoreboardPlayAgain = () => {
+    if (!isMultiplayer || !room?.id) {
+      // Single-player: behave like a fresh start.
+      sp.endGame();
+      setShowScoreboard(false);
+      setIsViewingScores(false);
+      return;
+    }
+    gameClient
+      .restartGame(room.id)
+      .then(() => {
+        setShowScoreboard(false);
+        setIsViewingScores(false);
+      })
+      .catch((err) => console.error('[GameTable] restartGame failed:', err));
+  };
+
+  // After a game ends, the host hits "Play Again" → server flips
+  // room.phase 'finished' → 'waiting'. Every client (host + guests)
+  // should pop back to WaitingRoom so they can confirm readiness for
+  // the next match.
+  const wasFinishedRef = useRef(false);
+  useEffect(() => {
+    if (room?.phase === 'finished') {
+      wasFinishedRef.current = true;
+    } else if (room?.phase === 'waiting' && wasFinishedRef.current) {
+      wasFinishedRef.current = false;
+      setShowScoreboard(false);
+      setIsViewingScores(false);
+      onExit?.();
+    }
+  }, [room?.phase, onExit]);
+
   // Trump display helpers
   const getTrumpSymbol = (trump: string): string => {
     if (trump === 'notrump') return 'NT';
@@ -1029,8 +1066,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           players={scoreboardPlayers}
           startingPlayerIndex={vm.startingPlayerIndex}
           isGameOver={vm.handNumber >= vm.totalHands || vm.phase === 'finished'}
+          isHost={isMultiplayer && room?.host_session_id === myPlayerId}
           isMidGame={isViewingScores}
           onContinue={handleScoreboardContinue}
+          onPlayAgain={handleScoreboardPlayAgain}
           onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
         />
 

@@ -63,6 +63,10 @@ export interface ScoreboardModalProps {
   scoreHistory?: HandResult[];
   startingPlayerIndex?: number;
   isGameOver?: boolean;
+  /** True if the local user is the room host. Only the host sees the
+   *  "Play again" button on game-over; everyone else sees a quieter
+   *  "Back to lobby". */
+  isHost?: boolean;
   isMidGame?: boolean;
   onContinue: () => void;
   onPlayAgain?: () => void;
@@ -77,6 +81,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   scoreHistory,
   startingPlayerIndex,
   isGameOver = false,
+  isHost = false,
   isMidGame = false,
   onContinue,
   onPlayAgain,
@@ -123,11 +128,29 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
       </Text>
 
-      {/* Winner banner — only on Game Over, otherwise the leader can change. */}
+      {/* Winner fanfare — only on Game Over, otherwise the leader can
+          change. Big celebration with confetti emoji + congrats text +
+          winner avatar so it actually feels like winning, not just a
+          line of stats. */}
       {isGameOver && leader && (
-        <View style={[styles.winnerBanner, { backgroundColor: 'rgba(48,133,82,0.15)', borderColor: colors.success }]}>
-          <Text style={[styles.winnerText, { color: colors.success }]} numberOfLines={1}>
-            🏆 {leader.name} — {leader.totalScore} {t('scoreboard.points', 'pts')}
+        <View style={[styles.winnerFanfare, { backgroundColor: 'rgba(48,133,82,0.15)', borderColor: colors.success }]}>
+          <Text style={styles.winnerConfetti}>🎉🏆🎉</Text>
+          <View style={[
+            styles.winnerAvatarBig,
+            { backgroundColor: leader.avatarColor || avatarColorFor(leader.id) },
+          ]}>
+            <Text style={styles.winnerAvatarBigText}>
+              {leader.avatar || (leader.name?.[0] ?? '?').toUpperCase()}
+            </Text>
+          </View>
+          <Text style={[styles.winnerName, { color: colors.success }]} numberOfLines={1}>
+            {leader.name}
+          </Text>
+          <Text style={[styles.winnerSubtitle, { color: colors.success }]}>
+            {t('scoreboard.winsCongrats', 'wins! Congratulations 🎊')}
+          </Text>
+          <Text style={[styles.winnerScore, { color: colors.success }]}>
+            {leader.totalScore} {t('scoreboard.points', 'pts')}
           </Text>
         </View>
       )}
@@ -290,17 +313,43 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             {/* Content */}
             {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
 
-            {/* Continue / Play Again button */}
+            {/* Continue / Play Again button.
+                  Mid-game (between hands): everyone sees "Continue" → next hand.
+                  Game over + host: "Play Again" → restart_game RPC.
+                  Game over + non-host: "Waiting for host..." informative
+                    label, button calls onContinue (which navigates the
+                    user out if they want to leave, see GameTable wiring).
+            */}
             <View style={styles.footer}>
-              <Pressable
-                style={[styles.continueBtn, { backgroundColor: colors.accent }]}
-                onPress={isGameOver && onPlayAgain ? onPlayAgain : onContinue}
-                testID="btn-continue-scoreboard"
-              >
-                <Text style={styles.continueBtnText}>
-                  {isGameOver ? t('scoreboard.playAgain') : t('scoreboard.continue')}
-                </Text>
-              </Pressable>
+              {isGameOver ? (
+                isHost && onPlayAgain ? (
+                  <Pressable
+                    style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+                    onPress={onPlayAgain}
+                    testID="btn-play-again-scoreboard"
+                  >
+                    <Text style={styles.continueBtnText}>
+                      {t('scoreboard.playAgain')}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
+                    <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                      {t('scoreboard.waitingForHost', 'Waiting for host…')}
+                    </Text>
+                  </View>
+                )
+              ) : (
+                <Pressable
+                  style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+                  onPress={onContinue}
+                  testID="btn-continue-scoreboard"
+                >
+                  <Text style={styles.continueBtnText}>
+                    {t('scoreboard.continue')}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </SafeAreaView>
         </View>
@@ -459,6 +508,48 @@ const styles = StyleSheet.create({
   winnerText: {
     fontSize: 16,
     fontWeight: '800',
+  },
+  winnerFanfare: {
+    borderWidth: 2,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    marginBottom: Spacing.md,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  winnerConfetti: {
+    fontSize: 36,
+    marginBottom: Spacing.xs,
+  },
+  winnerAvatarBig: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  winnerAvatarBigText: {
+    color: '#ffffff',
+    fontSize: 36,
+    fontWeight: '800',
+  },
+  winnerName: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  winnerSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  winnerScore: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: Spacing.xs,
   },
   // Toggle button
   toggleBtn: {

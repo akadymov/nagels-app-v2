@@ -114,6 +114,8 @@
     "playAgain": "Play Again",
     "gameOver": "Game Over",
     "winner": "Winner",
+    "winsCongrats": "wins! Congratulations 🎊",
+    "waitingForHost": "Waiting for host…",
     "showHistory": "Show History",
     "hideHistory": "Hide History",
     "leading": "leading",

@@ -20,6 +20,7 @@ import { placeBet }       from './actions/placeBet.ts';
 import { playCard }       from './actions/playCard.ts';
 import { continueHand }   from './actions/continueHand.ts';
 import { requestTimeout } from './actions/requestTimeout.ts';
+import { restartGame }    from './actions/restartGame.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -62,6 +63,7 @@ Deno.serve(async (req: Request) => {
         case 'play_card':       result = await playCard(svc, actor, action); break;
         case 'continue_hand':   result = await continueHand(svc, actor, action); break;
         case 'request_timeout': result = await requestTimeout(svc, actor, action); break;
+        case 'restart_game':    result = await restartGame(svc, actor, action); break;
         default:                throw new Error('unknown_action');
       }
     }

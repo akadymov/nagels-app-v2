@@ -114,6 +114,8 @@
     "playAgain": "Jugar de Nuevo",
     "gameOver": "Juego Terminado",
     "winner": "Ganador",
+    "winsCongrats": "¡gana! Enhorabuena 🎊",
+    "waitingForHost": "Esperando al anfitrión…",
     "showHistory": "Ver historial",
     "hideHistory": "Ocultar historial",
     "leading": "lidera",
