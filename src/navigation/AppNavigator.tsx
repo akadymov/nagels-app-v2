@@ -53,12 +53,20 @@ export type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-// Capture URL hash at module load — before Supabase client consumes it
+// Capture URL hash AND pathname at module load — before Supabase client and
+// React Navigation's linking system consume them. RN's linking rewrites the
+// pathname to the matched screen (e.g. /join/ABC → /Welcome) when no screen
+// is registered for the path, so live `window.location.pathname` is unreliable.
 const _initialHash = (Platform.OS === 'web' && typeof window !== 'undefined')
   ? window.location.hash
   : '';
+const _initialPath = (Platform.OS === 'web' && typeof window !== 'undefined')
+  ? window.location.pathname
+  : '';
 const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_initialHash.includes('error') && !_initialHash.includes('type=recovery');
 const _cameFromPasswordReset = _initialHash.includes('access_token') && _initialHash.includes('type=recovery');
+const _initialJoinMatch = _initialPath.match(/^\/join\/([A-Z0-9]{4,8})/i);
+const _initialJoinCode = _initialJoinMatch ? _initialJoinMatch[1].toUpperCase() : null;
 
 /**
  * Deep link configuration.
@@ -266,48 +274,47 @@ const NavigatorGuard: React.FC = () => {
     }
 
     // Invite-link deep link: /join/ABCDEF — extract the code, auto-join.
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const m = window.location.pathname.match(/^\/join\/([A-Z0-9]{4,8})/i);
-      if (m) {
-        const code = m[1].toUpperCase();
-        console.log('[NavigatorGuard] /join/ deeplink matched, code=', code);
-        // Strip the path so refresh doesn't loop.
-        window.history.replaceState(null, '', '/');
-        (async () => {
-          // Wait up to 3 s for an auth session — anonymous sign-in may still
-          // be in flight when the URL path is parsed.
-          const { getSupabaseClient } = await import('../lib/supabase/client');
-          const supabase = getSupabaseClient();
-          let session = null as any;
-          for (let i = 0; i < 30 && !session; i++) {
-            const { data } = await supabase.auth.getSession();
-            session = data.session;
-            if (!session) await new Promise((r) => setTimeout(r, 100));
+    // We use _initialJoinCode (captured at module load) because React Navigation's
+    // linking system rewrites window.location.pathname before this guard runs.
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && _initialJoinCode) {
+      const code = _initialJoinCode;
+      console.log('[NavigatorGuard] /join/ deeplink matched, code=', code);
+      // Strip the path so refresh doesn't loop.
+      window.history.replaceState(null, '', '/');
+      (async () => {
+        // Wait up to 3 s for an auth session — anonymous sign-in may still
+        // be in flight when the URL path is parsed.
+        const { getSupabaseClient } = await import('../lib/supabase/client');
+        const supabase = getSupabaseClient();
+        let session = null as any;
+        for (let i = 0; i < 30 && !session; i++) {
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
+          if (!session) await new Promise((r) => setTimeout(r, 100));
+        }
+        if (!session) {
+          (window as any).alert(`Couldn't sign in to join ${code}. Try refresh.`);
+          return;
+        }
+        try {
+          const { gameClient } = await import('../lib/gameClient');
+          const { setActiveRoom } = await import('../lib/activeRoom');
+          const { subscribeRoom } = await import('../lib/realtimeBroadcast');
+          const displayName = useAuthStore.getState().displayName || 'Guest';
+          const result = await gameClient.joinRoom(displayName, code);
+          console.log('[NavigatorGuard] auto-join result', result);
+          if (result.ok && result.state.room?.id) {
+            await setActiveRoom(result.state.room.id);
+            subscribeRoom(result.state.room.id);
+            navigation.navigate('WaitingRoom');
+          } else {
+            (window as any).alert(`Couldn't join ${code}: ${(result as any).error ?? 'unknown error'}`);
           }
-          if (!session) {
-            (window as any).alert(`Couldn't sign in to join ${code}. Try refresh.`);
-            return;
-          }
-          try {
-            const { gameClient } = await import('../lib/gameClient');
-            const { setActiveRoom } = await import('../lib/activeRoom');
-            const { subscribeRoom } = await import('../lib/realtimeBroadcast');
-            const displayName = useAuthStore.getState().displayName || 'Guest';
-            const result = await gameClient.joinRoom(displayName, code);
-            console.log('[NavigatorGuard] auto-join result', result);
-            if (result.ok && result.state.room?.id) {
-              await setActiveRoom(result.state.room.id);
-              subscribeRoom(result.state.room.id);
-              navigation.navigate('WaitingRoom');
-            } else {
-              (window as any).alert(`Couldn't join ${code}: ${(result as any).error ?? 'unknown error'}`);
-            }
-          } catch (err) {
-            console.error('[NavigatorGuard] auto-join failed:', err);
-            (window as any).alert(`Auto-join failed: ${(err as Error)?.message ?? err}`);
-          }
-        })();
-      }
+        } catch (err) {
+          console.error('[NavigatorGuard] auto-join failed:', err);
+          (window as any).alert(`Auto-join failed: ${(err as Error)?.message ?? err}`);
+        }
+      })();
     }
   }, [isLoading, isInitialized, navigation]);
 
