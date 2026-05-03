@@ -210,14 +210,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Mirrors the sort used on GameTableScreen so the order stays consistent
   // when the betting modal hands off to the table.
   const sortedHandCards = useMemo(() => {
-    const RANK_ORDER: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+    // Within the trump suit Nägels promotes J / 9 to the top — keep
+    // them on the leftmost two positions when they're in the hand.
+    const NORMAL_RANK: Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '9': 7, '10': 8, J: 9, Q: 10, K: 11, A: 12 };
+    const TRUMP_RANK:  Record<string, number> = { '2': 0, '3': 1, '4': 2, '5': 3, '6': 4, '7': 5, '8': 6, '10': 7, Q: 8, K: 9, A: 10, '9': 11, J: 12 };
     const SUIT_ORDER: Record<string, number> = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
     const tw = (s: string) => (s === trumpSuit ? -1 : SUIT_ORDER[s] ?? 9);
     const cards = myHandCards.map(parseCard);
     return cards.sort((a, b) => {
       const ds = tw(String(a.suit)) - tw(String(b.suit));
       if (ds !== 0) return ds;
-      return (RANK_ORDER[String(b.rank)] ?? 0) - (RANK_ORDER[String(a.rank)] ?? 0);
+      const map = String(a.suit) === trumpSuit ? TRUMP_RANK : NORMAL_RANK;
+      return (map[String(b.rank)] ?? 0) - (map[String(a.rank)] ?? 0);
     });
   }, [myHandCards, trumpSuit]);
 
