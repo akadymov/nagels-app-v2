@@ -87,11 +87,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const handleSaveProfile = async () => {
     if (!nickname.trim()) return;
     try {
-      await updateUserMetadata({
+      const updated = await updateUserMetadata({
         display_name: nickname.trim(),
         avatar: selectedAvatar,
         avatar_color: avatarColor,
       });
+      // Push the fresh user into authStore so any screen reading user_metadata
+      // (e.g. Lobby avatar) updates immediately — supabase USER_UPDATED events
+      // don't always fire reliably for anonymous sessions.
+      useAuthStore.getState().setUser(updated, !!updated.is_anonymous);
       useAuthStore.getState().setDisplayName(nickname.trim());
       setAlertMessage(String(t('profile.saved', 'Profile saved')));
       setShowConfirmAlert(true);
@@ -154,7 +158,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       >
 
         {/* === PROFILE === */}
-        {isLoggedIn && (
+        {/* Render for any user (guest or registered). Email + password sub-
+            blocks are gated on isLoggedIn separately so guests can still
+            pick a nickname and an avatar — those persist via user metadata
+            on the anonymous Supabase session. */}
+        {user && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               {t('profile.title', 'Profile')}
@@ -169,16 +177,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
                   <Text style={styles.avatarInitial}>{initial}</Text>
                 )}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.emailText, { color: colors.textMuted }]}>{user?.email}</Text>
-                {!user?.email_confirmed_at && (
-                  <Pressable onPress={handleResendConfirmation}>
-                    <Text style={[styles.resendLink, { color: colors.warning }]}>
-                      ⚠ {t('auth.resendConfirmation', 'Resend confirmation')}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
+              {isLoggedIn && (
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.emailText, { color: colors.textMuted }]}>{user?.email}</Text>
+                  {!user?.email_confirmed_at && (
+                    <Pressable onPress={handleResendConfirmation}>
+                      <Text style={[styles.resendLink, { color: colors.warning }]}>
+                        ⚠ {t('auth.resendConfirmation', 'Resend confirmation')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Nickname */}
@@ -221,18 +231,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
               ))}
             </View>
 
-            {/* Change password */}
-            <Pressable onPress={() => setShowPasswordReset(!showPasswordReset)}>
-              <Text style={[styles.linkText, { color: colors.accent }]}>
-                {t('auth.changePassword', 'Change Password')}
-              </Text>
-            </Pressable>
-            {showPasswordReset && (
-              <Pressable style={[styles.secondaryBtn, { borderColor: colors.accent }]} onPress={handleResetPassword}>
-                <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
-                  {t('auth.sendResetLink', 'Send Reset Link')}
-                </Text>
-              </Pressable>
+            {/* Change password — registered users only */}
+            {isLoggedIn && (
+              <>
+                <Pressable onPress={() => setShowPasswordReset(!showPasswordReset)}>
+                  <Text style={[styles.linkText, { color: colors.accent }]}>
+                    {t('auth.changePassword', 'Change Password')}
+                  </Text>
+                </Pressable>
+                {showPasswordReset && (
+                  <Pressable style={[styles.secondaryBtn, { borderColor: colors.accent }]} onPress={handleResetPassword}>
+                    <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
+                      {t('auth.sendResetLink', 'Send Reset Link')}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
             )}
           </View>
         )}
