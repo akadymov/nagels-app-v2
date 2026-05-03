@@ -667,15 +667,11 @@ async function main() {
     });
   }
 
-  // Window grid: ≤4 players in a single row, 5–6 in two rows.
-  // Each window is iPhone-sized (VP) plus chrome (16+88 px).
+  // Window layout: always one row, left → right. Akula prefers seeing
+  // every player's pane at a glance over fitting on a small monitor —
+  // for 6 players this needs roughly 2700 px wide.
   const W = VP.width + 16, H = VP.height + 88;
-  const cols = N <= 4 ? N : Math.ceil(N / 2);
-  await Promise.all(pages.map((p, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    return pos(p, col * (W + 4), row * (H + 4), W, H);
-  }));
+  await Promise.all(pages.map((p, i) => pos(p, i * (W + 4), 0, W, H)));
 
   try {
     // ── Load all ─────────────────────────────────────────────────

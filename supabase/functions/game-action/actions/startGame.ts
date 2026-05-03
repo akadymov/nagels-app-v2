@@ -56,8 +56,19 @@ export async function startGame(
     await svc.from('rooms').update({ player_count: actualPlayerCount }).eq('id', room.id);
   }
 
+  // Clamp max_cards by deck size: the Nägels deck is 52 cards, dealt evenly,
+  // so for N players the largest hand is floor(52 / N). For 4 players that's
+  // 13 (the original 10 cap holds), but at 5 players it's 10, at 6 it's 8.
+  // Without this clamp 6-player games threw 'not_enough_cards' on hand 1
+  // because cardsPerPlayer(1, 10) = 10, and 6×10=60>52.
+  const deckSize = 52;
+  const safeMaxCards = Math.min(room.max_cards, Math.floor(deckSize / actualPlayerCount));
+  if (safeMaxCards !== room.max_cards) {
+    await svc.from('rooms').update({ max_cards: safeMaxCards }).eq('id', room.id);
+  }
+
   const handNumber = 1;
-  const cardsPerPlayer = getHandCards(handNumber, room.max_cards);
+  const cardsPerPlayer = getHandCards(handNumber, safeMaxCards);
   const trumpSuit = getTrumpForHand(handNumber);
   const startingSeat = 0;
   const seed = crypto.randomUUID();
