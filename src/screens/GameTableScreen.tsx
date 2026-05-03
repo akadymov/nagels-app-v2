@@ -660,21 +660,27 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      {/* First-time onboarding tips. The component itself self-gates on
-          settingsStore.shownTips so once dismissed it never shows again. */}
-      {vm.trumpSuit === 'notrump' ? (
-        <OnboardingTip
-          name="noTrump"
-          titleKey="onboarding.noTrumpTitle"
-          bodyKey="onboarding.noTrumpBody"
-        />
-      ) : (
-        <OnboardingTip
-          name="trumpRank"
-          titleKey="onboarding.trumpRankTitle"
-          bodyKey="onboarding.trumpRankBody"
-          delayMs={800}
-        />
+      {/* First-time onboarding tips. Tips self-gate on
+          settingsStore.shownTips so once dismissed they never show again.
+          We also gate the trump-related tips on phase==='playing' — during
+          betting, the BettingPhase overlay already shows the bidding tip,
+          and stacking two modals at once looks broken. The trump tip pops
+          naturally right after betting completes. */}
+      {vm.phase === 'playing' && (
+        vm.trumpSuit === 'notrump' ? (
+          <OnboardingTip
+            name="noTrump"
+            titleKey="onboarding.noTrumpTitle"
+            bodyKey="onboarding.noTrumpBody"
+          />
+        ) : (
+          <OnboardingTip
+            name="trumpRank"
+            titleKey="onboarding.trumpRankTitle"
+            bodyKey="onboarding.trumpRankBody"
+            delayMs={800}
+          />
+        )
       )}
       <ScrollView
         style={{ flex: 1 }}
