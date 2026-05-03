@@ -22,6 +22,7 @@ import { GlassCard } from '../components/glass';
 import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
 import { ScoreboardModal } from './ScoreboardModal';
+import { WinnerFanfareModal } from '../components/WinnerFanfareModal';
 import { PlayingCard, CardHand } from '../components/cards';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
@@ -422,6 +423,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
+  // Game-over celebration that pops BEFORE the scoreboard. Tied to
+  // hand id so re-opening the screen on a finished room shows it
+  // exactly once per match.
+  const [showWinnerFanfare, setShowWinnerFanfare] = useState(false);
+  const fanfareShownForHandRef = useRef<string | null>(null);
   const [isViewingScores, setIsViewingScores] = useState(false);
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
@@ -473,7 +479,19 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       // same 1500 ms TRICK_HOLD_MS so the trick-hold visual and the
       // scoreboard delay stay in lockstep.
       const t = setTimeout(() => {
-        setShowScoreboard(true);
+        if (vm.phase === 'finished') {
+          // Game over: pop the dedicated winner fanfare modal first;
+          // the scoreboard is unveiled when the user dismisses it.
+          const handIdKey = handIdForBanner || 'finished';
+          if (fanfareShownForHandRef.current !== handIdKey) {
+            fanfareShownForHandRef.current = handIdKey;
+            setShowWinnerFanfare(true);
+          } else {
+            setShowScoreboard(true);
+          }
+        } else {
+          setShowScoreboard(true);
+        }
         setIsViewingScores(false);
       }, TRICK_HOLD_MS);
       return () => clearTimeout(t);
@@ -605,6 +623,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     } else if (room?.phase === 'waiting' && wasFinishedRef.current) {
       wasFinishedRef.current = false;
       setShowScoreboard(false);
+      setShowWinnerFanfare(false);
+      fanfareShownForHandRef.current = null;
       setIsViewingScores(false);
       onExit?.();
     }
@@ -1054,6 +1074,23 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           onClose={onExit}
           onShowScore={() => {
             setIsViewingScores(true);
+            setShowScoreboard(true);
+          }}
+        />
+
+        {/* Game-over Winner fanfare — pops first on phase=finished,
+            then the scoreboard appears once the user dismisses it. */}
+        <WinnerFanfareModal
+          visible={showWinnerFanfare}
+          winner={(() => {
+            const top = scoreboardPlayers[0];
+            return top ? {
+              id: top.id, name: top.name, totalScore: top.totalScore,
+              avatar: top.avatar, avatarColor: top.avatarColor,
+            } : null;
+          })()}
+          onDismiss={() => {
+            setShowWinnerFanfare(false);
             setShowScoreboard(true);
           }}
         />

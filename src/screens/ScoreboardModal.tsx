@@ -128,32 +128,9 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
       </Text>
 
-      {/* Winner fanfare — only on Game Over, otherwise the leader can
-          change. Big celebration with confetti emoji + congrats text +
-          winner avatar so it actually feels like winning, not just a
-          line of stats. */}
-      {isGameOver && leader && (
-        <View style={[styles.winnerFanfare, { backgroundColor: 'rgba(48,133,82,0.15)', borderColor: colors.success }]}>
-          <Text style={styles.winnerConfetti}>🎉🏆🎉</Text>
-          <View style={[
-            styles.winnerAvatarBig,
-            { backgroundColor: leader.avatarColor || avatarColorFor(leader.id) },
-          ]}>
-            <Text style={styles.winnerAvatarBigText}>
-              {leader.avatar || (leader.name?.[0] ?? '?').toUpperCase()}
-            </Text>
-          </View>
-          <Text style={[styles.winnerName, { color: colors.success }]} numberOfLines={1}>
-            {leader.name}
-          </Text>
-          <Text style={[styles.winnerSubtitle, { color: colors.success }]}>
-            {t('scoreboard.winsCongrats', 'wins! Congratulations 🎊')}
-          </Text>
-          <Text style={[styles.winnerScore, { color: colors.success }]}>
-            {leader.totalScore} {t('scoreboard.points', 'pts')}
-          </Text>
-        </View>
-      )}
+      {/* Winner fanfare lives in its own modal (WinnerFanfareModal) now —
+          shown by GameTableScreen ahead of this scoreboard so the
+          celebration moment isn't crammed above the rankings list. */}
 
       {/* Rankings */}
       {sortedPlayers.map((p, i) => {
