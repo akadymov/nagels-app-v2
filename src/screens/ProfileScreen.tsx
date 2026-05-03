@@ -25,7 +25,7 @@ export interface ProfileScreenProps {
   onBack: () => void;
 }
 
-const AVATAR_PRESETS = ['🦈', '🐺', '🦊', '🐻', '🎯', '🎲', '🃏', '👑', '💎', '🔥', '⭐', '🏆'];
+const AVATAR_PRESETS = ['🦈', '🐺', '🦊', '🐻', '🐱', '🎯', '🎲', '🃏', '👑', '💎', '🔥', '⭐', '🏆'];
 const AVATAR_COLORS = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA', '#CC6633', '#6666CC'];
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {

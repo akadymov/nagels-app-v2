@@ -30,6 +30,7 @@ import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useHeartbeat } from '../lib/heartbeat';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
+import { avatarColorFor } from '../utils/avatarColor';
 
 export interface WaitingRoomScreenProps {
   onGameStart: () => void;
@@ -260,9 +261,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             const msSince = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
             const isOffline = !isMe && msSince > 30_000;
             // Avatar: prefer user-chosen emoji + color (from auth metadata),
-            // fall back to seat-based color and the player's initial.
-            const seatColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA'];
-            const avatarBg = (player as any).avatar_color || seatColors[index % seatColors.length];
+            // fall back to a session-id-hashed color (random-looking, stable).
+            const avatarBg = (player as any).avatar_color || avatarColorFor(player.session_id);
             const avatarEmoji = (player as any).avatar as string | null | undefined;
             return (
               <GlassCard

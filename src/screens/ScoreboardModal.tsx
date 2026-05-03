@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+import { avatarColorFor } from '../utils/avatarColor';
 import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { OnboardingTip } from '../components/OnboardingTip';
@@ -134,8 +135,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       {/* Rankings */}
       {sortedPlayers.map((p, i) => {
         const isWinner = isGameOver && i === 0;
-        const seatColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA'];
-        const avatarBg = p.avatarColor || seatColors[i % seatColors.length];
+        const avatarBg = p.avatarColor || avatarColorFor(p.id);
         return (
           <View
             key={p.id}
