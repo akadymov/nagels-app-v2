@@ -104,24 +104,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     }
   }, [room?.phase, onGameStart]);
 
-  // The room transitions to 'finished' both when the host leaves AND when
-  // the game completes naturally — we used to show a misleading "host
-  // left" alert in both cases. Now we just leave silently: the
-  // ScoreboardModal in GameTable already showed the winner banner, the
-  // user dismissed it, and we land back here. Navigate FIRST, then
-  // cleanup — otherwise reset() drops the snapshot and the screen
-  // flashes "Players in Room (0/?)" before navigation kicks in.
-  useEffect(() => {
-    if (room?.phase === 'finished') {
-      onLeave();
-      (async () => {
-        const { clearActiveRoom } = await import('../lib/activeRoom');
-        await clearActiveRoom();
-        unsubscribeRoom();
-        useRoomStore.getState().reset();
-      })();
-    }
-  }, [room?.phase, onLeave]);
+  // We no longer auto-leave on phase='finished'. The GameTable holds
+  // the scoreboard / winner fanfare; from there the host can restart
+  // (phase='waiting' again) or any player can leave manually. Bouncing
+  // out of WaitingRoom on 'finished' would yank the host out before
+  // they could click "Play again" and disorient guests who landed here
+  // through a natural goBack.
 
   const handleForceReady = useCallback(async (sessionId: string, value: boolean) => {
     if (!room?.id) return;

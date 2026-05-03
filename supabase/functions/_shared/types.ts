@@ -2,7 +2,8 @@ export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room'
   | 'ready' | 'start_game'
   | 'place_bet' | 'play_card' | 'continue_hand'
-  | 'request_timeout';
+  | 'request_timeout'
+  | 'restart_game';
 
 export type Action =
   | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string }
@@ -13,7 +14,8 @@ export type Action =
   | { kind: 'place_bet';   room_id: string; hand_id: string; bet: number }
   | { kind: 'play_card';   room_id: string; hand_id: string; card: string }
   | { kind: 'continue_hand'; room_id: string; hand_id: string }
-  | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number };
+  | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
+  | { kind: 'restart_game'; room_id: string };
 
 export interface ActorContext {
   auth_user_id: string;

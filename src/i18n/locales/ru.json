@@ -114,6 +114,8 @@
     "playAgain": "Играть снова",
     "gameOver": "Игра окончена",
     "winner": "Победитель",
+    "winsCongrats": "побеждает! Поздравляем 🎊",
+    "waitingForHost": "Ждём хоста…",
     "showHistory": "Показать историю",
     "hideHistory": "Скрыть историю",
     "leading": "лидирует",

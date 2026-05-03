@@ -99,6 +99,9 @@ export const gameClient = {
   requestTimeout: (room_id: string, hand_id: string, expected_seat: number) =>
     postAction(null, { kind: 'request_timeout', room_id, hand_id, expected_seat }),
 
+  restartGame: (room_id: string) =>
+    postAction(null, { kind: 'restart_game', room_id }),
+
   refreshSnapshot: async (room_id: string): Promise<void> => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('get_room_state', { p_room_id: room_id });
