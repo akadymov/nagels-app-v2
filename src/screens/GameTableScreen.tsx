@@ -442,13 +442,16 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // The "X to fight / X to give" banner: server transitions the hand
   // atomically from 'betting' → 'playing' the moment the last bet is
   // placed, so the client almost never observes phase==='betting' with
-  // hasAllBets===true (the snapshot already shows phase==='playing').
-  // We instead trigger on the first appearance of phase==='playing'
-  // when no cards have been laid yet — that's the bet-balance moment
-  // — and gate it once per hand id so a mid-hand refresh doesn't
-  // surface a stale banner.
+  // hasAllBets===true. We instead trigger on the first appearance of
+  // phase==='playing' for a given hand_id, before any card has been
+  // laid. We also lock the diff at trigger time into bannerDiffRef so
+  // the banner shows a stable number even if the snapshot briefly
+  // re-renders between sub-snapshots.
   const handIdForBanner = snapshot?.current_hand?.id ?? null;
   const bannerShownForHandRef = useRef<string | null>(null);
+  const bannerDiffRef = useRef<number>(0);
+
+  // 1) Trigger: open banner once per hand at phase→playing transition.
   useEffect(() => {
     const noCardsPlayedYet = (currentTrick?.cards?.length ?? 0) === 0;
     if (
@@ -460,14 +463,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       bannerShownForHandRef.current !== handIdForBanner
     ) {
       bannerShownForHandRef.current = handIdForBanner;
+      bannerDiffRef.current = tricksDiff;
       setShowBetBanner(true);
-      const t = setTimeout(() => setShowBetBanner(false), 3000);
-      return () => clearTimeout(t);
-    }
-    if (vm.phase !== 'playing' && vm.phase !== 'betting') {
+    } else if (vm.phase === 'finished' || vm.phase === 'scoring' || vm.phase === 'lobby') {
       setShowBetBanner(false);
     }
   }, [hasAllBets, vm.phase, tricksDiff, handIdForBanner, currentTrick?.cards?.length]);
+
+  // 2) Auto-hide: separate effect so the 3 s timer isn't cancelled by
+  // every unrelated re-render that re-runs the trigger effect's deps.
+  useEffect(() => {
+    if (!showBetBanner) return;
+    const t = setTimeout(() => setShowBetBanner(false), 3000);
+    return () => clearTimeout(t);
+  }, [showBetBanner]);
 
   useEffect(() => {
     if (vm.phase === 'scoring' || vm.phase === 'finished') {
@@ -1021,9 +1030,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
         </View>
 
-        {/* Bet balance overlay */}
+        {/* Bet balance overlay. The diff is locked into bannerDiffRef
+            at trigger time so the banner doesn't flicker if the
+            snapshot transiently re-renders with a different total. */}
         <Modal
-          visible={showBetBanner && tricksDiff !== 0}
+          visible={showBetBanner}
           transparent
           animationType="fade"
           onRequestClose={() => setShowBetBanner(false)}
@@ -1032,7 +1043,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             <View
               style={[
                 styles.betBannerModal,
-                tricksDiff > 0 ? styles.betBannerFight : styles.betBannerGive,
+                bannerDiffRef.current > 0 ? styles.betBannerFight : styles.betBannerGive,
                 { backgroundColor: isDark ? colors.surface : undefined },
               ]}
             >
@@ -1040,9 +1051,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 <Text style={[styles.betBannerCloseText, { color: isDark ? colors.textMuted : undefined }]}>✕</Text>
               </Pressable>
               <Text style={[styles.betBannerText, { color: colors.textPrimary }]}>
-                {tricksDiff > 0
-                  ? t('game.toFight', { count: tricksDiff })
-                  : t('game.toGive', { count: Math.abs(tricksDiff) })}
+                {bannerDiffRef.current > 0
+                  ? t('game.toFight', { count: bannerDiffRef.current })
+                  : t('game.toGive', { count: Math.abs(bannerDiffRef.current) })}
               </Text>
               <Pressable style={styles.betBannerGotItBtn} onPress={() => setShowBetBanner(false)}>
                 <Text style={styles.betBannerGotItText}>{t('game.gotIt')}</Text>
