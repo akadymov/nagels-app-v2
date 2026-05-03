@@ -13,8 +13,10 @@
     "demo": "node demo/play-demo.js",
     "demo:slow": "DEMO_SLOW=1400 node demo/play-demo.js",
     "demo:fast": "DEMO_SLOW=400 node demo/play-demo.js",
-    "demo:6players": "npx tsx scripts/demo-6players.ts",
-    "demo:6players:prod": "APP_URL=$APP_URL npx tsx scripts/demo-6players.ts"
+    "demo:5": "DEMO_PLAYERS=5 node demo/play-demo.js",
+    "demo:6": "DEMO_PLAYERS=6 node demo/play-demo.js",
+    "demo:6players": "DEMO_PLAYERS=6 node demo/play-demo.js",
+    "demo:6players:prod": "DEMO_PLAYERS=6 DEMO_URL=$APP_URL node demo/play-demo.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
