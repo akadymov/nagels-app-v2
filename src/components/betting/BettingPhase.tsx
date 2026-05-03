@@ -455,7 +455,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 ]}
               >
                 <Text
-                  style={[styles.playerCardName, { color: isMe ? colors.accent : colors.textPrimary }]}
+                  style={[
+                    styles.playerCardName,
+                    // Active-player rule: whoever is bidding RIGHT NOW
+                    // gets the yellow accent. Only fall back to "this
+                    // is me" blue when it isn't my turn.
+                    {
+                      color: isBetting
+                        ? colors.activePlayerBorder
+                        : isMe
+                          ? colors.accent
+                          : colors.textPrimary,
+                    },
+                  ]}
                   numberOfLines={1}
                 >
                   {displayName}
