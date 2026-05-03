@@ -42,6 +42,7 @@ import {
   getPlayableCards as engineGetPlayableCards,
 } from '../../supabase/functions/_shared/engine/rules';
 import type { PlayerScore } from './ScoreboardModal';
+import { avatarColorFor } from '../utils/avatarColor';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -841,7 +842,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
                   <View style={[
                     styles.profileAvatar,
-                    { backgroundColor: vm.myPlayer.avatarColor || colors.accent },
+                    { backgroundColor: vm.myPlayer.avatarColor || avatarColorFor(vm.myPlayer.id) },
                   ]}>
                     <Text style={styles.profileAvatarText}>
                       {vm.myPlayer.avatar || vm.myPlayer.name[0]}
@@ -866,10 +867,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             const positionStyle = clockToScreen(clockPosition);
             const isCurrentPlayer = vm.currentPlayer?.id === player.id;
             const isFirstPlayer = vm.startingPlayerIndex === vm.players.indexOf(player);
-            const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
             // Prefer the player's chosen color (from user_metadata), fall back
-            // to a deterministic seat-based color.
-            const avatarBg = player.avatarColor || avatarColors[i % avatarColors.length];
+            // to a session-id-hashed color (random-looking, stable per player).
+            const avatarBg = player.avatarColor || avatarColorFor(player.id);
             // Offline = no heartbeat for >30s. msSinceSeen=null is single-player.
             const isOffline = player.msSinceSeen !== null && player.msSinceSeen > 30_000;
             return (
@@ -1266,7 +1266,10 @@ const styles = StyleSheet.create({
   },
   suitRow: {
     position: 'absolute',
-    top: '22%',
+    // Sit just under the top opponent's profile card. The previous 22%
+    // overlapped 'Your turn' / 'Must follow ♦' messages that render at
+    // ~24%; now they have clean space below the suit row.
+    top: '12%',
     left: '30%',
     right: '30%',
     flexDirection: 'row',

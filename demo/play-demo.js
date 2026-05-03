@@ -141,6 +141,26 @@ async function guestLobby(p, w, nick) {
   }
 }
 
+// Sign in with a pre-registered email/password account. Lands on Lobby.
+// The session persists in localStorage, so a subsequent navigation to
+// /join/CODE goes through the deep-link auto-join path with the
+// authenticated user — exercises both login and deep-link flows.
+async function loginAs(p, w, email, pass) {
+  await tap(p, 'btn-sign-in', w, 10000);
+  log(w, `→ Auth (login as ${email})`);
+  await sleep(400);
+  // signIn is the default tab, but tap it to be explicit/idempotent.
+  await tap(p, 'auth-tab-signIn', w, 5000);
+  await sleep(200);
+  await type(p, 'auth-input-email', email, w);
+  await type(p, 'auth-input-password', pass, w);
+  await tap(p, 'auth-btn-submit', w);
+  // Wait for Lobby — input-player-name is unique to LobbyScreen.
+  const ok = await find(p.locator('[data-testid="input-player-name"]'), 15000);
+  if (!ok) throw new Error(`login failed for ${w} (${email})`);
+  log(w, '✓ logged in → Lobby');
+}
+
 // Walk through the Learn-to-Play primer (3 swipeable screens) instead of
 // jumping straight to the lobby. Each screen has a "Next" button with a
 // stable testID; the third one navigates to Lobby.
@@ -549,9 +569,18 @@ async function pos(p, x, y, w, h) {
 
 async function main() {
   const ts = Date.now();
+  // Player roster:
+  //   Koshasa  — pre-registered (alice@nigels.test), logs in, joins via /join/CODE
+  //   Ryabina  — guest, walks Learn-to-Play primer
+  //   Scherbet — guest, skips straight to lobby
+  //   Guest#XXX — guest, hosts the room (random suffix per run)
+  const guestNum = 1000 + Math.floor(Math.random() * 9000);
+  const NAMES = ['Koshasa', 'Ryabina', 'Scherbet', `Guest#${guestNum}`];
+  const LOGIN_EMAIL = process.env.DEMO_LOGIN_EMAIL || 'alice@nigels.test';
+  const LOGIN_PASS  = process.env.DEMO_LOGIN_PASS  || 'demo-pass-1234';
   step('Nägels Online — 4-Player Full Feature Demo');
   console.log(`  URL: ${BASE}  slowMo: ${SLOW_MO}ms`);
-  console.log(`  Alice 🦈 EN dark  |  Bob 🐺 RU  |  Carol 🦊 ES  |  Dave 🐻 light\n`);
+  console.log(`  ${NAMES[0]} (login) | ${NAMES[1]} (primer) | ${NAMES[2]} (skip) | ${NAMES[3]} (host)\n`);
 
   const browser = await chromium.launch({
     channel: 'chrome', headless: false, slowMo: SLOW_MO, devtools: DEVTOOLS,
@@ -579,7 +608,6 @@ async function main() {
   // Capture browser dialogs (alerts, confirms) so silent failures aren't
   // hidden by Playwright's default auto-dismiss. Without this, the only
   // sign of an error path is "click happened, no nav, idle timeout".
-  const NAMES = ['Alice', 'Bob', 'Carol', 'Dave'];
   for (let i = 0; i < 4; i++) {
     const w = NAMES[i];
     const page = [ap, bp, cp, dp][i];
@@ -605,109 +633,96 @@ async function main() {
   try {
     // ── Load all ─────────────────────────────────────────────────
     step('Step 1: Load apps');
-    await Promise.all([loadApp(ap,'Alice'), loadApp(bp,'Bob'), loadApp(cp,'Carol'), loadApp(dp,'Dave')]);
+    await Promise.all([loadApp(ap, NAMES[0]), loadApp(bp, NAMES[1]), loadApp(cp, NAMES[2]), loadApp(dp, NAMES[3])]);
 
-    // ── All 4 enter as guests ────────────────────────────────────
-    // Previously Alice & Bob registered with email, but the project
-    // requires email confirmation → signUp returns user without
-    // session → all subsequent actions fail with not_signed_in.
-    // Plus /signup is rate-limited (429) so anonymous fallback
-    // collides with email signups in the same bucket. Easiest path
-    // for the gameplay demo: skip registration, all guests.
-    step('Step 2: All 4 enter as guests');
-    // Alice walks through Learn-to-Play (the new-user onboarding primer);
-    // the others skip straight to the lobby. This validates the onboarding
-    // path without inflating the demo's runtime.
+    // ── Step 2 — entry paths ─────────────────────────────────────
+    //   Koshasa  → email login (pre-registered)
+    //   Ryabina  → Learn-to-Play primer
+    //   Scherbet → skip-to-lobby
+    //   Guest#XXX → skip-to-lobby (will host)
+    step('Step 2: Entry paths (login / primer / skip)');
     await Promise.all([
-      learnToPlay(ap, 'Alice', 'Alice'),
-      guestLobby(bp, 'Bob',   'Bob'),
-      guestLobby(cp, 'Carol', 'Carol'),
-      guestLobby(dp, 'Dave',  'Dave'),
+      loginAs(ap, NAMES[0], LOGIN_EMAIL, LOGIN_PASS),
+      learnToPlay(bp, NAMES[1], NAMES[1]),
+      guestLobby(cp, NAMES[2], NAMES[2]),
+      guestLobby(dp, NAMES[3], NAMES[3]),
     ]);
 
     // ── Profile & Settings ───────────────────────────────────────
-    step('Step 3: Customize profiles & settings');
+    // Koshasa already has an avatar (🐱) and language (ru) saved on the
+    // server-side account, so we don't touch her settings — exercises the
+    // metadata-restore path. The 3 guests pick their visual preferences.
+    step('Step 3: Customize guest profiles & settings');
 
-    // Alice: Settings → dark theme, 4-color deck (default), avatar 🦈
-    if (await goSettings(ap, 'Alice')) {
-      await setTheme(ap, 'Alice', 'dark');
-      await setDeck(ap, 'Alice', 'fourColor');
-      await setAvatar(ap, 'Alice', '🦈');
-      await backFromSettings(ap, 'Alice');
+    if (await goSettings(bp, NAMES[1])) {
+      await setLang(bp, NAMES[1], 'ru');
+      await setDeck(bp, NAMES[1], 'classic');
+      await setAvatar(bp, NAMES[1], '🐺');
+      await backFromSettings(bp, NAMES[1]);
     }
 
-    // Bob: Settings → Russian, classic 2-color deck, avatar 🐺
-    if (await goSettings(bp, 'Bob')) {
-      await setLang(bp, 'Bob', 'ru');
-      await setDeck(bp, 'Bob', 'classic');
-      await setAvatar(bp, 'Bob', '🐺');
-      await backFromSettings(bp, 'Bob');
+    if (await goSettings(cp, NAMES[2])) {
+      await setLang(cp, NAMES[2], 'es');
+      await setDeck(cp, NAMES[2], 'fourColor');
+      await setAvatar(cp, NAMES[2], '🦊');
+      await backFromSettings(cp, NAMES[2]);
     }
 
-    // Carol: Settings → Spanish, 4-color deck, avatar 🦊
-    if (await goSettings(cp, 'Carol')) {
-      await setLang(cp, 'Carol', 'es');
-      await setDeck(cp, 'Carol', 'fourColor');
-      await setAvatar(cp, 'Carol', '🦊');
-      await backFromSettings(cp, 'Carol');
-    }
-
-    // Dave: Settings → light theme, classic 2-color deck, avatar 🐻
-    if (await goSettings(dp, 'Dave')) {
-      await setTheme(dp, 'Dave', 'light');
-      await setDeck(dp, 'Dave', 'classic');
-      await setAvatar(dp, 'Dave', '🐻');
-      await backFromSettings(dp, 'Dave');
+    if (await goSettings(dp, NAMES[3])) {
+      await setTheme(dp, NAMES[3], 'light');
+      await setDeck(dp, NAMES[3], 'classic');
+      await setAvatar(dp, NAMES[3], '🐻');
+      await backFromSettings(dp, NAMES[3]);
     }
 
     // ── Create & join room ───────────────────────────────────────
-    // Dave (guest) creates — registered users can't create with unconfirmed email
-    step('Step 4: Dave creates room');
-    const code = await createRoom(dp, 'Dave');
+    step(`Step 4: ${NAMES[3]} creates room`);
+    const code = await createRoom(dp, NAMES[3]);
 
     step('Step 5: Others join');
-    // Alice joins via the public invite URL (/join/CODE) — exercises the
-    // deep-link auto-join path. Bob and Carol use the manual code-entry
-    // form so we cover both flows in one run.
-    await joinViaDeepLink(ap, 'Alice', code);
-    await joinRoom(bp, 'Bob', code);
-    await joinRoom(cp, 'Carol', code);
+    // Koshasa joins via the public invite URL (/join/CODE) — exercises the
+    // deep-link auto-join path AND verifies the deep-link picks up her
+    // already-authenticated session. Ryabina/Scherbet use the manual
+    // code-entry form so we cover both join flows in one run.
+    await joinViaDeepLink(ap, NAMES[0], code);
+    await joinRoom(bp, NAMES[1], code);
+    await joinRoom(cp, NAMES[2], code);
 
     // ── Ready & start ────────────────────────────────────────────
     step('Step 6: Ready & start');
     await sleep(1500);
     await Promise.all([
-      tap(ap, 'btn-ready', 'Alice'),
-      tap(bp, 'btn-ready', 'Bob'),
-      tap(cp, 'btn-ready', 'Carol'),
+      tap(ap, 'btn-ready', NAMES[0]),
+      tap(bp, 'btn-ready', NAMES[1]),
+      tap(cp, 'btn-ready', NAMES[2]),
     ]);
     await sleep(2500);
-    await tap(dp, 'btn-start-game', 'Dave');
+    await tap(dp, 'btn-start-game', NAMES[3]);
 
     // ── Play ─────────────────────────────────────────────────────
     step('Step 7: Playing!');
     await sleep(3000);
 
     await Promise.all([
-      gameLoop(ap, 'Alice', {
+      gameLoop(ap, NAMES[0], {
         chat: [
           { phase: 'bet', text: 'Good luck everyone!' },
           { phase: 'play', text: 'Nice trick!' },
           { phase: 'play', text: 'GG' },
         ],
       }),
-      gameLoop(bp, 'Bob', {
+      gameLoop(bp, NAMES[1], {
         chat: [
           { phase: 'bet', text: 'Удачи!' },
           { phase: 'play', text: 'Ого, красиво' },
         ],
       }),
-      gameLoop(cp, 'Carol', {
+      gameLoop(cp, NAMES[2], {
         chat: [
           { phase: 'bet', text: '¡Buena suerte!' },
         ],
       }),
-      gameLoop(dp, 'Dave', {
+      gameLoop(dp, NAMES[3], {
         viewTricks: true,
       }),
     ]);
