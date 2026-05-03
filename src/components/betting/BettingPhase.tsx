@@ -351,7 +351,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             >
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
                 {trumpSuit === 'notrump'
-                  ? t('game.notrump')
+                  ? t('game.noTrump')
                   : `${getTrumpSymbol(trumpSuit)} ${t('game.trump')}`}
               </Text>
             </View>

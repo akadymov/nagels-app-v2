@@ -104,18 +104,21 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     }
   }, [room?.phase, onGameStart]);
 
-  // If the host leaves, the room ends — kick everyone out cleanly.
+  // The room transitions to 'finished' both when the host leaves AND when
+  // the game completes naturally — we used to show a misleading "host
+  // left" alert in both cases. Now we just leave silently: the
+  // ScoreboardModal in GameTable already showed the winner banner, the
+  // user dismissed it, and we land back here. Navigate FIRST, then
+  // cleanup — otherwise reset() drops the snapshot and the screen
+  // flashes "Players in Room (0/?)" before navigation kicks in.
   useEffect(() => {
     if (room?.phase === 'finished') {
+      onLeave();
       (async () => {
         const { clearActiveRoom } = await import('../lib/activeRoom');
         await clearActiveRoom();
         unsubscribeRoom();
         useRoomStore.getState().reset();
-        if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
-          (window as any).alert('The host left the room — game ended.');
-        }
-        onLeave();
       })();
     }
   }, [room?.phase, onLeave]);
@@ -245,10 +248,14 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           </GlassCard>
         )}
 
-        {/* Players List */}
-        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          {t('multiplayer.playersInRoom', { count: playerCount, max: room?.player_count ?? '?' })}
-        </Text>
+        {/* Players List — hide the count until the snapshot has loaded so
+            we don't flash "Players in Room (0/?)" during the brief gap
+            between leaving a finished room and navigating away. */}
+        {room && (
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('multiplayer.playersInRoom', { count: playerCount, max: room.player_count })}
+          </Text>
+        )}
 
         <View style={styles.playersList}>
           {players.map((player, index) => {

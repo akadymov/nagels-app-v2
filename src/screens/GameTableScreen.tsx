@@ -83,6 +83,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const setThemePreference = useSettingsStore((s) => s.setThemePreference);
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
   const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
+  const biddingTipDismissed = useSettingsStore((s) => s.shownTips.bidding);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
 
@@ -662,11 +663,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* First-time onboarding tips. Tips self-gate on
           settingsStore.shownTips so once dismissed they never show again.
-          We also gate the trump-related tips on phase==='playing' — during
-          betting, the BettingPhase overlay already shows the bidding tip,
-          and stacking two modals at once looks broken. The trump tip pops
-          naturally right after betting completes. */}
-      {vm.phase === 'playing' && (
+          We also chain the trump-related tip after the bidding tip: it
+          mounts only once shownTips.bidding is true, so the bidding modal
+          dismisses first, then the trump explanation pops as the next
+          step (instead of stacking two Modals on top of each other). */}
+      {biddingTipDismissed && (
         vm.trumpSuit === 'notrump' ? (
           <OnboardingTip
             name="noTrump"
@@ -678,7 +679,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             name="trumpRank"
             titleKey="onboarding.trumpRankTitle"
             bodyKey="onboarding.trumpRankBody"
-            delayMs={800}
+            delayMs={400}
           />
         )
       )}

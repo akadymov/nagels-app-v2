@@ -459,7 +459,14 @@ async function gameLoop(p, w, opts = {}) {
     const gameOverByText = p.locator('text=/Game Over|Игра окончена|Juego Terminado|Конец игры|Fin del juego/i').first();
     if (await gameOverById.isVisible().catch(() => false) ||
         await gameOverByText.isVisible().catch(() => false)) {
-      log(w, '🏁 Game Over!');
+      // Try to read the winner banner so the demo log mirrors what a human
+      // sees on the final screen.
+      const banner = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
+      log(w, `🏁 Game Over!${banner ? '  ' + banner.trim() : ''}`);
+      // Hold the final screen long enough for a human watcher to read the
+      // winner banner and the final standings before windows close. The
+      // game-over scoreboard is the demo's payoff shot.
+      await sleep(8000);
       break;
     }
 
