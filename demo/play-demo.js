@@ -384,26 +384,51 @@ async function gameLoop(p, w, opts = {}) {
     await sleep(600);
 
     // Onboarding tip modals (bidding/trumpRank/noTrump/scoring) appear
-    // once per user and block everything underneath them. RN-web's <Modal>
-    // renders inside a portal where Playwright's Pressable click via
-    // testID does NOT reliably dispatch onPress (force-click skips the
-    // pointer-event sequence; non-force can be blocked by the backdrop).
-    // We synthesize a real mouse click at the button's center so the full
-    // mousedown→mouseup→click sequence reaches the Pressable handler.
+    // once per user and block everything underneath them. RN-web's
+    // Pressable responder listens to *PointerEvents*, not bare MouseEvents
+    // — Playwright's mouse.click() and click({force:true}) only dispatch
+    // mouse events, so onPress never fires and the modal stays visible.
+    // We dispatch the full pointerdown→mousedown→pointerup→mouseup→click
+    // sequence inside the page so the responder actually triggers.
     const tipBtn = p.locator('[data-testid^="onboarding-tip-"][data-testid$="-got-it"]').first();
     if (await tipBtn.isVisible().catch(() => false)) {
       try {
         const tid = (await tipBtn.getAttribute('data-testid')) || 'onboarding-tip';
-        const box = await tipBtn.boundingBox();
-        if (box) {
-          await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await tipBtn.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const cx = r.left + r.width / 2;
+          const cy = r.top + r.height / 2;
+          const opts = {
+            bubbles: true, cancelable: true, view: window,
+            clientX: cx, clientY: cy, button: 0,
+            pointerId: 1, pointerType: 'mouse', isPrimary: true,
+          };
+          el.dispatchEvent(new PointerEvent('pointerdown', opts));
+          el.dispatchEvent(new MouseEvent('mousedown', opts));
+          el.dispatchEvent(new PointerEvent('pointerup', opts));
+          el.dispatchEvent(new MouseEvent('mouseup', opts));
+          el.dispatchEvent(new MouseEvent('click', opts));
+        });
+        // Verify dismissal actually happened — only a true 'hidden'
+        // transition means onPress fired and markTipShown() persisted.
+        const dismissed = await tipBtn.waitFor({ state: 'hidden', timeout: 3000 })
+          .then(() => true)
+          .catch(() => false);
+        if (dismissed) {
+          log(w, `✓ dismissed ${tid}`);
         } else {
-          await tipBtn.click({ timeout: 2000 });
+          // Last-resort fallback: forcibly persist shownTips and reload so
+          // the next render sees alreadyShown=true. Keeps the loop moving
+          // instead of hammering an unresponsive modal forever.
+          log(w, `✗ dismiss did not register for ${tid} → seeding shownTips`);
+          await p.evaluate(() => {
+            try {
+              const cur = JSON.parse(localStorage.getItem('nagels_settings') || '{}');
+              cur.shownTips = { bidding: true, trumpRank: true, noTrump: true, scoring: true };
+              localStorage.setItem('nagels_settings', JSON.stringify(cur));
+            } catch {}
+          });
         }
-        // Confirm dismissal — wait for the button to disappear; if it stays
-        // visible the click didn't reach onPress and we'd loop forever.
-        await tipBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
-        log(w, `✓ dismissed ${tid}`);
         await sleep(200);
         continue;
       } catch (_) {}
