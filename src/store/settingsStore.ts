@@ -10,12 +10,23 @@ import { updateUserMetadata } from '../lib/supabase/authService';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+export type OnboardingTipName = 'bidding' | 'trumpRank' | 'noTrump' | 'scoring';
+export type ShownTips = Record<OnboardingTipName, boolean>;
+
+const DEFAULT_SHOWN_TIPS: ShownTips = {
+  bidding: false,
+  trumpRank: false,
+  noTrump: false,
+  scoring: false,
+};
+
 export interface SettingsStore {
   themePreference: ThemePreference;
   fourColorDeck: boolean;
   language: string;
   gamesPlayedUnconfirmed: number;
   pendingEmail: string | null;
+  shownTips: ShownTips;
   _hydrated: boolean;
 
   setThemePreference: (pref: ThemePreference) => void;
@@ -24,6 +35,8 @@ export interface SettingsStore {
   incrementGamesPlayed: () => void;
   resetGamesPlayed: () => void;
   setPendingEmail: (email: string | null) => void;
+  markTipShown: (name: OnboardingTipName) => void;
+  resetShownTips: () => void;
   syncFromUserMetadata: (metadata: Record<string, any>) => void;
   hydrate: () => Promise<void>;
 }
@@ -36,6 +49,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   language: 'en',
   gamesPlayedUnconfirmed: 0,
   pendingEmail: null,
+  shownTips: { ...DEFAULT_SHOWN_TIPS },
   _hydrated: false,
 
   setThemePreference: (pref) => {
@@ -71,6 +85,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     persistSettings(get());
   },
 
+  markTipShown: (name) => {
+    set({ shownTips: { ...get().shownTips, [name]: true } });
+    persistSettings(get());
+  },
+
+  resetShownTips: () => {
+    set({ shownTips: { ...DEFAULT_SHOWN_TIPS } });
+    persistSettings(get());
+  },
+
   syncFromUserMetadata: (metadata) => {
     const updates: Partial<SettingsStore> = {};
     if (metadata.theme_preference) updates.themePreference = metadata.theme_preference;
@@ -93,6 +117,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           language: parsed.language ?? 'en',
           gamesPlayedUnconfirmed: parsed.gamesPlayedUnconfirmed ?? 0,
           pendingEmail: parsed.pendingEmail ?? null,
+          shownTips: { ...DEFAULT_SHOWN_TIPS, ...(parsed.shownTips ?? {}) },
           _hydrated: true,
         });
       } else {
@@ -111,6 +136,7 @@ function persistSettings(state: SettingsStore) {
     language: state.language,
     gamesPlayedUnconfirmed: state.gamesPlayedUnconfirmed,
     pendingEmail: state.pendingEmail,
+    shownTips: state.shownTips,
   };
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
 }

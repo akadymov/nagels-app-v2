@@ -29,6 +29,9 @@ import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useTurnTimeout } from '../lib/turnTimeout';
+import { useHeartbeat } from '../lib/heartbeat';
+import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
+import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
@@ -89,6 +92,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Turn timeout watcher — any client posts request_timeout after 30s
   // of no progress; the Edge Function idempotently auto-advances.
   useTurnTimeout();
+
+  // Mark this player online (last_seen_at = now()) every 10s. Other clients
+  // read room_players.is_connected via the snapshot to detect drop-offs.
+  useHeartbeat();
+
+  // Force a fresh snapshot when the tab returns to foreground / online.
+  useReconnectOnFocus();
 
   const room = snapshot?.room ?? null;
   const mpPlayers = snapshot?.players ?? [];
@@ -221,6 +231,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     score: number;
     bonus: number;
     hand: Array<{ id: string; suit: any; rank: any }>;
+    /** ms since the player's last heartbeat. null in single-player mode. */
+    msSinceSeen: number | null;
   };
 
   const vm = useMemo(() => {
@@ -234,6 +246,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           const row = h.scores?.find((s) => s.session_id === p.session_id);
           if (row) total += row.hand_score;
         }
+        const seenTs = p.last_seen_at ? Date.parse(p.last_seen_at) : NaN;
+        const msSinceSeen = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
         return {
           id: p.session_id,
           name: p.display_name,
@@ -244,6 +258,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           score: total,
           bonus: 0,
           hand: p.session_id === myPlayerId ? myHandStrings.map(parseCard) : [],
+          msSinceSeen,
         };
       });
       players.sort((a, b) => a.seatIndex - b.seatIndex);
@@ -363,6 +378,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       score: p.score,
       bonus: p.bonus,
       hand: p.hand,
+      msSinceSeen: null,
     }));
     return {
       phase: sp.phase,
@@ -635,6 +651,22 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      {/* First-time onboarding tips. The component itself self-gates on
+          settingsStore.shownTips so once dismissed it never shows again. */}
+      {vm.trumpSuit === 'notrump' ? (
+        <OnboardingTip
+          name="noTrump"
+          titleKey="onboarding.noTrumpTitle"
+          bodyKey="onboarding.noTrumpBody"
+        />
+      ) : (
+        <OnboardingTip
+          name="trumpRank"
+          titleKey="onboarding.trumpRankTitle"
+          bodyKey="onboarding.trumpRankBody"
+          delayMs={800}
+        />
+      )}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
@@ -662,7 +694,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               ]}
             >
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(vm.trumpSuit) }]}>
-                {getTrumpSymbol(vm.trumpSuit)} {t('game.trump')}
+                {vm.trumpSuit === 'notrump'
+                  ? t('game.notrump')
+                  : `${getTrumpSymbol(vm.trumpSuit)} ${t('game.trump')}`}
               </Text>
             </View>
           </View>
@@ -821,6 +855,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             const isFirstPlayer = vm.startingPlayerIndex === vm.players.indexOf(player);
             const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
             const avatarBg = avatarColors[i % avatarColors.length];
+            // Offline = no heartbeat for >30s. msSinceSeen=null is single-player.
+            const isOffline = player.msSinceSeen !== null && player.msSinceSeen > 30_000;
             return (
               <View
                 key={player.id}
@@ -831,9 +867,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     styles.profileCard,
                     { marginTop: positionStyle.marginTop, marginLeft: positionStyle.marginLeft },
                     isCurrentPlayer && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                    isOffline && { opacity: 0.45 },
                   ]}
                 >
                   {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                  {isOffline && <Text style={styles.offlineBadge}>📡</Text>}
                   <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
                     <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
                   </View>
@@ -1223,7 +1261,10 @@ const styles = StyleSheet.create({
   },
   tableInfoArea: {
     position: 'absolute',
-    top: '32%',
+    // Raised from 32% to 24% so the "Your turn" badge and "Must follow ♦"
+    // notification stay visible on the smallest layout (4+ players, 2 rows
+    // of cards in hand). Cards used to overlap this row.
+    top: '24%',
     left: 0,
     right: 0,
     alignItems: 'center',
@@ -1320,6 +1361,13 @@ const styles = StyleSheet.create({
     left: 3,
     fontSize: 12,
     color: '#308552',
+  },
+  offlineBadge: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    fontSize: 11,
+    opacity: 0.85,
   },
   playArea: {
     position: 'absolute',

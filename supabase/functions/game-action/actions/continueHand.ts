@@ -63,7 +63,18 @@ export async function continueHand(
     phase: 'betting',
     deck_seed: seed,
   }).select('id').single();
-  if (hErr) throw hErr;
+  if (hErr) {
+    // Concurrent Continue clicks (3-4 players hit "Continue" at once) all
+    // pass the phase==='scoring' check above before any of them can update
+    // hand to 'closed'. The UNIQUE (room_id, hand_number) constraint then
+    // rejects all but the first inserter with code 23505. Treat it as
+    // idempotent success and return the snapshot the winner produced.
+    if ((hErr as any).code === '23505') {
+      const s = await buildSnapshot(svc, action.room_id, actor.session_id);
+      return { ok: true, state: s, version: s.room?.version ?? 0 };
+    }
+    throw hErr;
+  }
 
   const { data: players } = await svc.from('room_players')
     .select('session_id, seat_index')

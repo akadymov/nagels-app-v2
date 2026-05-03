@@ -1,30 +1,48 @@
 /**
  * Client-side turn timeout watcher.
  *
- * Tracks the time since the last `current_seat` change. When 30 s elapses
- * with no progress, ANY mounted client posts `request_timeout` to the
- * Edge Function, which idempotently auto-advances (auto-bet 0 / random
- * legal card). Multiple concurrent timeout requests are safe — the
- * server checks `expected_seat == current_seat` and no-ops on stale ones.
+ * Two budgets:
+ *   • LONG (5 min) — for present-but-thinking players
+ *   • SHORT (20 s) — when the current_seat player is offline
+ *     (last_seen_at older than OFFLINE_THRESHOLD_MS) so the table
+ *     doesn't hang for 5 minutes whenever someone closes their tab.
+ *
+ * After the chosen budget elapses with no progress, ANY mounted client
+ * posts `request_timeout` to the Edge Function, which idempotently
+ * auto-advances (auto-bet 0 / lowest legal card). Concurrent requests
+ * are safe — the server checks `expected_seat == current_seat` and
+ * no-ops on stale ones.
  */
 
 import { useEffect, useRef } from 'react';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from './gameClient';
 
-// 5 minutes per turn. Anything shorter caused premature auto-bet=0 during
-// real-paced play. After this, any client may post `request_timeout`; the
-// server idempotently auto-advances (bet 0 / lowest legal card).
-const TURN_TIMEOUT_MS = 5 * 60 * 1000;
+const TURN_TIMEOUT_LONG_MS  = 5 * 60 * 1000;  // 5 min — humans thinking
+const TURN_TIMEOUT_SHORT_MS = 20 * 1000;       // 20 s — offline player
+const OFFLINE_THRESHOLD_MS  = 30 * 1000;       // 30 s since last heartbeat
+
+function isPlayerOffline(lastSeenAt: string | null | undefined): boolean {
+  if (!lastSeenAt) return true;
+  const ts = Date.parse(lastSeenAt);
+  if (Number.isNaN(ts)) return true;
+  return Date.now() - ts > OFFLINE_THRESHOLD_MS;
+}
 
 export function useTurnTimeout(): void {
   const roomId   = useRoomStore((s) => s.snapshot?.room?.id);
   const handId   = useRoomStore((s) => s.snapshot?.current_hand?.id);
   const seat     = useRoomStore((s) => s.snapshot?.current_hand?.current_seat);
+  const players  = useRoomStore((s) => s.snapshot?.players);
   const version  = useRoomStore((s) => s.version);
 
   const lastSeat = useRef<number | null>(null);
   const startedAt = useRef<number>(Date.now());
+
+  // Determine the budget for the player whose turn it currently is.
+  const currentPlayer = players?.find((p) => p.seat_index === seat);
+  const offline = currentPlayer ? isPlayerOffline(currentPlayer.last_seen_at) : false;
+  const budget = offline ? TURN_TIMEOUT_SHORT_MS : TURN_TIMEOUT_LONG_MS;
 
   useEffect(() => {
     if (!roomId || !handId || seat === undefined || seat === null) return;
@@ -35,7 +53,7 @@ export function useTurnTimeout(): void {
     }
 
     const elapsed = Date.now() - startedAt.current;
-    const remaining = TURN_TIMEOUT_MS - elapsed;
+    const remaining = budget - elapsed;
 
     if (remaining <= 0) {
       void gameClient.requestTimeout(roomId, handId, seat);
@@ -46,5 +64,5 @@ export function useTurnTimeout(): void {
       void gameClient.requestTimeout(roomId, handId, seat);
     }, remaining);
     return () => clearTimeout(t);
-  }, [roomId, handId, seat, version]);
+  }, [roomId, handId, seat, version, budget]);
 }

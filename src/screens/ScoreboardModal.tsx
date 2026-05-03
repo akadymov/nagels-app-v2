@@ -19,6 +19,7 @@ import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
+import { OnboardingTip } from '../components/OnboardingTip';
 
 // Compact result row for one player in a closed hand.
 export interface HandResultRow {
@@ -108,25 +109,52 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   if (!visible) return null;
 
   const renderCompact = () => (
-    <View style={styles.compactContainer}>
+    <View style={styles.compactContainer} testID={isGameOver ? 'game-over' : undefined}>
       {/* Header */}
-      <Text style={[styles.title, { color: colors.accent }]}>
+      <Text
+        style={[styles.title, { color: colors.accent }]}
+        testID={isGameOver ? 'scoreboard-title-gameover' : 'scoreboard-title-hand'}
+      >
         {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
       </Text>
 
-      {/* Rankings */}
-      {sortedPlayers.map((p, i) => (
-        <View key={p.id} style={[styles.compactRow, { backgroundColor: colors.surface, borderColor: i === 0 ? colors.accent : colors.glassLight }]}>
-          <Text style={[styles.compactRank, { color: colors.textMuted }]}>{i + 1}</Text>
-          <Text style={[styles.compactName, { color: colors.textPrimary }]} numberOfLines={1}>{p.name}</Text>
-          <Text style={[styles.compactScore, { color: colors.accent }]}>{p.totalScore}</Text>
-          <View style={[styles.compactLastHand, { backgroundColor: p.madeBet ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' }]}>
-            <Text style={{ color: p.madeBet ? colors.success : colors.error, fontWeight: '700', fontSize: 12 }}>
-              {p.lastPoints > 0 ? '+' : ''}{p.lastPoints}
-            </Text>
-          </View>
+      {/* Winner banner — only on Game Over, otherwise the leader can change. */}
+      {isGameOver && leader && (
+        <View style={[styles.winnerBanner, { backgroundColor: 'rgba(48,133,82,0.15)', borderColor: colors.success }]}>
+          <Text style={[styles.winnerText, { color: colors.success }]} numberOfLines={1}>
+            🏆 {leader.name} — {leader.totalScore} {t('scoreboard.points', 'pts')}
+          </Text>
         </View>
-      ))}
+      )}
+
+      {/* Rankings */}
+      {sortedPlayers.map((p, i) => {
+        const isWinner = isGameOver && i === 0;
+        return (
+          <View
+            key={p.id}
+            style={[
+              styles.compactRow,
+              {
+                backgroundColor: isWinner ? 'rgba(48,133,82,0.10)' : colors.surface,
+                borderColor: isWinner ? colors.success : (i === 0 ? colors.accent : colors.glassLight),
+                borderWidth: isWinner ? 2 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.compactRank, { color: isWinner ? colors.success : colors.textMuted, fontWeight: isWinner ? '800' : '600' }]}>
+              {isWinner ? '🏆' : i + 1}
+            </Text>
+            <Text style={[styles.compactName, { color: colors.textPrimary, fontWeight: isWinner ? '700' : '500' }]} numberOfLines={1}>{p.name}</Text>
+            <Text style={[styles.compactScore, { color: isWinner ? colors.success : colors.accent, fontWeight: isWinner ? '800' : '700' }]}>{p.totalScore}</Text>
+            <View style={[styles.compactLastHand, { backgroundColor: p.madeBet ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' }]}>
+              <Text style={{ color: p.madeBet ? colors.success : colors.error, fontWeight: '700', fontSize: 12 }}>
+                {p.lastPoints > 0 ? '+' : ''}{p.lastPoints}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
 
       {/* Show History toggle */}
       {effectiveHistory.length > 0 && (
@@ -144,9 +172,12 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     const playerColW = Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
 
     return (
-      <View style={styles.fullContainer}>
+      <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
         {/* Header */}
-        <Text style={[styles.title, { color: colors.accent }]}>
+        <Text
+          style={[styles.title, { color: colors.accent }]}
+          testID={isGameOver ? 'scoreboard-title-gameover' : 'scoreboard-title-hand'}
+        >
           {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
         </Text>
 
@@ -173,8 +204,9 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
 
-          {/* Round rows */}
-          {effectiveHistory.map((hand) => (
+          {/* Round rows — latest hand on top so the most-interesting
+              recent rounds stay visible without scrolling. */}
+          {[...effectiveHistory].reverse().map((hand) => (
             <View key={hand.handNumber} style={styles.tableRow}>
               <View style={[styles.tableCell, { width: roundColW }]}>
                 <Text style={[styles.roundNum, { color: colors.textMuted }]}>{hand.handNumber}</Text>
@@ -228,6 +260,14 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
+      {/* First-time scoring explainer. Renders above the scoreboard the
+          first time a user opens it and self-dismisses afterwards. */}
+      <OnboardingTip
+        name="scoring"
+        titleKey="onboarding.scoringTitle"
+        bodyKey="onboarding.scoringBody"
+        delayMs={600}
+      />
       <View style={styles.overlay}>
         <View style={[styles.modal, { backgroundColor: colors.background }]}>
           <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
@@ -383,6 +423,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.md,
     marginBottom: Spacing.sm,
+  },
+  winnerBanner: {
+    borderWidth: 2,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.sm,
+    alignItems: 'center',
+  },
+  winnerText: {
+    fontSize: 16,
+    fontWeight: '800',
   },
   // Toggle button
   toggleBtn: {

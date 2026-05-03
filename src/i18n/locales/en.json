@@ -239,5 +239,16 @@
     "classic": "Classic",
     "fourColor": "4-Color",
     "language": "Language"
+  },
+  "onboarding": {
+    "gotIt": "Got it",
+    "biddingTitle": "Place your bid",
+    "biddingBody": "Predict how many tricks you will win this hand. Exact match = +10 bonus. Missing it costs the difference.\n\nThe last bidder cannot make the total of all bids equal the cards dealt — someone has to be unhappy.",
+    "trumpRankTitle": "Trump cards are special",
+    "trumpRankBody": "In the trump suit, the Jack is the highest card and the 9 is the second highest. So J♥ and 9♥ beat A♥ when hearts are trump.",
+    "noTrumpTitle": "No trump this round",
+    "noTrumpBody": "This round has no trump suit. The highest card of the lead suit always wins. Trumps return next round.",
+    "scoringTitle": "How scoring works",
+    "scoringBody": "Each trick won = 1 point.\nExact bid = +10 bonus.\nMiss your bid = lose |bid − tricks| points.\n\nHighest total after 20 hands wins."
   }
 }

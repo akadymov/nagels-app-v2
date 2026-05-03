@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
 import { getAllowedBets } from '../../../supabase/functions/_shared/engine/rules';
+import { OnboardingTip } from '../OnboardingTip';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -87,6 +88,26 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
   const isMyTurn = !!bettingPlayer && !!myPlayer && bettingPlayer.session_id === myPlayer.session_id;
 
+  // One-shot diagnostic: log when *I* become the bettor, with full snapshot
+  // so we can see what state the client thinks it has at that moment.
+  useEffect(() => {
+    if (!visible || !isMyTurn) return;
+    console.log('[BetDbg] my turn to bet — snapshot view', {
+      myPlayerId,
+      myPlayerSession: myPlayer?.session_id,
+      bettingSession: bettingPlayer?.session_id,
+      bettingSeat: bettingPlayer?.seat_index,
+      handId: hand?.id,
+      handNumber: hand?.hand_number,
+      handPhase: hand?.phase,
+      handCurrentSeat: hand?.current_seat,
+      cardsPerPlayer,
+      playersCount: players.length,
+      handScoresCount: handScores.length,
+      handScores: handScores.map((s) => ({ sid: s.session_id, bet: s.bet })),
+    });
+  }, [visible, isMyTurn, hand?.id, hand?.current_seat, handScores.length]);
+
   // My current bet (from hand_scores)
   const myBet = useMemo(() => {
     if (!myPlayer) return null;
@@ -129,19 +150,42 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Allowed bets for the current betting player.
   // Computed locally so the UI gives instant feedback; the server still validates.
   const allowedBets = useMemo(() => {
-    if (!bettingPlayer || !hand || hand.phase !== 'betting') return [];
+    if (!bettingPlayer || !hand || hand.phase !== 'betting') {
+      console.log('[BetDbg] allowedBets=[] guard tripped', {
+        hasBettingPlayer: !!bettingPlayer,
+        hasHand: !!hand,
+        handPhase: hand?.phase,
+      });
+      return [];
+    }
     const currentBets = handScores
       .filter((s) => s.session_id !== bettingPlayer.session_id)
       .map((s) => ({ playerId: s.session_id, amount: s.bet }));
     const placedCount = handScores.length;
     const isLastPlayer = placedCount === players.length - 1;
-    return getAllowedBets({
+    const result = getAllowedBets({
       playerCount: players.length,
       cardsPerPlayer,
       currentBets,
       isLastPlayer,
     });
-  }, [bettingPlayer, hand, handScores, players.length, cardsPerPlayer]);
+    console.log('[BetDbg] allowedBets recomputed', {
+      bettingSession: bettingPlayer.session_id,
+      bettingSeat: bettingPlayer.seat_index,
+      myPlayerId,
+      isMyTurnComputed: bettingPlayer.session_id === myPlayerId,
+      handId: hand.id,
+      handPhase: hand.phase,
+      handCurrentSeat: hand.current_seat,
+      cardsPerPlayer,
+      placedCount,
+      isLastPlayer,
+      currentBetsSum: currentBets.reduce((s, b) => s + b.amount, 0),
+      currentBets,
+      result,
+    });
+    return result;
+  }, [bettingPlayer, hand, handScores, players.length, cardsPerPlayer, myPlayerId]);
 
   const allBets = useMemo(
     () => Array.from({ length: cardsPerPlayer + 1 }, (_, i) => i),
@@ -189,16 +233,37 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
   const handleBet = useCallback(
     async (bet: number) => {
-      if (!room?.id || !hand?.id) return;
-      if (!allowedBets.includes(bet)) return;
+      console.log('[BetDbg] handleBet click', {
+        bet,
+        roomId: room?.id,
+        handId: hand?.id,
+        handPhase: hand?.phase,
+        handCurrentSeat: hand?.current_seat,
+        myPlayerId,
+        bettingSession: bettingPlayer?.session_id,
+        isMyTurn,
+        allowedBets,
+        included: allowedBets.includes(bet),
+        handScoresLen: handScores.length,
+      });
+      if (!room?.id || !hand?.id) {
+        console.log('[BetDbg] handleBet bailing: missing room/hand id');
+        return;
+      }
+      if (!allowedBets.includes(bet)) {
+        console.log('[BetDbg] handleBet bailing: bet not in allowedBets');
+        return;
+      }
       betPlacedHaptic();
       try {
+        const t0 = Date.now();
         await gameClient.placeBet(room.id, hand.id, bet);
+        console.log('[BetDbg] placeBet success', { bet, ms: Date.now() - t0 });
       } catch (err) {
-        console.error('[BettingPhase] placeBet failed:', err);
+        console.error('[BetDbg] placeBet failed:', err);
       }
     },
-    [room?.id, hand?.id, allowedBets]
+    [room?.id, hand?.id, hand?.phase, hand?.current_seat, allowedBets, myPlayerId, bettingPlayer?.session_id, isMyTurn, handScores.length]
   );
 
   const renderBetChip = (bet: number) => {
@@ -247,6 +312,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' },
       ]}
     >
+      {/* First-time bidding explainer (last-bidder rule + scoring intro). */}
+      <OnboardingTip
+        name="bidding"
+        titleKey="onboarding.biddingTitle"
+        bodyKey="onboarding.biddingBody"
+      />
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -279,7 +350,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               ]}
             >
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
-                {getTrumpSymbol(trumpSuit)} {t('game.trump')}
+                {trumpSuit === 'notrump'
+                  ? t('game.notrump')
+                  : `${getTrumpSymbol(trumpSuit)} ${t('game.trump')}`}
               </Text>
             </View>
           </View>
@@ -332,6 +405,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               hitSlop={8}
             >
               <Text style={styles.iconBtnEmoji}>🏆</Text>
+            </Pressable>
+            {/* Chat button placeholder — disabled until chat is wired up.
+                Keeps action-bar layout consistent with GameTable. */}
+            <Pressable
+              disabled
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight, opacity: 0.3 },
+              ]}
+              testID="betting-btn-chat"
+              hitSlop={8}
+            >
+              <Text style={styles.iconBtnEmoji}>💬</Text>
             </Pressable>
           </View>
         </View>
