@@ -579,29 +579,38 @@ async function pos(p, x, y, w, h) {
 
 async function main() {
   // Player count: configurable via DEMO_PLAYERS (default 4, clamped 2..6).
-  // First 3 players get cat names (Koshasa / Ryabina / Scherbet); the
-  // rest get Guest#XXXX with a fresh random suffix each. The LAST player
-  // creates and hosts the room; the FIRST joins via /join/CODE deep-link.
-  const N = Math.max(2, Math.min(6, parseInt(process.env.DEMO_PLAYERS || '4', 10)));
-  const CAT_NAMES = ['Koshasa', 'Ryabina', 'Scherbet'];
-  const NAMES = Array.from({ length: N }, (_, i) =>
-    i < CAT_NAMES.length ? CAT_NAMES[i] : `Guest#${1000 + Math.floor(Math.random() * 9000)}`,
-  );
-  const LOGIN_EMAIL = process.env.DEMO_LOGIN_EMAIL || 'alice@nigels.test';
-  const LOGIN_PASS  = process.env.DEMO_LOGIN_PASS  || 'demo-pass-1234';
-
-  // Per-player visual preferences. Index 0 (Koshasa) is pre-configured
-  // server-side via auth user_metadata, so we skip her Settings step.
-  // Indices 1..N-1 each get a distinct lang/deck/theme/avatar so the
-  // demo exercises i18n + theming + avatar variety.
-  const PRESETS = [
-    null, // 0 — Koshasa, server-side
-    { lang: 'ru', deck: 'classic',   theme: null,    avatar: '🐺' }, // 1 — Ryabina
-    { lang: 'es', deck: 'fourColor', theme: null,    avatar: '🦊' }, // 2 — Scherbet
-    { lang: 'en', deck: 'classic',   theme: 'light', avatar: '🐻' }, // 3 — Guest
-    { lang: 'en', deck: 'fourColor', theme: 'dark',  avatar: '🦈' }, // 4 — Guest
-    { lang: 'ru', deck: 'classic',   theme: 'light', avatar: '⭐' },  // 5 — Guest
+  //
+  // Roster — pre-seeded test accounts in supabase, all confirmed.
+  // Display names live on the auth user_metadata so they survive login
+  // without a 'guest name' input. Slot 1 is intentionally anonymous so
+  // the demo still exercises the Welcome → Learn-to-Play → guest path.
+  // Everyone else logs in via email — this avoids the project-wide
+  // /signup rate limit (30/hour) that flooded the lobby with 429s when
+  // 5+ contexts hit anonymous sign-in at once.
+  //
+  //   Slot 0  Koshasa    alice@nigels.test     login    deep-link join
+  //   Slot 1  Ryabina    (anonymous)           guest    primer + manual join
+  //   Slot 2  Scherbet   bob@nigels.test       login    manual join
+  //   Slot 3  Guest#001  carol@nigels.test     login    manual join (host @ N=4)
+  //   Slot 4  Guest#002  dave@nigels.test      login    manual join
+  //   Slot 5  Guest#003  eve@nigels.test       login    manual join (host @ N=6)
+  const PASS = process.env.DEMO_LOGIN_PASS || 'demo-pass-1234';
+  const ROSTER = [
+    { name: 'Koshasa',   email: 'alice@nigels.test', anon: false }, // 0
+    { name: 'Ryabina',   email: null,                anon: true  }, // 1
+    { name: 'Scherbet',  email: 'bob@nigels.test',   anon: false }, // 2
+    { name: 'Guest#001', email: 'carol@nigels.test', anon: false }, // 3
+    { name: 'Guest#002', email: 'dave@nigels.test',  anon: false }, // 4
+    { name: 'Guest#003', email: 'eve@nigels.test',   anon: false }, // 5
   ];
+  const N = Math.max(2, Math.min(6, parseInt(process.env.DEMO_PLAYERS || '4', 10)));
+  const slots = ROSTER.slice(0, N);
+  const NAMES = slots.map((s) => s.name);
+
+  // Only Ryabina (anonymous) needs lobby-level Settings — the logged-in
+  // accounts already carry their preferred theme/lang/deck/avatar in
+  // server-side user_metadata (set via SQL).
+  const RYABINA_PRESET = { lang: 'ru', deck: 'classic', theme: null, avatar: '🐺' };
   const CHAT = [
     [
       { phase: 'bet',  text: 'Good luck everyone!' },
@@ -617,10 +626,12 @@ async function main() {
 
   step(`Nägels Online — ${N}-Player Full Feature Demo`);
   console.log(`  URL: ${BASE}  slowMo: ${SLOW_MO}ms`);
-  console.log(`  ${NAMES[0]} (login → /join/CODE) | ` +
-              `${NAMES[1]} (Learn-to-Play primer) | ` +
-              `${NAMES.slice(2, -1).map(n => n + ' (skip)').join(' | ')}` +
-              `${N > 2 ? ' | ' : ''}${NAMES[N-1]} (host)\n`);
+  console.log(slots.map((s, i) =>
+    `  ${s.name.padEnd(10)} ${i === 0 ? 'login + /join/CODE'
+      : s.anon ? 'guest + primer + manual'
+      : i === N - 1 ? 'login + host'
+      : 'login + manual'}`,
+  ).join('\n') + '\n');
 
   const browser = await chromium.launch({
     channel: 'chrome', headless: false, slowMo: SLOW_MO, devtools: DEVTOOLS,
@@ -678,30 +689,28 @@ async function main() {
     ));
 
     // ── Step 2 — entry paths ─────────────────────────────────────
-    //   index 0   → email login (pre-registered Koshasa)
-    //   index 1   → Learn-to-Play primer
-    //   indices ≥2 → skip-to-lobby (guests; last one hosts)
-    step('Step 2: Entry paths (login / primer / skip)');
-    await Promise.all(pages.map((p, i) => {
-      if (i === 0) return loginAs(p, NAMES[0], LOGIN_EMAIL, LOGIN_PASS);
-      if (i === 1) return learnToPlay(p, NAMES[1], NAMES[1]);
-      return guestLobby(p, NAMES[i], NAMES[i]);
-    }));
+    //   anon slot (Ryabina)  → Welcome → Learn-to-Play primer → Lobby
+    //   logged-in slots       → AuthScreen → email login → Lobby
+    step('Step 2: Entry paths (login / primer)');
+    await Promise.all(slots.map((s, i) =>
+      s.anon
+        ? learnToPlay(pages[i], s.name, s.name)
+        : loginAs(pages[i], s.name, s.email, PASS),
+    ));
 
     // ── Profile & Settings ───────────────────────────────────────
-    // Skip Koshasa (index 0) — her preferences live in server-side
-    // user_metadata (set via SQL on auth.users) and are restored on
-    // login. The other players configure theme / lang / deck / avatar.
-    step('Step 3: Customize guest profiles & settings');
-    for (let i = 1; i < N; i++) {
-      const preset = PRESETS[i] ?? PRESETS[i % PRESETS.length] ?? PRESETS[1];
-      if (!preset) continue;
-      if (await goSettings(pages[i], NAMES[i])) {
-        if (preset.theme)  await setTheme(pages[i],  NAMES[i], preset.theme);
-        if (preset.lang)   await setLang(pages[i],   NAMES[i], preset.lang);
-        if (preset.deck)   await setDeck(pages[i],   NAMES[i], preset.deck);
-        if (preset.avatar) await setAvatar(pages[i], NAMES[i], preset.avatar);
-        await backFromSettings(pages[i], NAMES[i]);
+    // Logged-in players already have theme/lang/deck/avatar baked into
+    // server-side user_metadata. Only the one anonymous slot (Ryabina)
+    // needs to configure preferences in the lobby.
+    step('Step 3: Customize anonymous profile');
+    for (let i = 0; i < N; i++) {
+      if (!slots[i].anon) continue;
+      if (await goSettings(pages[i], slots[i].name)) {
+        if (RYABINA_PRESET.theme)  await setTheme(pages[i],  slots[i].name, RYABINA_PRESET.theme);
+        if (RYABINA_PRESET.lang)   await setLang(pages[i],   slots[i].name, RYABINA_PRESET.lang);
+        if (RYABINA_PRESET.deck)   await setDeck(pages[i],   slots[i].name, RYABINA_PRESET.deck);
+        if (RYABINA_PRESET.avatar) await setAvatar(pages[i], slots[i].name, RYABINA_PRESET.avatar);
+        await backFromSettings(pages[i], slots[i].name);
       }
     }
 
