@@ -141,6 +141,25 @@ async function guestLobby(p, w, nick) {
   }
 }
 
+// Walk through the Learn-to-Play primer (3 swipeable screens) instead of
+// jumping straight to the lobby. Each screen has a "Next" button with a
+// stable testID; the third one navigates to Lobby.
+async function learnToPlay(p, w, nick) {
+  await tap(p, 'btn-learn-to-play', w, 10000);
+  log(w, '→ Primer (Learn to Play)');
+  for (let i = 0; i < 3; i++) {
+    await tap(p, `primer-button-${i}`, w, 5000);
+    await sleep(450);
+  }
+  // Lobby reached
+  const l = p.locator('[data-testid="input-player-name"]');
+  if (await find(l, 5000)) {
+    await l.click({ clickCount: 3 });
+    await l.type(nick, { delay: 25 });
+    log(w, `✓ Primer done → Lobby, name="${nick}"`);
+  }
+}
+
 // ─── Settings / Profile ─────────────────────────────────────────────────────
 
 async function goSettings(p, w) {
@@ -211,6 +230,18 @@ async function joinRoom(p, w, code) {
   log(w, 'joining…');
   await sleep(4000);
   log(w, '✓ joined');
+}
+
+// Deep-link join: navigate the page directly to /join/CODE. NavigatorGuard
+// auto-joins after auth hydrates and pushes the player into WaitingRoom.
+async function joinViaDeepLink(p, w, code) {
+  log(w, `→ /join/${code} (deep-link)`);
+  await p.goto(`${BASE}/join/${code}`, { waitUntil: 'domcontentloaded' });
+  // Wait for the WaitingRoom indicator (room-code testID) to confirm
+  // the auto-join landed.
+  const ok = await find(p.locator('[data-testid="room-code"]'), 12000);
+  if (!ok) throw new Error(`deep-link join timed out for ${w}`);
+  log(w, '✓ joined via deep-link');
 }
 
 // ─── Chat ───────────────────────────────────────────────────────────────────
@@ -353,13 +384,25 @@ async function gameLoop(p, w, opts = {}) {
     await sleep(600);
 
     // Onboarding tip modals (bidding/trumpRank/noTrump/scoring) appear
-    // once per user and block everything underneath them. Find the first
-    // visible "Got it" button and dismiss it before doing anything else.
+    // once per user and block everything underneath them. RN-web's <Modal>
+    // renders inside a portal where Playwright's Pressable click via
+    // testID does NOT reliably dispatch onPress (force-click skips the
+    // pointer-event sequence; non-force can be blocked by the backdrop).
+    // We synthesize a real mouse click at the button's center so the full
+    // mousedown→mouseup→click sequence reaches the Pressable handler.
     const tipBtn = p.locator('[data-testid^="onboarding-tip-"][data-testid$="-got-it"]').first();
     if (await tipBtn.isVisible().catch(() => false)) {
       try {
         const tid = (await tipBtn.getAttribute('data-testid')) || 'onboarding-tip';
-        await tipBtn.click({ force: true, timeout: 2000 });
+        const box = await tipBtn.boundingBox();
+        if (box) {
+          await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        } else {
+          await tipBtn.click({ timeout: 2000 });
+        }
+        // Confirm dismissal — wait for the button to disappear; if it stays
+        // visible the click didn't reach onPress and we'd loop forever.
+        await tipBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
         log(w, `✓ dismissed ${tid}`);
         await sleep(200);
         continue;
@@ -506,20 +549,6 @@ async function main() {
     browser.newContext({ ...IPHONE, viewport: VP }),
   ]);
 
-  // Pre-seed localStorage so onboarding tips are already "dismissed" by the
-  // time the app hydrates. Force-clicking an RN-web Modal Pressable from
-  // Playwright is unreliable (events don't always reach the Pressable handler),
-  // and the tip then re-appears on every loop iteration. Bypassing entirely is
-  // both simpler and faster than retrying clicks.
-  await Promise.all(ctxs.map(c => c.addInitScript(() => {
-    try {
-      const raw = localStorage.getItem('nagels_settings');
-      const cur = raw ? JSON.parse(raw) : {};
-      cur.shownTips = { bidding: true, trumpRank: true, noTrump: true, scoring: true };
-      localStorage.setItem('nagels_settings', JSON.stringify(cur));
-    } catch {}
-  })));
-
   const [ap, bp, cp, dp] = await Promise.all(ctxs.map(c => c.newPage()));
 
   // Capture browser dialogs (alerts, confirms) so silent failures aren't
@@ -561,8 +590,11 @@ async function main() {
     // collides with email signups in the same bucket. Easiest path
     // for the gameplay demo: skip registration, all guests.
     step('Step 2: All 4 enter as guests');
+    // Alice walks through Learn-to-Play (the new-user onboarding primer);
+    // the others skip straight to the lobby. This validates the onboarding
+    // path without inflating the demo's runtime.
     await Promise.all([
-      guestLobby(ap, 'Alice', 'Alice'),
+      learnToPlay(ap, 'Alice', 'Alice'),
       guestLobby(bp, 'Bob',   'Bob'),
       guestLobby(cp, 'Carol', 'Carol'),
       guestLobby(dp, 'Dave',  'Dave'),
@@ -609,8 +641,10 @@ async function main() {
     const code = await createRoom(dp, 'Dave');
 
     step('Step 5: Others join');
-    // Sequential joins so each player appears one by one
-    await joinRoom(ap, 'Alice', code);
+    // Alice joins via the public invite URL (/join/CODE) — exercises the
+    // deep-link auto-join path. Bob and Carol use the manual code-entry
+    // form so we cover both flows in one run.
+    await joinViaDeepLink(ap, 'Alice', code);
     await joinRoom(bp, 'Bob', code);
     await joinRoom(cp, 'Carol', code);
 
