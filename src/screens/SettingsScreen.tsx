@@ -20,6 +20,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail } from '../lib/supabase/authService';
+import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
 
@@ -97,6 +98,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       // don't always fire reliably for anonymous sessions.
       useAuthStore.getState().setUser(updated, !!updated.is_anonymous);
       useAuthStore.getState().setDisplayName(nickname.trim());
+      // Mirror the new name into the legacy guest-name AsyncStorage cache so
+      // Lobby's getPlayerNameFromStorage on next mount agrees with authStore.
+      await setPlayerNameInStorage(nickname.trim()).catch(() => {});
       setAlertMessage(String(t('profile.saved', 'Profile saved')));
       setShowConfirmAlert(true);
       setTimeout(() => setShowConfirmAlert(false), 3000);

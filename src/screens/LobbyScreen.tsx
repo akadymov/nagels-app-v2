@@ -28,7 +28,7 @@ import { useGameStore } from '../store';
 import { gameClient } from '../lib/gameClient';
 import { useRoomStore } from '../store/roomStore';
 import { subscribeRoom } from '../lib/realtimeBroadcast';
-import { getCurrentUser } from '../lib/supabase/authService';
+import { getCurrentUser, updateUserMetadata } from '../lib/supabase/authService';
 import { setPlayerName as setPlayerNameInStorage, getPlayerName as getPlayerNameFromStorage } from '../lib/supabase/auth';
 
 const { width: SW } = Dimensions.get('window');
@@ -68,8 +68,20 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   }, [authDisplayName]);
 
   const setPlayerName = useCallback(async (name: string) => {
+    // Persist on three surfaces so Lobby and Profile/Settings stay in sync:
+    //  1. AsyncStorage (legacy guest cache, read on next app start)
+    //  2. authStore.displayName + .user (Settings/Profile read these)
+    //  3. supabase user_metadata.display_name (cross-device source of truth)
     await setPlayerNameInStorage(name);
     setPlayerNameState(name);
+    useAuthStore.getState().setDisplayName(name);
+    try {
+      const updated = await updateUserMetadata({ display_name: name });
+      useAuthStore.getState().setUser(updated, !!updated.is_anonymous);
+    } catch {
+      // Offline / supabase down — local state is still updated, will
+      // re-sync on next online action.
+    }
   }, []);
 
   const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
