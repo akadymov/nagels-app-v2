@@ -233,6 +233,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     hand: Array<{ id: string; suit: any; rank: any }>;
     /** ms since the player's last heartbeat. null in single-player mode. */
     msSinceSeen: number | null;
+    /** Avatar emoji chosen by the player; null/undefined → use initial. */
+    avatar?: string | null;
+    /** Avatar background color hex; null/undefined → seat-based default. */
+    avatarColor?: string | null;
   };
 
   const vm = useMemo(() => {
@@ -259,6 +263,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           bonus: 0,
           hand: p.session_id === myPlayerId ? myHandStrings.map(parseCard) : [],
           msSinceSeen,
+          avatar: (p as any).avatar ?? null,
+          avatarColor: (p as any).avatar_color ?? null,
         };
       });
       players.sort((a, b) => a.seatIndex - b.seatIndex);
@@ -637,6 +643,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           lastBonus: lastHandBonus,
           lastPoints: lastHandPoints,
           madeBet: p.bet !== null && p.tricksWon === p.bet,
+          avatar: p.avatar ?? null,
+          avatarColor: p.avatarColor ?? null,
         };
       })
       .sort((a, b) => b.totalScore - a.totalScore)
@@ -831,8 +839,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   ]}
                 >
                   {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
-                  <View style={[styles.profileAvatar, { backgroundColor: colors.accent }]}>
-                    <Text style={styles.profileAvatarText}>{vm.myPlayer.name[0]}</Text>
+                  <View style={[
+                    styles.profileAvatar,
+                    { backgroundColor: vm.myPlayer.avatarColor || colors.accent },
+                  ]}>
+                    <Text style={styles.profileAvatarText}>
+                      {vm.myPlayer.avatar || vm.myPlayer.name[0]}
+                    </Text>
                   </View>
                   <Text style={styles.profileName} numberOfLines={1}>{vm.myPlayer.name}</Text>
                   <Text style={styles.profileStats}>Bet:{vm.myPlayer.bet ?? '-'} Won:{vm.myPlayer.tricksWon}</Text>
@@ -854,7 +867,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             const isCurrentPlayer = vm.currentPlayer?.id === player.id;
             const isFirstPlayer = vm.startingPlayerIndex === vm.players.indexOf(player);
             const avatarColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933'];
-            const avatarBg = avatarColors[i % avatarColors.length];
+            // Prefer the player's chosen color (from user_metadata), fall back
+            // to a deterministic seat-based color.
+            const avatarBg = player.avatarColor || avatarColors[i % avatarColors.length];
             // Offline = no heartbeat for >30s. msSinceSeen=null is single-player.
             const isOffline = player.msSinceSeen !== null && player.msSinceSeen > 30_000;
             return (
@@ -873,7 +888,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
                   {isOffline && <Text style={styles.offlineBadge}>📡</Text>}
                   <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
-                    <Text style={styles.profileAvatarText}>{player.name[0]}</Text>
+                    <Text style={styles.profileAvatarText}>
+                      {player.avatar || player.name[0]}
+                    </Text>
                   </View>
                   <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
                   <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>

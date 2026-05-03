@@ -48,6 +48,10 @@ export interface PlayerScore {
   lastBonus: number;
   lastPoints: number;
   madeBet: boolean;
+  /** Avatar emoji from auth metadata. Null/undefined → render initial. */
+  avatar?: string | null;
+  /** Avatar color hex; falls back to a deterministic seat-based color. */
+  avatarColor?: string | null;
 }
 
 export interface ScoreboardModalProps {
@@ -130,6 +134,8 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       {/* Rankings */}
       {sortedPlayers.map((p, i) => {
         const isWinner = isGameOver && i === 0;
+        const seatColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA'];
+        const avatarBg = p.avatarColor || seatColors[i % seatColors.length];
         return (
           <View
             key={p.id}
@@ -145,6 +151,11 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             <Text style={[styles.compactRank, { color: isWinner ? colors.success : colors.textMuted, fontWeight: isWinner ? '800' : '600' }]}>
               {isWinner ? '🏆' : i + 1}
             </Text>
+            <View style={[styles.scoreboardAvatar, { backgroundColor: avatarBg }]}>
+              <Text style={styles.scoreboardAvatarText}>
+                {p.avatar || (p.name?.[0] ?? '?').toUpperCase()}
+              </Text>
+            </View>
             <Text style={[styles.compactName, { color: colors.textPrimary, fontWeight: isWinner ? '700' : '500' }]} numberOfLines={1}>{p.name}</Text>
             <Text style={[styles.compactScore, { color: isWinner ? colors.success : colors.accent, fontWeight: isWinner ? '800' : '700' }]}>{p.totalScore}</Text>
             <View style={[styles.compactLastHand, { backgroundColor: p.madeBet ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' }]}>
@@ -349,6 +360,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
+  },
+  scoreboardAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 6,
+  },
+  scoreboardAvatarText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   compactScore: {
     fontSize: 16,
