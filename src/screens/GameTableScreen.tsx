@@ -703,7 +703,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             >
               <Text style={[styles.trumpBadgeText, { color: getTrumpColor(vm.trumpSuit) }]}>
                 {vm.trumpSuit === 'notrump'
-                  ? t('game.notrump')
+                  ? t('game.noTrump')
                   : `${getTrumpSymbol(vm.trumpSuit)} ${t('game.trump')}`}
               </Text>
             </View>
