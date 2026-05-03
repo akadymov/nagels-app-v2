@@ -442,8 +442,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 style={[
                   styles.playerCard,
                   { backgroundColor: colors.surface, borderColor: colors.glassLight },
-                  isBetting && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                  // "It's me" highlight first; then the active-player
+                  // highlight wins on top so when it's my turn to bet I
+                  // see the same yellow ring everyone else does, not the
+                  // blue accent that's just "this is me" elsewhere.
                   isMe && { borderColor: colors.accent, borderWidth: 2 },
+                  isBetting && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
                 ]}
               >
                 <Text
