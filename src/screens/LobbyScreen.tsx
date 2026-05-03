@@ -276,7 +276,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       >
         {/* Nickname */}
         <View style={[styles.nicknameRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.nicknameIcon, { color: colors.textMuted }]}>🦈</Text>
+          <Text style={[styles.nicknameIcon, { color: colors.textMuted }]}>
+            {(user?.user_metadata?.avatar as string | undefined) || '🦈'}
+          </Text>
           <TextInput
             style={[styles.nicknameInput, { color: colors.textPrimary }]}
             value={nameInput}
