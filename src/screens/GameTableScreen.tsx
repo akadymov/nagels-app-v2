@@ -445,8 +445,18 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   useEffect(() => {
     if (vm.phase === 'scoring' || vm.phase === 'finished') {
-      setShowScoreboard(true);
-      setIsViewingScores(false);
+      // Defer the scoreboard so every player sees the final card on the
+      // table before the modal covers it. Server transitions to 'scoring'
+      // the moment the last trick closes, but the actor's pane is the
+      // only one that already knows what was played — broadcast
+      // refreshSnapshot needs a beat to land on the rest. We reuse the
+      // same 1500 ms TRICK_HOLD_MS so the trick-hold visual and the
+      // scoreboard delay stay in lockstep.
+      const t = setTimeout(() => {
+        setShowScoreboard(true);
+        setIsViewingScores(false);
+      }, TRICK_HOLD_MS);
+      return () => clearTimeout(t);
     }
   }, [vm.phase]);
 
