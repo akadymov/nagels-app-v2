@@ -68,13 +68,14 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   }, [authDisplayName]);
 
   const setPlayerName = useCallback(async (name: string) => {
-    // Persist on three surfaces so Lobby and Profile/Settings stay in sync:
-    //  1. AsyncStorage (legacy guest cache, read on next app start)
-    //  2. authStore.displayName + .user (Settings/Profile read these)
-    //  3. supabase user_metadata.display_name (cross-device source of truth)
-    await setPlayerNameInStorage(name);
+    // Sync writes go FIRST — by the time saveName resolves, any screen
+    // that mounts (e.g. Settings opened from the gear button) will read
+    // the fresh displayName from authStore. If we awaited AsyncStorage
+    // first, Settings could mount mid-tick and read the stale value.
     setPlayerNameState(name);
     useAuthStore.getState().setDisplayName(name);
+    // Async persistence — AsyncStorage cache + supabase user_metadata.
+    await setPlayerNameInStorage(name);
     try {
       const updated = await updateUserMetadata({ display_name: name });
       useAuthStore.getState().setUser(updated, !!updated.is_anonymous);
@@ -295,6 +296,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             style={[styles.nicknameInput, { color: colors.textPrimary }]}
             value={nameInput}
             onChangeText={setNameInput}
+            onBlur={saveName}
+            onSubmitEditing={saveName}
             placeholder="Guest"
             placeholderTextColor={colors.textMuted}
             maxLength={20}
