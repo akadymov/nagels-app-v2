@@ -243,12 +243,12 @@
   "onboarding": {
     "gotIt": "Entendido",
     "biddingTitle": "Haz tu apuesta",
-    "biddingBody": "Predice cuántas bazas vas a ganar esta mano. Acertar exacto = +10 de bonus. Fallar cuesta la diferencia.\n\nEl último apostador no puede igualar la suma total con las cartas repartidas — alguien debe quedar insatisfecho.",
+    "biddingBody": "Predice cuántas bazas vas a ganar esta mano. Acertar exacto = +10 de bonus. Fallar = sin bonus, pero igual ganas un punto por cada baza tomada.\n\nEl último apostador no puede igualar la suma total con las cartas repartidas — alguien debe quedar insatisfecho.",
     "trumpRankTitle": "El triunfo es especial",
     "trumpRankBody": "En el palo de triunfo, la J es la carta más alta y el 9 es la segunda. Así J♥ y 9♥ vencen al A♥ cuando los corazones son triunfo.",
     "noTrumpTitle": "Esta ronda sin triunfo",
     "noTrumpBody": "Esta ronda no tiene triunfo. La carta más alta del palo de salida siempre gana. El triunfo vuelve la próxima ronda.",
     "scoringTitle": "Cómo se puntúa",
-    "scoringBody": "Cada baza ganada = 1 punto.\nApuesta exacta = +10 de bonus.\nFallar la apuesta = pierdes |apuesta − bazas|.\n\nGana quien tenga más puntos tras 20 manos."
+    "scoringBody": "Cada baza ganada = 1 punto.\nApuesta exacta = +10 de bonus.\nFallar la apuesta = sin bonus.\n\nGana quien tenga más puntos tras todas las manos."
   }
 }
