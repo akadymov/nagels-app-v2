@@ -39,6 +39,11 @@ export interface RoomSnapshot {
     is_ready: boolean;
     is_connected: boolean;
     last_seen_at: string;
+    /** User-chosen avatar emoji from auth.users.raw_user_meta_data.avatar.
+     *  Null/undefined → render initial+color fallback (default avatar). */
+    avatar?: string | null;
+    /** User-chosen avatar color hex (#RRGGBB). Null → seat-based default. */
+    avatar_color?: string | null;
   }>;
   current_hand: {
     id: string;

@@ -259,6 +259,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             const seenTs = player.last_seen_at ? Date.parse(player.last_seen_at) : NaN;
             const msSince = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
             const isOffline = !isMe && msSince > 30_000;
+            // Avatar: prefer user-chosen emoji + color (from auth metadata),
+            // fall back to seat-based color and the player's initial.
+            const seatColors = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA'];
+            const avatarBg = (player as any).avatar_color || seatColors[index % seatColors.length];
+            const avatarEmoji = (player as any).avatar as string | null | undefined;
             return (
               <GlassCard
                 key={player.session_id}
@@ -269,8 +274,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   isOffline && { opacity: 0.5 },
                 ]}
               >
-                <View style={[styles.seatBadge, { backgroundColor: colors.surfaceSecondary }]}>
-                  <Text style={[styles.seatNumber, { color: colors.textMuted }]}>{index + 1}</Text>
+                <View style={[styles.seatBadge, { backgroundColor: avatarBg }]}>
+                  <Text style={[styles.seatNumber, { color: '#ffffff' }]}>
+                    {avatarEmoji || (player.display_name?.[0] ?? '?').toUpperCase()}
+                  </Text>
                 </View>
                 <View style={styles.playerInfo}>
                   <Text style={[styles.playerName, { color: colors.textPrimary }]}>
