@@ -433,15 +433,35 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const hasAllBets =
     vm.players.length > 0 && vm.players.every((p) => p.bet !== null);
 
+  // The "X to fight / X to give" banner: server transitions the hand
+  // atomically from 'betting' → 'playing' the moment the last bet is
+  // placed, so the client almost never observes phase==='betting' with
+  // hasAllBets===true (the snapshot already shows phase==='playing').
+  // We instead trigger on the first appearance of phase==='playing'
+  // when no cards have been laid yet — that's the bet-balance moment
+  // — and gate it once per hand id so a mid-hand refresh doesn't
+  // surface a stale banner.
+  const handIdForBanner = snapshot?.current_hand?.id ?? null;
+  const bannerShownForHandRef = useRef<string | null>(null);
   useEffect(() => {
-    if (hasAllBets && vm.phase === 'betting') {
+    const noCardsPlayedYet = (currentTrick?.cards?.length ?? 0) === 0;
+    if (
+      hasAllBets &&
+      vm.phase === 'playing' &&
+      noCardsPlayedYet &&
+      tricksDiff !== 0 &&
+      handIdForBanner &&
+      bannerShownForHandRef.current !== handIdForBanner
+    ) {
+      bannerShownForHandRef.current = handIdForBanner;
       setShowBetBanner(true);
       const t = setTimeout(() => setShowBetBanner(false), 3000);
       return () => clearTimeout(t);
-    } else if (vm.phase === 'playing') {
+    }
+    if (vm.phase !== 'playing' && vm.phase !== 'betting') {
       setShowBetBanner(false);
     }
-  }, [hasAllBets, vm.phase]);
+  }, [hasAllBets, vm.phase, tricksDiff, handIdForBanner, currentTrick?.cards?.length]);
 
   useEffect(() => {
     if (vm.phase === 'scoring' || vm.phase === 'finished') {
