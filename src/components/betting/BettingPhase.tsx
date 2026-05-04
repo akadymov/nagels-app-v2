@@ -22,6 +22,7 @@ import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
+import { useGameStore } from '../../store/gameStore';
 import { gameClient } from '../../lib/gameClient';
 import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
@@ -61,14 +62,82 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
 
-  const snapshot = useRoomStore((s) => s.snapshot);
-  const myPlayerId = useRoomStore((s) => s.myPlayerId);
+  // Multiplayer reads from the realtime room store. Single-player
+  // (vs. bots) doesn't have a server-side room, so we synthesize a
+  // matching snapshot shape from useGameStore — that way every
+  // downstream selector (bettingPlayer, allowedBets, etc.) keeps
+  // working without a parallel render path. Akula's report: betting
+  // screen for a bot game showed no players or cards because we were
+  // reading from an empty roomStore.
+  const mpSnapshot = useRoomStore((s) => s.snapshot);
+  const mpMyPlayerId = useRoomStore((s) => s.myPlayerId);
+  const sp = useGameStore();
+
+  const SP_HAND_ID = 'sp-hand';
+  const spSnapshot = useMemo(() => {
+    if (isMultiplayer) return null;
+    const me = sp.getMyPlayer();
+    const playersArr = sp.players.map((p, i) => ({
+      session_id: p.id,
+      display_name: p.name,
+      seat_index: i,
+      is_ready: true,
+      is_connected: true,
+      last_seen_at: new Date().toISOString(),
+      avatar: null,
+      avatar_color: null,
+    }));
+    const handScoresArr = sp.players
+      .filter((p) => p.bet !== null && p.bet !== undefined)
+      .map((p) => ({
+        hand_id: SP_HAND_ID,
+        session_id: p.id,
+        bet: p.bet as number,
+        taken_tricks: p.tricksWon ?? 0,
+        hand_score: 0,
+      }));
+    return {
+      room: { id: 'sp-room', code: 'SP', host_session_id: me?.id ?? '',
+              player_count: sp.playerCount, max_cards: 10, phase: 'playing',
+              current_hand_id: SP_HAND_ID, version: 0 },
+      players: playersArr,
+      current_hand: {
+        id: SP_HAND_ID,
+        room_id: 'sp-room',
+        hand_number: sp.handNumber,
+        cards_per_player: sp.cardsPerPlayer,
+        trump_suit: sp.trumpSuit,
+        starting_seat: sp.startingPlayerIndex,
+        current_seat: sp.currentPlayerIndex,
+        phase: sp.phase === 'betting' ? 'betting' : 'playing',
+        deck_seed: '',
+        started_at: new Date().toISOString(),
+        closed_at: null,
+      },
+      hand_scores: handScoresArr,
+      current_trick: null,
+      last_closed_trick: null,
+      score_history: [],
+      my_hand: me ? me.hand.map((c) => `${c.suit}-${c.rank}`) : [],
+      _myId: me?.id ?? null,
+    };
+  }, [isMultiplayer, sp.players, sp.handNumber, sp.cardsPerPlayer, sp.trumpSuit,
+      sp.startingPlayerIndex, sp.currentPlayerIndex, sp.phase, sp.playerCount]);
+
+  type SnapPlayer = { session_id: string; display_name: string; seat_index: number;
+    is_ready: boolean; is_connected: boolean; last_seen_at: string;
+    avatar?: string | null; avatar_color?: string | null };
+  type SnapScore = { hand_id: string; session_id: string; bet: number;
+    taken_tricks: number; hand_score: number };
+
+  const snapshot: any = isMultiplayer ? mpSnapshot : spSnapshot;
+  const myPlayerId: string | null = isMultiplayer ? mpMyPlayerId : (spSnapshot?._myId ?? null);
 
   const room = snapshot?.room ?? null;
-  const players = snapshot?.players ?? [];
+  const players: SnapPlayer[] = snapshot?.players ?? [];
   const hand = snapshot?.current_hand ?? null;
-  const handScores = snapshot?.hand_scores ?? [];
-  const myHandCards = snapshot?.my_hand ?? [];
+  const handScores: SnapScore[] = snapshot?.hand_scores ?? [];
+  const myHandCards: string[] = snapshot?.my_hand ?? [];
 
   const myPlayer = players.find((p) => p.session_id === myPlayerId) ?? null;
   const trumpSuit = hand?.trump_suit ?? 'diamonds';
@@ -259,6 +328,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         return;
       }
       betPlacedHaptic();
+      if (!isMultiplayer) {
+        // Bot game — go straight through useGameStore.
+        const meId = sp.getMyPlayer()?.id;
+        if (meId) sp.placeBet(meId, bet);
+        return;
+      }
       try {
         const t0 = Date.now();
         await gameClient.placeBet(room.id, hand.id, bet);
