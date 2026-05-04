@@ -457,19 +457,27 @@ async function gameLoop(p, w, opts = {}) {
       } catch (_) {}
     }
 
-    // Game over — prefer testID (i18n-proof), fall back to localized text.
+    // Game over — wait specifically for the WinnerFanfareModal (the
+    // standalone celebration card with confetti + big avatar) and let
+    // it sit visible for 25 s before exiting. That's the demo's payoff
+    // shot and a human watcher needs the full beat to read the winner
+    // name + score. We DO NOT click winner-fanfare-continue — the
+    // browser closes with the fanfare still on screen.
+    const fanfareBtn = p.locator('[data-testid="winner-fanfare-continue"]');
     const gameOverById = p.locator('[data-testid="game-over"]');
     const gameOverByText = p.locator('text=/Game Over|Игра окончена|Juego Terminado|Конец игры|Fin del juego/i').first();
+    if (await fanfareBtn.isVisible().catch(() => false)) {
+      const banner = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
+      log(w, `🏁 Game Over (fanfare)!${banner ? '  ' + banner.trim() : ''}`);
+      await sleep(25000);
+      break;
+    }
     if (await gameOverById.isVisible().catch(() => false) ||
         await gameOverByText.isVisible().catch(() => false)) {
-      // Try to read the winner banner so the demo log mirrors what a human
-      // sees on the final screen.
+      // Scoreboard appeared without a fanfare (mid-game finish path).
       const banner = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
       log(w, `🏁 Game Over!${banner ? '  ' + banner.trim() : ''}`);
-      // Hold the final screen long enough for a human watcher to read the
-      // winner banner and the final standings before windows close. The
-      // game-over scoreboard is the demo's payoff shot.
-      await sleep(8000);
+      await sleep(15000);
       break;
     }
 
