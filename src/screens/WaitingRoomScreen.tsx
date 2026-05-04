@@ -31,6 +31,8 @@ import { useHeartbeat } from '../lib/heartbeat';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
 import { avatarColorFor } from '../utils/avatarColor';
+import { useChatStore } from '../store/chatStore';
+import { ChatPanel } from '../components/ChatPanel';
 
 export interface WaitingRoomScreenProps {
   onGameStart: () => void;
@@ -63,6 +65,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   );
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
   const amIReady = myPlayer?.is_ready ?? false;
+  const [showChat, setShowChat] = useState(false);
+  const chatUnread = useChatStore((s) => s.unread);
   const playerCount = players.length;
   const readyCount = players.filter((p) => p.is_ready).length;
   // Host is implicitly ready: only count non-host ready players for "canStart"
@@ -207,13 +211,35 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           <Text style={{ fontSize: 18 }}>🔄</Text>
         </Pressable>
         <GameLogo size="sm" />
-        {onSettings ? (
-          <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn} testID="waiting-btn-settings">
-            <Text style={{ fontSize: 18 }}>⚙️</Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <Pressable
+            onPress={() => setShowChat(true)}
+            hitSlop={8}
+            style={styles.settingsBtn}
+            testID="waiting-btn-chat"
+          >
+            <Text style={{ fontSize: 18 }}>💬</Text>
+            {chatUnread > 0 && (
+              <View style={{
+                position: 'absolute', top: -4, right: -4,
+                minWidth: 16, height: 16, paddingHorizontal: 4,
+                borderRadius: 8, backgroundColor: colors.error,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                  {chatUnread > 9 ? '9+' : chatUnread}
+                </Text>
+              </View>
+            )}
           </Pressable>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
+          {onSettings ? (
+            <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn} testID="waiting-btn-settings">
+              <Text style={{ fontSize: 18 }}>⚙️</Text>
+            </Pressable>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
+        </View>
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -417,6 +443,16 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           <Text style={styles.leaveButtonText}>{t('multiplayer.leaveRoom')}</Text>
         </Pressable>
       </ScrollView>
+      <ChatPanel
+        visible={showChat}
+        onClose={() => setShowChat(false)}
+        sender={myPlayer ? {
+          sessionId: myPlayer.session_id,
+          displayName: myPlayer.display_name,
+          avatar: (myPlayer as any).avatar ?? null,
+          avatarColor: (myPlayer as any).avatar_color ?? null,
+        } : null}
+      />
     </SafeAreaView>
   );
 };

@@ -104,6 +104,12 @@
     "spades": "Spades",
     "notrump": "No Trump"
   },
+  "chat": {
+    "title": "Chat",
+    "empty": "No messages yet — say hi!",
+    "placeholder": "Message",
+    "send": "Send"
+  },
   "scoreboard": {
     "hand": "Hand",
     "of": "of",

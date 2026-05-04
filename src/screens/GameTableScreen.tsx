@@ -23,6 +23,8 @@ import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
 import { ScoreboardModal } from './ScoreboardModal';
 import { WinnerFanfareModal } from '../components/WinnerFanfareModal';
+import { ChatPanel } from '../components/ChatPanel';
+import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
@@ -428,6 +430,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const chatUnread = useChatStore((s) => s.unread);
   // Game-over celebration that pops BEFORE the scoreboard. Tied to
   // hand id so re-opening the screen on a finished room shows it
   // exactly once per match.
@@ -873,11 +877,23 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
             <Pressable
-              disabled
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: 0.3 }]}
+              onPress={() => setShowChat(true)}
+              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-chat"
             >
               <Text style={styles.iconBtnEmoji}>💬</Text>
+              {chatUnread > 0 && (
+                <View style={{
+                  position: 'absolute', top: -4, right: -4,
+                  minWidth: 16, height: 16, paddingHorizontal: 4,
+                  borderRadius: 8, backgroundColor: colors.error,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                    {chatUnread > 9 ? '9+' : chatUnread}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
@@ -1082,6 +1098,24 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             </View>
           </View>
         )}
+
+        {/* Chat panel — multiplayer only; SP has no peers to chat with. */}
+        {isMultiplayer && (() => {
+          const me = mpPlayers.find((p) => p.session_id === myPlayerId) ?? null;
+          return (
+            <ChatPanel
+              visible={showChat}
+              onClose={() => setShowChat(false)}
+              sender={me ? {
+                sessionId: me.session_id,
+                displayName: me.display_name,
+                avatar: (me as any).avatar ?? null,
+                avatarColor: (me as any).avatar_color ?? null,
+              } : null}
+              testIdPrefix="chat"
+            />
+          );
+        })()}
 
         {/* Betting Phase Modal */}
         <BettingPhase

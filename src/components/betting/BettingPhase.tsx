@@ -23,7 +23,9 @@ import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
 import { useGameStore } from '../../store/gameStore';
+import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
+import { ChatPanel } from '../ChatPanel';
 import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -197,6 +199,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Action bar modals / toggles
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const chatUnread = useChatStore((s) => s.unread);
 
   // Settings & auth for in-game settings panel
   const themePreference = useSettingsStore((s) => s.themePreference);
@@ -397,6 +401,20 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         titleKey="onboarding.biddingTitle"
         bodyKey="onboarding.biddingBody"
       />
+      {/* Chat panel — multiplayer only. */}
+      {isMultiplayer && (
+        <ChatPanel
+          visible={showChat}
+          onClose={() => setShowChat(false)}
+          sender={myPlayer ? {
+            sessionId: myPlayer.session_id,
+            displayName: myPlayer.display_name,
+            avatar: (myPlayer as any).avatar ?? null,
+            avatarColor: (myPlayer as any).avatar_color ?? null,
+          } : null}
+          testIdPrefix="betting-chat"
+        />
+      )}
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -485,18 +503,34 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             >
               <Text style={styles.iconBtnEmoji}>🏆</Text>
             </Pressable>
-            {/* Chat button placeholder — disabled until chat is wired up.
-                Keeps action-bar layout consistent with GameTable. */}
             <Pressable
-              disabled
+              onPress={() => setShowChat(true)}
+              disabled={!isMultiplayer}
               style={[
                 styles.iconBtn,
-                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight, opacity: 0.3 },
+                {
+                  backgroundColor: colors.iconButtonBg,
+                  borderWidth: 1,
+                  borderColor: colors.glassLight,
+                  opacity: isMultiplayer ? 1 : 0.3,
+                },
               ]}
               testID="betting-btn-chat"
               hitSlop={8}
             >
               <Text style={styles.iconBtnEmoji}>💬</Text>
+              {chatUnread > 0 && (
+                <View style={{
+                  position: 'absolute', top: -4, right: -4,
+                  minWidth: 16, height: 16, paddingHorizontal: 4,
+                  borderRadius: 8, backgroundColor: colors.error,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                    {chatUnread > 9 ? '9+' : chatUnread}
+                  </Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>

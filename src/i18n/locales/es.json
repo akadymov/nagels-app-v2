@@ -104,6 +104,12 @@
     "spades": "Picas",
     "notrump": "Sin Triunfo"
   },
+  "chat": {
+    "title": "Chat",
+    "empty": "Aún no hay mensajes — ¡saluda!",
+    "placeholder": "Mensaje",
+    "send": "Enviar"
+  },
   "scoreboard": {
     "hand": "Mano",
     "of": "de",
