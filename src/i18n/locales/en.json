@@ -182,6 +182,7 @@
   "multiplayer": {
     "quickMatch": "Quick Match",
     "createRoom": "Create Private Room",
+    "tooManyRooms": "You've created too many rooms in the past hour. Try again later.",
     "joinRoom": "Join Room",
     "waitingRoom": "Waiting Room",
     "roomCode": "Room Code",

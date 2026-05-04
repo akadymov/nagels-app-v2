@@ -171,7 +171,13 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       const displayName = (nameInput.trim() || playerName) ?? 'Guest';
       const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10);
       if (!result.ok) {
-        throw new Error(result.error || 'Failed to create room');
+        // Map server error codes to translated user-friendly text where
+        // the wire string is shorthand only. Default = passthrough.
+        const code = result.error || 'Failed to create room';
+        const friendly = code === 'too_many_rooms'
+          ? t('multiplayer.tooManyRooms', 'You\'ve created too many rooms in the past hour. Try again later.')
+          : code;
+        throw new Error(friendly);
       }
       const user = await getCurrentUser();
       if (user && result.state.players) {
