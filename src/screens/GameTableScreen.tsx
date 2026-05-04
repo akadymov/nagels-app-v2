@@ -1152,7 +1152,19 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           totalHands={vm.totalHands}
           players={scoreboardPlayers}
           startingPlayerIndex={vm.startingPlayerIndex}
-          isGameOver={vm.handNumber >= vm.totalHands || vm.phase === 'finished'}
+          // Game-over is the SERVER's "room.phase='finished'" signal,
+          // not just a hand-count match. Using vm.handNumber >=
+          // vm.totalHands flagged the scoreboard as final the moment
+          // hand N (the last hand) was DEALT — we hadn't actually
+          // played it yet. The host's button then read "Play Again"
+          // instead of "Continue", a Play Again click hit the
+          // restart_game RPC which rejected with 'not_finished'
+          // (room.phase was still 'playing'), and the table froze
+          // mid-betting on hand N. Now we wait for the real signal:
+          // continueHand on hand N flips room to 'finished', the
+          // snapshot lands, vm.phase becomes 'finished', and only
+          // THEN do we render the game-over scoreboard.
+          isGameOver={vm.phase === 'finished'}
           isHost={isMultiplayer && room?.host_session_id === myPlayerId}
           isMidGame={isViewingScores}
           onContinue={handleScoreboardContinue}
