@@ -1,5 +1,5 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { ActorContext, Action, ActionResult } from '../../_shared/types.ts';
+import type { ActorContext, Action, ActionResult, RoomSnapshot } from '../../_shared/types.ts';
 import { buildSnapshot } from '../snapshot.ts';
 
 function generateCode(): string {
@@ -11,11 +11,44 @@ function generateCode(): string {
   return code;
 }
 
+const ROOMS_PER_HOUR_LIMIT = 10;
+const ROOMS_PER_HOUR_WINDOW_MS = 60 * 60 * 1000;
+
+function emptySnapshot(): RoomSnapshot {
+  return {
+    room: null, players: [], current_hand: null,
+    hand_scores: [], current_trick: null, last_closed_trick: null,
+    score_history: [], my_hand: [],
+  };
+}
+
 export async function createRoom(
   svc: SupabaseClient,
   actor: ActorContext,
   action: Extract<Action, { kind: 'create_room' }>,
 ): Promise<ActionResult> {
+  // Throttle: a single session can't create more than ROOMS_PER_HOUR_LIMIT
+  // rooms in any rolling hour. Counts kind='create_room' events on
+  // game_events for the current session in the last 60 min — no new
+  // table or migration needed; the events table already records every
+  // creation. Caps abusive automation while letting humans (and the
+  // demo, ~1 room/run) breathe.
+  const since = new Date(Date.now() - ROOMS_PER_HOUR_WINDOW_MS).toISOString();
+  const { count: recentCount } = await svc
+    .from('game_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('session_id', actor.session_id)
+    .eq('kind', 'create_room')
+    .gte('created_at', since);
+  if ((recentCount ?? 0) >= ROOMS_PER_HOUR_LIMIT) {
+    return {
+      ok: false,
+      error: 'too_many_rooms',
+      state: emptySnapshot(),
+      version: 0,
+    };
+  }
+
   let inserted: { id: string; version: number } | null = null;
   for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
     const code = generateCode();

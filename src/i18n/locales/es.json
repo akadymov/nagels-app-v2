@@ -182,6 +182,7 @@
   "multiplayer": {
     "quickMatch": "Partida Rápida",
     "createRoom": "Crear Sala Privada",
+    "tooManyRooms": "Has creado demasiadas salas en la última hora. Inténtalo más tarde.",
     "joinRoom": "Unirse a Sala",
     "waitingRoom": "Sala de Espera",
     "roomCode": "Código de Sala",
