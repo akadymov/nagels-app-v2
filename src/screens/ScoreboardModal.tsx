@@ -116,6 +116,20 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const leader = sortedPlayers[0];
 
+  // Hooks for the full-table view live up here — never below the
+  // `if (!visible) return null` guard. Putting useRef/useEffect after
+  // a conditional early return changes the hook count between
+  // renders and trips React's "Rendered more hooks than during the
+  // previous render" (#310), breaking every player's table at once.
+  const tableScrollRef = useRef<ScrollView | null>(null);
+  useEffect(() => {
+    if (!visible || !showFull) return;
+    const t = setTimeout(() => {
+      try { tableScrollRef.current?.scrollToEnd({ animated: false }); } catch {}
+    }, 50);
+    return () => clearTimeout(t);
+  }, [visible, showFull, effectiveHistory.length]);
+
   if (!visible) return null;
 
   const renderCompact = () => (
@@ -175,17 +189,6 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       )}
     </View>
   );
-
-  const tableScrollRef = useRef<ScrollView | null>(null);
-  // Auto-scroll to bottom whenever the full table opens or new hands
-  // append, so the user always lands on the latest round.
-  useEffect(() => {
-    if (!visible || !showFull) return;
-    const t = setTimeout(() => {
-      try { tableScrollRef.current?.scrollToEnd({ animated: false }); } catch {}
-    }, 50);
-    return () => clearTimeout(t);
-  }, [visible, showFull, effectiveHistory.length]);
 
   const renderFullTable = () => {
     // Column width calculation
