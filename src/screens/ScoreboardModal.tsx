@@ -4,7 +4,7 @@
  * Two modes: compact (mid-game) and full (end-of-round).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -176,6 +176,17 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     </View>
   );
 
+  const tableScrollRef = useRef<ScrollView | null>(null);
+  // Auto-scroll to bottom whenever the full table opens or new hands
+  // append, so the user always lands on the latest round.
+  useEffect(() => {
+    if (!visible || !showFull) return;
+    const t = setTimeout(() => {
+      try { tableScrollRef.current?.scrollToEnd({ animated: false }); } catch {}
+    }, 50);
+    return () => clearTimeout(t);
+  }, [visible, showFull, effectiveHistory.length]);
+
   const renderFullTable = () => {
     // Column width calculation
     const playerCount = players.length;
@@ -184,7 +195,8 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
     return (
       <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
-        {/* Header */}
+        {/* Sticky header — title + column-name row stay visible above
+            the scrollable rounds list. */}
         <Text
           style={[styles.title, { color: colors.accent }]}
           testID={isGameOver ? 'scoreboard-title-gameover' : 'scoreboard-title-hand'}
@@ -198,26 +210,31 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           </Pressable>
         )}
 
-        {/* Table */}
-        <ScrollView style={styles.tableScroll} showsVerticalScrollIndicator={false}>
-          {/* Column headers */}
-          <View style={styles.tableRow}>
-            <View style={[styles.tableCell, { width: roundColW }]}>
-              <Text style={[styles.headerText, { color: colors.textMuted }]}>#</Text>
-            </View>
-            {sortedPlayers.map((p) => (
-              <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
-                <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={1}>{p.name}</Text>
-              </View>
-            ))}
+        {/* Sticky column headers. Two-line cap so long nicknames wrap
+            instead of being cropped. */}
+        <View style={[styles.tableRow, { minHeight: 38 }]}>
+          <View style={[styles.tableCell, { width: roundColW }]}>
+            <Text style={[styles.headerText, { color: colors.textMuted }]}>#</Text>
           </View>
+          {sortedPlayers.map((p) => (
+            <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
+              <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
+                {p.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+        <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
 
-          {/* Divider */}
-          <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
-
-          {/* Round rows — latest hand on top so the most-interesting
-              recent rounds stay visible without scrolling. */}
-          {[...effectiveHistory].reverse().map((hand) => (
+        {/* Scrollable rounds — ascending order so the chronology reads
+            top-to-bottom; the parent effect auto-scrolls to bottom on
+            mount so the user opens to the latest round. */}
+        <ScrollView
+          ref={(r) => { tableScrollRef.current = r; }}
+          style={styles.tableScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          {effectiveHistory.map((hand) => (
             <View key={hand.handNumber} style={styles.tableRow}>
               <View style={[styles.tableCell, { width: roundColW }]}>
                 <Text style={[styles.roundNum, { color: colors.textMuted }]}>{hand.handNumber}</Text>
@@ -243,7 +260,8 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             </View>
           ))}
 
-          {/* Total row */}
+          {/* Total row at the bottom — also scrolls into view so it's
+              what the user sees first when the modal opens. */}
           <View style={[styles.divider, { backgroundColor: colors.accent, height: 2 }]} />
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, { width: roundColW }]}>
@@ -258,7 +276,6 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             ))}
           </View>
 
-          {/* Leader */}
           {leader && (
             <Text style={[styles.leaderText, { color: colors.success }]}>
               🏆 {leader.name} {isGameOver ? t('scoreboard.winner', 'wins!') : t('scoreboard.leading', 'leading')}

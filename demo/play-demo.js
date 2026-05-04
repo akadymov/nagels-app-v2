@@ -473,25 +473,36 @@ async function gameLoop(p, w, opts = {}) {
       break;
     }
 
-    // Last Trick modal blocks every other interaction. If the player opened
-    // it and the hand has since advanced (Scoreboard or new betting), the
-    // modal stays mounted on top and the next button is unreachable.
-    // Close it first whenever it's visible.
+    // Last Trick modal close — only attempt if NO higher-priority
+    // modal is on top of it. The scoreboard, winner fanfare, betting
+    // overlay can all auto-mount over a leftover Last Trick modal; the
+    // click then gets intercepted and we'd loop forever logging
+    // "closed Last Trick (was blocking)" without progress. Skip those
+    // iterations so the dedicated handlers below close the top modal,
+    // and Last Trick auto-unmounts when the room state changes.
     const ltModal = p.locator('[data-testid="last-trick-close"]');
     if (await ltModal.isVisible().catch(() => false)) {
-      try {
-        await ltModal.click({ force: true, timeout: 2000 });
-        log(w, '✓ closed Last Trick (was blocking)');
-        await sleep(300);
-        continue;
-      } catch (_) {
-        // Fallback: localized "Close" text
-        const close = p.locator('text=/^\\s*(Close|Закрыть|Cerrar)\\s*$/i').first();
-        if (await close.isVisible().catch(() => false)) {
-          await close.click({ force: true, timeout: 2000 }).catch(() => {});
-          log(w, '✓ closed Last Trick via text fallback');
+      const blockedBy = (await Promise.all([
+        p.locator('[data-testid="btn-continue-scoreboard"]').isVisible().catch(() => false),
+        p.locator('[data-testid="btn-play-again-scoreboard"]').isVisible().catch(() => false),
+        p.locator('[data-testid="winner-fanfare-continue"]').isVisible().catch(() => false),
+        p.locator('[data-testid^="bet-chip-"]').first().isVisible().catch(() => false),
+      ])).some(Boolean);
+      if (!blockedBy) {
+        try {
+          await ltModal.click({ force: true, timeout: 2000 });
+          log(w, '✓ closed Last Trick (was blocking)');
           await sleep(300);
           continue;
+        } catch (_) {
+          // Fallback: localized "Close" text
+          const close = p.locator('text=/^\\s*(Close|Закрыть|Cerrar)\\s*$/i').first();
+          if (await close.isVisible().catch(() => false)) {
+            await close.click({ force: true, timeout: 2000 }).catch(() => {});
+            log(w, '✓ closed Last Trick via text fallback');
+            await sleep(300);
+            continue;
+          }
         }
       }
     }
