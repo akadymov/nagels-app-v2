@@ -18,7 +18,9 @@
     "demo:6players": "DEMO_PLAYERS=6 node demo/play-demo.js",
     "demo:6players:prod": "DEMO_PLAYERS=6 DEMO_URL=$APP_URL node demo/play-demo.js",
     "demo:sp": "node demo/play-sp-demo.js",
-    "demo:sp:prod": "DEMO_URL=$APP_URL node demo/play-sp-demo.js"
+    "demo:sp:prod": "DEMO_URL=$APP_URL node demo/play-sp-demo.js",
+    "test:sp": "playwright test tests/sp-game.spec.js",
+    "test:sp:prod": "DEMO_URL=$APP_URL playwright test tests/sp-game.spec.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
