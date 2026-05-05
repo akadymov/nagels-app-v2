@@ -1,5 +1,14 @@
 ## Backlog
 
+### Discord integration
+
+OAuth login + bot. "Sign in with Discord" to skip the
+manual signup flow. A Discord bot that can post game-results to a
+configured channel (room.discord_webhook?), and ideally support
+"play with my Discord friends" — invite link posted by the bot,
+joinable from the Discord button. Requires Discord Developer
+Application + bot token.
+
 ### Push notifications — "Your turn", "Game started"
 
 
