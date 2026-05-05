@@ -144,60 +144,85 @@ async function main() {
         continue;
       }
 
-      // Auto-bet for me: I always pick the smallest allowed bet so the
-      // game progresses without the user having to chime in. Bots
-      // handle the other seats themselves.
-      // Look for any visible "betting-bet-N" chip; the Lobby exposes
-      // bet chips as elements with class containing "bet"; use a plain
-      // text-based locator.
-      const myTurnBadge = p.locator('text=/Place your bid|Сделай ставку|Hagan sus apuestas/i').first();
-      if (await myTurnBadge.isVisible({ timeout: 200 }).catch(() => false)) {
-        // Find first enabled bet chip — they're rendered as Pressables
-        // with text like "0", "1", ... For robustness, try testIDs that
-        // look like numbers, otherwise click the smallest visible bid.
-        const tried = await p.evaluate(() => {
-          const buttons = Array.from(document.querySelectorAll('div[role="button"], button')).filter((b) => {
-            const txt = (b.textContent || '').trim();
-            return /^\d+$/.test(txt) && parseInt(txt, 10) <= 9;
-          });
-          for (const b of buttons) {
-            const rect = b.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              const ev = (type) => b.dispatchEvent(new MouseEvent(type, {
-                bubbles: true, cancelable: true, view: window,
-                clientX: rect.left + rect.width/2, clientY: rect.top + rect.height/2,
-                button: 0,
-              }));
-              ev('mousedown'); ev('mouseup'); ev('click');
-              return (b.textContent || '').trim();
+      // Auto-bet: bet chips are rendered with testID `bet-btn-{N}`.
+      // Mirror the 4-player demo's tryBet — pick a bet near
+      // cardsPerPlayer / PLAYERS with small jitter, fall back to the
+      // first enabled chip if the desired one is blocked. Plain
+      // Playwright .click() drives the Pressable correctly here (same
+      // as the 4p demo); we don't need the manual pointer-event dance.
+      {
+        const allBtns = p.locator('[data-testid^="bet-btn-"]');
+        const totalCount = await allBtns.count().catch(() => 0);
+        if (totalCount > 0) {
+          const cardsPerPlayer = totalCount - 1;
+          const enabled = p.locator('[data-testid^="bet-btn-"]:not([disabled]):not([aria-disabled="true"])');
+          const enabledCount = await enabled.count().catch(() => 0);
+          if (enabledCount > 0) {
+            const allowed = [];
+            for (let i = 0; i < enabledCount; i++) {
+              const txt = ((await enabled.nth(i).textContent().catch(() => '')) || '').trim();
+              const n = parseInt(txt, 10);
+              if (!Number.isNaN(n)) allowed.push(n);
+            }
+            if (allowed.length > 0) {
+              const target = cardsPerPlayer / PLAYERS;
+              const jitter = Math.floor(Math.random() * 3) - 1;
+              const desired = Math.max(0, Math.min(cardsPerPlayer, Math.round(target + jitter)));
+              allowed.sort((a, b) => Math.abs(a - desired) - Math.abs(b - desired) || (Math.random() - 0.5));
+              const choice = allowed[0];
+              const chip = p.locator(`[data-testid="bet-btn-${choice}"]`);
+              try {
+                await chip.click({ timeout: 3000 });
+              } catch (_) {
+                await enabled.first().click({ timeout: 3000, force: true }).catch(() => {});
+              }
+              await sleep(400);
+              // After a successful placeBet the bet panel hides — chips
+              // disappear. If they're still visible we count it as no-op
+              // and fall through to the watchdog.
+              if (!(await enabled.first().isVisible({ timeout: 200 }).catch(() => false))) {
+                log(`✓ auto-bet ${choice}`);
+                idle = 0;
+                continue;
+              }
             }
           }
-          return null;
-        });
-        if (tried) { log(`✓ auto-bet ${tried}`); idle = 0; continue; }
+        }
       }
 
-      // Auto-play my card during playing: pick the first my-hand card.
-      // The hand is rendered with testID `card-{suit}-{rank}` (matches
-      // the multiplayer demo's locator).
-      const myCards = p.locator('[data-testid^="card-"]');
-      if (await myCards.first().isVisible({ timeout: 200 }).catch(() => false)) {
-        const cnt = await myCards.count();
-        // Try each card until one gets accepted (greys out / disappears).
+      // Auto-play my card during playing. Must scope into
+      // [data-testid="my-hand"] — the same `card-{suit}-{rank}` testID
+      // is also used for cards rendered in the trick area, so a bare
+      // `[data-testid^="card-"]` locator can hit a card that isn't in
+      // our hand and produce a phantom "play" with no game progress.
+      // Verify the card actually leaves the hand before declaring
+      // success (see demo/play-demo.js:tryPlay for the same pattern).
+      const hand = p.locator('[data-testid="my-hand"]');
+      if (await hand.isVisible({ timeout: 200 }).catch(() => false)) {
+        const cards = hand.locator('[data-testid^="card-"]');
+        const cnt = await cards.count();
         let played = false;
         for (let i = 0; i < cnt && i < 12; i++) {
-          const c = myCards.nth(i);
-          const tid = await c.getAttribute('data-testid').catch(() => '');
+          const c = cards.nth(i);
+          const tid = await c.getAttribute('data-testid').catch(() => null);
+          if (!tid) continue;
           try {
             await c.click({ timeout: 800 });
-            await c.click({ timeout: 800 }).catch(() => {});
-            await sleep(300);
-            // Confirm by observing that this exact testID has gone or
-            // current_seat advanced. We just trust the click and let
-            // the next tick verify by counting the hand.
-            log(`✓ play ${tid}`);
-            played = true;
-            break;
+            await sleep(350);
+            const same = hand.locator(`[data-testid="${tid}"]`);
+            if (!(await same.isVisible().catch(() => false))) {
+              log(`✓ play ${tid}`);
+              played = true;
+              break;
+            }
+            // Card still in hand → second click is the confirm gesture.
+            await same.click({ timeout: 800 }).catch(() => {});
+            await sleep(400);
+            if ((await cards.count()) < cnt) {
+              log(`✓ play ${tid}`);
+              played = true;
+              break;
+            }
           } catch (_) {}
         }
         if (played) { idle = 0; continue; }
@@ -218,6 +243,40 @@ async function main() {
 
       if (idle % 20 === 0 && idle > 0) {
         log(`⌛ idle ${idle * POLL_MS / 1000}s (hand ${lastHand})`);
+        if (idle === 20) {
+          // Diagnostic snapshot on first idle warning — dump every
+          // [data-testid] currently in the DOM with its disabled
+          // state and a snippet of text. Helps catch cases where the
+          // game phase doesn't match what the demo expects.
+          const snap = await p.evaluate(() => {
+            const isVis = (el) => {
+              const r = el.getBoundingClientRect();
+              return r.width > 0 && r.height > 0;
+            };
+            const ids = Array.from(document.querySelectorAll('[data-testid]'))
+              .filter(isVis)
+              .slice(0, 60)
+              .map((el) => {
+                const tid = el.getAttribute('data-testid');
+                const dis = el.getAttribute('aria-disabled') || el.getAttribute('disabled') || '';
+                const txt = (el.textContent || '').trim().slice(0, 60);
+                return `${tid}${dis ? ` [dis=${dis}]` : ''} ${txt ? `"${txt}"` : ''}`;
+              });
+            // Visible Text-like elements — useful for catching status
+            // text such as "Waiting for X" / "Place your bid".
+            const texts = Array.from(document.querySelectorAll('div, span'))
+              .filter((el) => el.children.length === 0 && isVis(el))
+              .map((el) => (el.textContent || '').trim())
+              .filter((t) => t && t.length < 80)
+              .slice(0, 40);
+            return { ids, texts };
+          });
+          console.log('  --- testID snapshot (visible only) ---');
+          snap.ids.forEach((line) => console.log('  ' + line));
+          console.log('  --- visible text leaves ---');
+          snap.texts.forEach((line) => console.log('  ' + line));
+          console.log('  --- end snapshot ---');
+        }
       }
       if (idle >= STUCK_THRESHOLD) {
         log('⚠ STUCK — bailing');
