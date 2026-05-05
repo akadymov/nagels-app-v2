@@ -10,7 +10,8 @@
  * Configurable via env:
  *   DEMO_URL    target host (default http://localhost:8081)
  *   SP_PLAYERS  total players incl. me, 2..6 (default 4)
- *   HEADLESS    "0" to run headed for debugging (default headless)
+ *   HEADLESS    "1" to run headless for CI (default headed for visual review)
+ *   SLOW_MO     ms per action (default 80, set 0 for max speed)
  *
  * Difficulty is hard-pinned to "hard" — we want regression coverage
  * against the strongest bot path because that's where the most code
