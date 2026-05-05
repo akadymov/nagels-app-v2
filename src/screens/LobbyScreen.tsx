@@ -372,6 +372,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
                 <Pressable
                   key={d}
                   onPress={() => setSelectedDifficulty(d)}
+                  testID={`difficulty-${d}`}
                   style={[
                     styles.diffChip,
                     { backgroundColor: colors.surface, borderColor: colors.glassLight },
