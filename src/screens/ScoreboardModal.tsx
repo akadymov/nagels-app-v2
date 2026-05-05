@@ -13,6 +13,7 @@ import {
   Pressable,
   Modal,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
@@ -116,6 +117,28 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const leader = sortedPlayers[0];
 
+  // Winner-banner animation. Bounces in on game-over so the celebration
+  // moment lands with weight; the confetti pops a beat later for layered
+  // motion. Reset when the banner unmounts so a re-open re-animates.
+  const bannerScale = useRef(new Animated.Value(0.6)).current;
+  const bannerOpacity = useRef(new Animated.Value(0)).current;
+  const confettiScale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (visible && isGameOver) {
+      bannerScale.setValue(0.6);
+      bannerOpacity.setValue(0);
+      confettiScale.setValue(0);
+      Animated.parallel([
+        Animated.spring(bannerScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true }),
+        Animated.timing(bannerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+      Animated.sequence([
+        Animated.delay(220),
+        Animated.spring(confettiScale, { toValue: 1, friction: 4, tension: 50, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, isGameOver]);
+
   // Hooks for the full-table view live up here — never below the
   // `if (!visible) return null` guard. Putting useRef/useEffect after
   // a conditional early return changes the hook count between
@@ -132,19 +155,55 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
   if (!visible) return null;
 
+  const renderWinnerBanner = () => {
+    const winner = sortedPlayers[0];
+    if (!winner) return null;
+    const avatarBg = winner.avatarColor || avatarColorFor(winner.id);
+    return (
+      <Animated.View
+        testID="scoreboard-winner-banner"
+        style={[
+          styles.winnerBanner,
+          { backgroundColor: 'rgba(48,133,82,0.12)', borderColor: colors.success,
+            opacity: bannerOpacity, transform: [{ scale: bannerScale }] },
+        ]}
+      >
+        <Animated.Text style={[styles.winnerConfetti, { transform: [{ scale: confettiScale }] }]}>
+          🎉🏆🎉
+        </Animated.Text>
+        <View style={[styles.winnerAvatar, { backgroundColor: avatarBg }]}>
+          <Text style={styles.winnerAvatarText}>
+            {winner.avatar || (winner.name?.[0] ?? '?').toUpperCase()}
+          </Text>
+        </View>
+        <Text style={[styles.winnerGameOverLabel, { color: colors.textMuted }]} numberOfLines={1}>
+          {t('scoreboard.gameOver')}
+        </Text>
+        <Text style={[styles.winnerName, { color: colors.success }]} numberOfLines={1}>
+          {winner.name}
+        </Text>
+        <Text style={[styles.winnerSubtitle, { color: colors.success }]} numberOfLines={1}>
+          {t('scoreboard.winsCongrats', 'wins! Congratulations 🎊')}
+        </Text>
+        <Text style={[styles.winnerScore, { color: colors.success }]}>
+          {winner.totalScore} {t('scoreboard.points', 'pts')}
+        </Text>
+      </Animated.View>
+    );
+  };
+
   const renderCompact = () => (
     <View style={styles.compactContainer} testID={isGameOver ? 'game-over' : undefined}>
-      {/* Header */}
-      <Text
-        style={[styles.title, { color: colors.accent }]}
-        testID={isGameOver ? 'scoreboard-title-gameover' : 'scoreboard-title-hand'}
-      >
-        {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
-      </Text>
-
-      {/* Winner fanfare lives in its own modal (WinnerFanfareModal) now —
-          shown by GameTableScreen ahead of this scoreboard so the
-          celebration moment isn't crammed above the rankings list. */}
+      {/* Hand counter — suppressed on game-over because the winner banner
+          above already announces the end of the game. */}
+      {!isGameOver && (
+        <Text
+          style={[styles.title, { color: colors.accent }]}
+          testID="scoreboard-title-hand"
+        >
+          {t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
+        </Text>
+      )}
 
       {/* Rankings */}
       {sortedPlayers.map((p, i) => {
@@ -198,14 +257,16 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
     return (
       <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
-        {/* Sticky header — title + column-name row stay visible above
-            the scrollable rounds list. */}
-        <Text
-          style={[styles.title, { color: colors.accent }]}
-          testID={isGameOver ? 'scoreboard-title-gameover' : 'scoreboard-title-hand'}
-        >
-          {isGameOver ? t('scoreboard.gameOver') : t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
-        </Text>
+        {/* Hand counter — suppressed on game-over (winner banner above
+            already announces the end of the game). */}
+        {!isGameOver && (
+          <Text
+            style={[styles.title, { color: colors.accent }]}
+            testID="scoreboard-title-hand"
+          >
+            {t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
+          </Text>
+        )}
 
         {isMidGame && (
           <Pressable onPress={() => setShowFull(false)} style={[styles.toggleBtn, { borderColor: colors.accent, marginBottom: Spacing.sm }]}>
@@ -307,6 +368,11 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
               <Text style={[styles.closeText, { color: colors.textMuted }]}>✕</Text>
             </Pressable>
 
+            {/* Game-over winner banner — animated celebration card that
+                lands at the top of the scoreboard so the winner shot and
+                the rankings are visible together in a single modal. */}
+            {isGameOver && renderWinnerBanner()}
+
             {/* Content */}
             {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
 
@@ -383,6 +449,55 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     marginBottom: Spacing.md,
+  },
+  // Game-over winner banner
+  winnerBanner: {
+    alignItems: 'center',
+    borderRadius: Radius.lg,
+    borderWidth: 2,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: 2,
+  },
+  winnerConfetti: {
+    fontSize: 32,
+  },
+  winnerAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 4,
+  },
+  winnerAvatarText: {
+    color: '#ffffff',
+    fontSize: 30,
+    fontWeight: '800',
+  },
+  winnerGameOverLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  winnerName: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  winnerSubtitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  winnerScore: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
   },
   // Compact mode
   compactContainer: {
@@ -493,60 +608,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.md,
     marginBottom: Spacing.sm,
-  },
-  winnerBanner: {
-    borderWidth: 2,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.sm,
-    alignItems: 'center',
-  },
-  winnerText: {
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  winnerFanfare: {
-    borderWidth: 2,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
-    marginBottom: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  winnerConfetti: {
-    fontSize: 36,
-    marginBottom: Spacing.xs,
-  },
-  winnerAvatarBig: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
-  winnerAvatarBigText: {
-    color: '#ffffff',
-    fontSize: 36,
-    fontWeight: '800',
-  },
-  winnerName: {
-    fontSize: 22,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  winnerSubtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  winnerScore: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: Spacing.xs,
   },
   // Toggle button
   toggleBtn: {

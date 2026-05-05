@@ -3,8 +3,9 @@
 /**
  * Single-player end-to-end regression test.
  *
- * Drives a full SP game vs Hard bots and asserts the WinnerFanfareModal
- * appears — i.e. the game progressed through every hand without stalling.
+ * Drives a full SP game vs Hard bots and asserts the scoreboard winner
+ * banner appears — i.e. the game progressed through every hand without
+ * stalling.
  *
  * Configurable via env:
  *   DEMO_URL    target host (default http://localhost:8081)
@@ -15,7 +16,7 @@
  * against the strongest bot path because that's where the most code
  * branches run (sabotage logic, suit-following heuristics, etc.).
  *
- * Pass: WinnerFanfareModal becomes visible.
+ * Pass: scoreboard-winner-banner becomes visible.
  * Fail: idle watchdog fires (no progress for STUCK_S seconds), or the
  *       per-test Playwright timeout (12 min) trips.
  */
@@ -207,9 +208,9 @@ test(`SP game (vs ${PLAYERS - 1} Hard bots) completes without stalling`, async (
   let idle = 0;
   let didDiagnostic = false;
 
-  // Loop bound: the WinnerFanfareModal exit is the only success path; the
-  // watchdog `throw` is the only fail path. The Playwright timeout is the
-  // last-resort backstop.
+  // Loop bound: the scoreboard winner-banner is the only success path;
+  // the watchdog `throw` is the only fail path. The Playwright timeout
+  // is the last-resort backstop.
   // eslint-disable-next-line no-constant-condition
   while (true) {
     await sleep(POLL_MS);
@@ -219,10 +220,10 @@ test(`SP game (vs ${PLAYERS - 1} Hard bots) completes without stalling`, async (
       continue;
     }
 
-    if (await exists(page, 'winner-fanfare-continue', 500)) {
-      // Found end-of-game modal — assert and exit.
+    if (await exists(page, 'scoreboard-winner-banner', 500)) {
+      // Found end-of-game banner — assert and exit.
       await expect(
-        page.locator('[data-testid="winner-fanfare-continue"]'),
+        page.locator('[data-testid="scoreboard-winner-banner"]'),
       ).toBeVisible();
       return;
     }
