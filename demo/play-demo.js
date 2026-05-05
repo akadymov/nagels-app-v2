@@ -457,26 +457,25 @@ async function gameLoop(p, w, opts = {}) {
       } catch (_) {}
     }
 
-    // Game over — wait specifically for the WinnerFanfareModal (the
-    // standalone celebration card with confetti + big avatar) and let
-    // it sit visible for 25 s before exiting. That's the demo's payoff
-    // shot and a human watcher needs the full beat to read the winner
-    // name + score. We DO NOT click winner-fanfare-continue — the
-    // browser closes with the fanfare still on screen.
-    const fanfareBtn = p.locator('[data-testid="winner-fanfare-continue"]');
+    // Game over — the scoreboard renders a winner banner at the top
+    // (testID="scoreboard-winner-banner") with confetti, avatar, and
+    // score. Hold the modal visible for 25 s so a human watcher gets
+    // the full payoff shot before the browser closes.
+    const winnerBanner = p.locator('[data-testid="scoreboard-winner-banner"]');
     const gameOverById = p.locator('[data-testid="game-over"]');
     const gameOverByText = p.locator('text=/Game Over|Игра окончена|Juego Terminado|Конец игры|Fin del juego/i').first();
-    if (await fanfareBtn.isVisible().catch(() => false)) {
-      const banner = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
-      log(w, `🏁 Game Over (fanfare)!${banner ? '  ' + banner.trim() : ''}`);
+    if (await winnerBanner.isVisible().catch(() => false)) {
+      const headline = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
+      log(w, `🏁 Game Over!${headline ? '  ' + headline.trim() : ''}`);
       await sleep(25000);
       break;
     }
     if (await gameOverById.isVisible().catch(() => false) ||
         await gameOverByText.isVisible().catch(() => false)) {
-      // Scoreboard appeared without a fanfare (mid-game finish path).
-      const banner = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
-      log(w, `🏁 Game Over!${banner ? '  ' + banner.trim() : ''}`);
+      // Scoreboard appeared but the banner hasn't mounted yet (race);
+      // shorter hold so we don't sit forever on a bare scoreboard.
+      const headline = await p.locator('text=/🏆/').first().textContent({ timeout: 1000 }).catch(() => null);
+      log(w, `🏁 Game Over!${headline ? '  ' + headline.trim() : ''}`);
       await sleep(15000);
       break;
     }
@@ -493,7 +492,7 @@ async function gameLoop(p, w, opts = {}) {
       const blockedBy = (await Promise.all([
         p.locator('[data-testid="btn-continue-scoreboard"]').isVisible().catch(() => false),
         p.locator('[data-testid="btn-play-again-scoreboard"]').isVisible().catch(() => false),
-        p.locator('[data-testid="winner-fanfare-continue"]').isVisible().catch(() => false),
+        p.locator('[data-testid="scoreboard-winner-banner"]').isVisible().catch(() => false),
         p.locator('[data-testid^="bet-chip-"]').first().isVisible().catch(() => false),
       ])).some(Boolean);
       if (!blockedBy) {

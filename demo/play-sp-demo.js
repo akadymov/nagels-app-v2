@@ -3,8 +3,8 @@
  *
  * One Chromium window. Skips to lobby, picks player count + difficulty,
  * starts the quick-match flow, plays the entire game with the bots
- * doing their own bets/cards. Holds the WinnerFanfareModal at the end
- * for ~25 s before closing.
+ * doing their own bets/cards. Holds the scoreboard winner banner at
+ * the end for ~25 s before closing.
  *
  * Configurable knobs (all env):
  *   DEMO_URL=https://nigels.online   target host (default localhost:8081)
@@ -128,9 +128,11 @@ async function main() {
         } catch (_) {}
       }
 
-      // Winner fanfare — payoff shot, hold and exit
-      if (await exists(p, 'winner-fanfare-continue', 500)) {
-        log('🏁 Winner fanfare — holding 25s');
+      // Game over — scoreboard renders a winner banner at the top.
+      // Hold for 25s so the human watcher reads the celebration, then
+      // exit without dismissing.
+      if (await exists(p, 'scoreboard-winner-banner', 500)) {
+        log('🏁 Game over — holding 25s');
         await sleep(25000);
         break;
       }
