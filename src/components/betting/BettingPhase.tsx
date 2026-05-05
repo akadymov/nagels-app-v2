@@ -110,7 +110,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         cards_per_player: sp.cardsPerPlayer,
         trump_suit: sp.trumpSuit,
         starting_seat: sp.startingPlayerIndex,
-        current_seat: sp.currentPlayerIndex,
+        // In betting, current_seat is the bidder cursor (bettingPlayerIndex);
+        // currentPlayerIndex only advances during the playing phase.
+        current_seat: sp.phase === 'betting' ? sp.bettingPlayerIndex : sp.currentPlayerIndex,
         phase: sp.phase === 'betting' ? 'betting' : 'playing',
         deck_seed: '',
         started_at: new Date().toISOString(),
@@ -124,7 +126,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       _myId: me?.id ?? null,
     };
   }, [isMultiplayer, sp.players, sp.handNumber, sp.cardsPerPlayer, sp.trumpSuit,
-      sp.startingPlayerIndex, sp.currentPlayerIndex, sp.phase, sp.playerCount]);
+      sp.startingPlayerIndex, sp.currentPlayerIndex, sp.bettingPlayerIndex, sp.phase, sp.playerCount]);
 
   type SnapPlayer = { session_id: string; display_name: string; seat_index: number;
     is_ready: boolean; is_connected: boolean; last_seen_at: string;
