@@ -17,7 +17,13 @@ export function subscribeRoom(room_id: string) {
   // Wipe chat from any previous room so messages don't leak across.
   useChatStore.getState().reset();
   const supabase = getSupabaseClient();
-  channel = supabase.channel(`room:${room_id}`);
+  // broadcast.self=true so the sender of a chat message also receives
+  // their own broadcast through the listener — otherwise the user
+  // never sees their own message rendered. The listener already
+  // dedupes by id, so it's safe.
+  channel = supabase.channel(`room:${room_id}`, {
+    config: { broadcast: { self: true } },
+  });
 
   channel.on('broadcast', { event: 'state_changed' }, async ({ payload }) => {
     const local = useRoomStore.getState().version;
