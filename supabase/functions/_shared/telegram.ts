@@ -45,6 +45,12 @@ export interface SendOptions {
   replyMarkup?: unknown;
   /** Default true. Telegram's link previews would expand the join URL into a card. */
   disablePreview?: boolean;
+  /**
+   * Forum-topic id for supergroups with topics enabled. Falls back to env
+   * TELEGRAM_TOPIC_ID. Omit (and leave env unset) to post to the General topic
+   * or to a non-forum chat.
+   */
+  messageThreadId?: number;
 }
 
 const TG_TIMEOUT_MS = 3_000;
@@ -65,6 +71,8 @@ export async function sendTelegram(opts: SendOptions): Promise<void> {
     // `npm run demo` and local supabase functions serve work without TG.
     return;
   }
+  const envTopic = Deno.env.get('TELEGRAM_TOPIC_ID');
+  const threadId = opts.messageThreadId ?? (envTopic ? Number(envTopic) : undefined);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TG_TIMEOUT_MS);
@@ -81,6 +89,9 @@ export async function sendTelegram(opts: SendOptions): Promise<void> {
           parse_mode: 'HTML',
           disable_web_page_preview: opts.disablePreview ?? true,
           reply_markup: opts.replyMarkup,
+          ...(threadId !== undefined && Number.isFinite(threadId)
+            ? { message_thread_id: threadId }
+            : {}),
         }),
         signal: controller.signal,
       },
