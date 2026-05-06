@@ -1,6 +1,6 @@
 <!--
-Связанные документы: [principles](principles.md) • [README](../README.md) • [CLAUDE](../CLAUDE.md)
-Колонки внизу читаются расширением Markdown Kanban для VS Code как доска (## = column, ### = card). Карточки описаны кратко; расширенные обсуждения и ADR живут отдельными файлами в docs/.
+Related docs: [principles](principles.md) • [README](../README.md) • [CLAUDE](../CLAUDE.md)
+The columns below are read by the VS Code Markdown Kanban extension as a board (## = column, ### = card). Cards are intentionally terse; extended discussion and ADRs live in separate files under docs/.
 -->
 
 ## Backlog

@@ -1,162 +1,164 @@
-# Принципы проекта nigels-app-v2
+# nigels-app-v2 project principles
 
-> Документ, ведущий организацию репозитория, документации и
-> воркфлоу разработки. Читается агентом первым в каждой сессии
-> через ссылку из [`CLAUDE.md`](../CLAUDE.md). Дублировать его
-> содержимое в `CLAUDE.md` нельзя — только ссылаться.
+> The document that governs repo organization, documentation, and the
+> development workflow. The agent reads it first in every session via
+> the link from [`CLAUDE.md`](../CLAUDE.md). Do not duplicate its
+> contents into `CLAUDE.md` — only link to it.
 >
-> Связанные документы: [`CLAUDE.md`](../CLAUDE.md) • [`README.md`](../README.md) • [`docs/BACKLOG.md`](BACKLOG.md)
+> Related docs: [`CLAUDE.md`](../CLAUDE.md) • [`README.md`](../README.md) • [`docs/BACKLOG.md`](BACKLOG.md)
 
-## 0. Контекст
+## 0. Context
 
-* **Продукт**: Nägels Online — PWA-карточная игра (Expo Web target).
-* **Стек**: Expo (React Native + Web) + TypeScript + Supabase + Zustand.
-* **Языки приложения**: EN / RU / ES (i18n).
-* **Язык документации и обсуждений**: русский.
-* **Язык кода, имён файлов, сообщений коммитов, PR-описаний**: английский.
+* **Product**: Nägels Online — a PWA card game (Expo Web target).
+* **Stack**: Expo (React Native + Web) + TypeScript + Supabase + Zustand.
+* **App languages**: EN / RU / ES (i18n).
+* **Conversation language with the agent**: Russian.
+* **Language of all written artifacts** (code, file names, commit messages, PR descriptions, **and all documentation under the repo**): English. Russian/Spanish only inside `src/i18n/locales/`.
 
-## 1. Файлы как источники правды
+## 1. Files as sources of truth
 
-У каждого ключевого файла одна роль; другие файлы только ссылаются.
+Each key file has a single role; other files only link to it.
 
-| Файл | Роль | Аудитория |
+| File | Role | Audience |
 |---|---|---|
-| `CLAUDE.md` | Инструкции для агента: стек, запуск, ссылки в `docs/` | Агент |
-| `README.md` | Описание продукта, фичи, как запустить | Внешний разработчик |
-| `docs/BACKLOG.md` | Канбан-доска: Backlog / In Progress / Done | Автор + агент |
-| `docs/<topic>.md` | Расширенная документация по темам | Агент при углублении |
+| `CLAUDE.md` | Agent instructions: stack, run, links into `docs/` | Agent |
+| `README.md` | Product description, features, how to run | External developer |
+| `docs/BACKLOG.md` | Kanban board: Backlog / In Progress / Done | Author + agent |
+| `docs/<topic>.md` | Extended documentation per topic | Agent on deep dives |
 
-`PROJECT_STATUS.md` отсутствует осознанно — `docs/BACKLOG.md` с тремя
-колонками покрывает ту же роль, и поддержка двух снимков состояния
-приводила бы к расхождению.
+`PROJECT_STATUS.md` is intentionally absent — `docs/BACKLOG.md` with
+its three columns covers the same role, and maintaining two state
+snapshots would lead to drift.
 
-## 2. Дисциплина живой документации
+## 2. Living-documentation discipline
 
-Документация — живой манифест, обновляется в той же сессии, что и
-изменение кода или состояния.
+Documentation is a living manifest, updated in the same session as
+the code or state change.
 
-| Что произошло | Что обновить |
+| What happened | What to update |
 |---|---|
-| Новая фича замержена | `README.md` (Features), `docs/BACKLOG.md` (Done) |
-| Изменился стек / запуск | `CLAUDE.md` (Stack, Run), `README.md` (Getting Started) |
-| Новая задача / починили баг | `docs/BACKLOG.md` |
-| Архитектурное решение | новый файл в `docs/` + ссылка из `CLAUDE.md` |
+| New feature merged | `README.md` (Features), `docs/BACKLOG.md` (Done) |
+| Stack / run command changed | `CLAUDE.md` (Stack, Run), `README.md` (Getting Started) |
+| New task / bug fixed | `docs/BACKLOG.md` |
+| Architectural decision | new file in `docs/` + link from `CLAUDE.md` |
 
-Триггеры — без блокера на коммит. Дисциплина агента, не pre-commit hook
-(пока). Если триггер пропущен — фиксится в следующей сессии при
-первом же замечании.
+These are triggers, not pre-commit blockers. Agent discipline, not a
+hook (yet). If a trigger is missed, fix it in the next session at the
+first reminder.
 
-## 3. Кросс-ссылки между документами
+## 3. Cross-links between documents
 
-* В шапке каждого нетривиального документа — блок «Связанные документы».
-* Только относительные пути: `[название](file.md)`, из подпапок — `[название](../file.md)`.
-* Ссылка на конкретный раздел: `[название](file.md#anchor)`.
-* `CLAUDE.md` ссылается на `docs/` точечно; `docs/` не ссылаются обратно
-  на `CLAUDE.md` (избегаем циклов в навигации Obsidian).
-* При переименовании файла — `grep` по репозиторию и починить все ссылки.
+* Every non-trivial document starts with a "Related docs" block.
+* Relative paths only: `[name](file.md)`, from subfolders `[name](../file.md)`.
+* Link to a specific section: `[name](file.md#anchor)`.
+* `CLAUDE.md` links into `docs/` selectively; `docs/` files do **not**
+  link back to `CLAUDE.md` (avoids cycles in Obsidian-style navigation).
+* When a file is renamed — `grep` the repo and fix every link.
 
-## 4. Лаконичность CLAUDE.md
+## 4. Keep CLAUDE.md lean
 
-* Целевой объём: ≤ 200 строк.
-* Не дублировать `README.md` или `docs/principles.md`.
-* Удалять устаревшее. `CLAUDE.md` — не changelog.
-* Принципы — не копировать сюда, ссылаться на этот файл.
+* Target size: ≤ 200 lines.
+* Do not duplicate `README.md` or `docs/principles.md`.
+* Delete stale content. `CLAUDE.md` is not a changelog.
+* Principles are not copied here — link to this file instead.
 
-## 5. Дисциплина коммитов
+## 5. Commit discipline
 
-* **Частота**: минимум один коммит за 6 часов активной работы.
-  Исследовательские/отладочные ветки могут идти дольше без коммита,
-  если ничего ship-worthy не получилось.
-* **Язык сообщений**: английский.
-* **Формат**: Conventional Commits — `feat:`, `fix:`, `docs:`,
+* **Cadence**: at least one commit per 6 hours of active work.
+  Exploratory/debugging branches may go longer without a commit if
+  nothing ship-worthy came out of them.
+* **Message language**: English.
+* **Format**: Conventional Commits — `feat:`, `fix:`, `docs:`,
   `refactor:`, `chore:`, `test:`.
-* **Атомарность**: один коммит = одно логическое изменение. Не
-  смешивать рефакторинг с фичей.
-* Документация в том же коммите, что и код, который она описывает (см. §2).
-* **Запрет**: `--no-verify`, force-push в `main`, WIP-коммиты без
-  последующего squash.
-* **Push в remote** — только по явной просьбе автора.
+* **Atomicity**: one commit = one logical change. Do not mix a
+  refactor with a feature.
+* Documentation lands in the same commit as the code it describes (see §2).
+* **Forbidden**: `--no-verify`, force-push to `main`, WIP commits
+  without a follow-up squash.
+* **Push to remote** — only when the author explicitly asks.
 
-### Force-push — почему «запрет», и как делать иначе
+### Force-push — why "forbidden", and what to do instead
 
-Если рабочая ветка ушла вперёд от `main`, а в `main` тем временем
-появились свои уникальные коммиты — **не делать force-push HEAD'а
-рабочей ветки на main**. Вместо этого:
+If a working branch has moved ahead of `main` while `main` itself has
+gained its own unique commits — **do not force-push the working
+branch HEAD onto main**. Instead:
 
-1. Принести коммиты `main` **в** рабочую ветку: `git merge main` или
-   `git cherry-pick <hash>` для конкретных коммитов, если merge
-   слишком конфликтный.
-2. Разрулить конфликты в рабочей ветке (там код актуальный).
-3. Fast-forward `main` на рабочую ветку — `--force` уже не нужен.
-4. Удалить рабочую ветку.
+1. Bring `main`'s commits **into** the working branch: `git merge main`,
+   or `git cherry-pick <hash>` for specific commits if a merge is too
+   conflict-heavy.
+2. Resolve conflicts inside the working branch (that's where the
+   current code lives).
+3. Fast-forward `main` to the working branch — `--force` is no longer
+   needed.
+4. Delete the working branch.
 
-Force-push приемлем только если: (а) пропавшие коммиты главы
-**физически** воспроизведены через cherry-pick, и (б) автор явно
-дал ОК с `--force-with-lease`.
+Force-push is acceptable only if (a) the missing commits on `main`
+are **physically** reproduced via cherry-pick, and (b) the author has
+explicitly OK'd `--force-with-lease`.
 
-## 6. Контейнерный воркфлоу
+## 6. Container workflow
 
-Не применяется на этой машине осознанно — Docker Desktop добавляет
-2–3 GB RAM-оверхеда, hot-reload Expo через bind-mount на macOS
-ненадёжен, и существующая нативная связка (`npx expo start --port
-8081` + Vercel build) уже даёт one-clone-setup через `.env.example`.
+Deliberately not used on this machine — Docker Desktop adds 2–3 GB of
+RAM overhead, Expo hot-reload through bind-mounts on macOS is
+unreliable, and the existing native setup (`npx expo start --port
+8081` + Vercel build) already gives one-clone-setup via `.env.example`.
 
-Если в будущем появится третий контрибьютор или переезд на менее
-загруженную машину — пересмотреть.
+If a third contributor appears in the future, or the project moves to
+a less loaded machine, revisit.
 
-## 7. Чистота корня репозитория
+## 7. Repo-root cleanliness
 
-В корне допустимы только:
+The following are allowed at the repo root:
 
-* конфиги (`*.config.{js,ts}`, `babel.config.js`, `metro.config.js` и т.п.)
+* configs (`*.config.{js,ts}`, `babel.config.js`, `metro.config.js`, etc.)
 * `package.json`, `package-lock.json`
 * `README.md`, `CLAUDE.md`
 * `.env.example`, `.gitignore`, `.dockerignore`, `LICENSE`
-* `app.json`, `index.js` (entry point Expo)
+* `app.json`, `index.js` (Expo entry point)
 
-Скриншоты, видео, случайные файлы — не в корне:
+Screenshots, videos, random files do not belong at the root:
 
-* UI-референсы → `reference_UI_screenshots/`
-* Архив случайных скринов → `docs/media/archive/` с осмысленными именами
-* Случайный мусор → `rm`
+* UI references → `reference_UI_screenshots/`
+* Archive of stray screenshots → `docs/media/archive/` with meaningful names
+* Random junk → `rm`
 
-`.gitignore` содержит anchored-паттерны (`/Screenshot*`, `/IMG_*`,
-`/Telegram*`, `/*.mov` и т.д.) — мусор отсеивается автоматически.
+`.gitignore` contains anchored patterns (`/Screenshot*`, `/IMG_*`,
+`/Telegram*`, `/*.mov`, etc.) — junk is filtered automatically.
 
-## 8. Критерии приёмки
+## 8. Acceptance criteria
 
-У каждой задачи измеримые критерии завершённости. Без критериев —
-задача не начата.
+Every task has measurable completion criteria. Without criteria, the
+task hasn't started.
 
-* **UI-задачи**: ручная проверка в браузере на 6.1″–6.7″ (золотой путь
-  + edge cases). Демки `npm run demo` / `demo:6players` / `demo:sp` —
-  смоук-проверка регрессий.
-* **Логика игры**: правила в `supabase/functions/_shared/engine/rules.ts`
-  изменяются вместе с тестами.
-* **Документация**: пройтись по триггерам §2 — все ли закрыты.
+* **UI tasks**: manual check in the browser at 6.1″–6.7″ (golden path
+  + edge cases). The `npm run demo` / `demo:6players` / `demo:sp`
+  demos serve as smoke checks for regressions.
+* **Game logic**: rules in `supabase/functions/_shared/engine/rules.ts`
+  change together with their tests.
+* **Documentation**: walk through the §2 triggers — are they all closed?
 
-## 9. Самообучение и память
+## 9. Self-improvement and memory
 
-Два слоя памяти, без дублирования:
+Two memory layers, no duplication:
 
-* **`~/.claude-personal/projects/<...>/memory/`** — *персональный*
-  слой. Предпочтения автора, прошлые инциденты, фидбек агенту через
-  сессии. Не попадает в репозиторий.
-* **`docs/principles.md`** и `docs/<topic>.md` — *общий* слой.
-  Версионируется в git, виден всем читающим репо. Применяется к
-  любому контрибьютору.
+* **`~/.claude-personal/projects/<...>/memory/`** — *personal* layer.
+  Author preferences, past incidents, agent feedback across sessions.
+  Not committed to the repo.
+* **`docs/principles.md`** and `docs/<topic>.md` — *shared* layer.
+  Versioned in git, visible to anyone reading the repo. Applies to
+  every contributor.
 
-Когда автор поправил подход агента:
+When the author corrects the agent's approach:
 
-1. Пофиксить проблему здесь и сейчас.
-2. Если урок применим к будущим сессиям — записать в один (только
-   один) из двух слоёв в зависимости от природы. Перед записью — `grep`
-   по существующим, чтобы не дублировать.
+1. Fix the immediate problem.
+2. If the lesson generalizes to future sessions, record it in exactly
+   one of the two layers depending on its nature. Before writing —
+   `grep` existing entries to avoid duplication.
 
-## 10. Границы
+## 10. Boundaries
 
-* Не пушить в remote без явной просьбы.
-* Не редактировать другие проекты пользователя.
-* Не отключать pre-commit хуки. Если хук падает — чинить причину.
-* Не удалять `.env.local`, `node_modules`, `supabase/.branches` без
-  подтверждения — там может быть незакоммиченное состояние.
+* Do not push to remote without an explicit ask.
+* Do not edit other projects of the user.
+* Do not disable pre-commit hooks. If a hook fails — fix the cause.
+* Do not delete `.env.local`, `node_modules`, `supabase/.branches`
+  without confirmation — they may hold uncommitted state.
