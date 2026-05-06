@@ -26,3 +26,38 @@ self.addEventListener('fetch', (event) => {
   // Required for Chrome to consider the site installable.
   event.respondWith(fetch(event.request));
 });
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload;
+  try { payload = event.data.json(); } catch { return; }
+  const { title, body, tag, room_id, room_code, type } = payload || {};
+  if (!title) return;
+  event.waitUntil(self.registration.showNotification(title, {
+    body: body || '',
+    tag,
+    icon: '/icons/icon.svg',
+    badge: '/icons/icon.svg',
+    data: { room_id, room_code, type },
+    // your_turn replaces prior turn notifications silently; everything else
+    // re-notifies so a stack of player_joined / hand_end events stays visible.
+    renotify: type !== 'your_turn',
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const room_code = data.room_code;
+  const target = room_code ? `/join/${room_code}` : '/';
+  event.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const ours = all.find((c) => new URL(c.url).origin === self.location.origin);
+    if (ours) {
+      await ours.focus();
+      ours.postMessage({ kind: 'push:navigate', room_code, room_id: data.room_id });
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});
