@@ -45,6 +45,7 @@ import {
 } from '../../supabase/functions/_shared/engine/rules';
 import type { PlayerScore } from './ScoreboardModal';
 import { avatarColorFor } from '../utils/avatarColor';
+import { bonusEarnedHaptic, gameWonHaptic } from '../utils/haptics';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -631,6 +632,41 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       onExit?.();
     }
   }, [room?.phase, onExit]);
+
+  // Haptic feedback on key gameplay milestones. We refire only on the
+  // edge of the phase transition (refs gate per-hand / per-game) so a
+  // mid-snapshot re-render doesn't double-buzz the device.
+  const bonusFiredForHandRef = useRef<number | null>(null);
+  const winFiredForGameRef = useRef(false);
+  useEffect(() => {
+    // Bonus haptic — fires once per hand when the local player nailed
+    // their bid exactly. Triggers on the playing→scoring edge so the
+    // buzz lands right as the scoreboard opens.
+    if (vm.phase === 'scoring' && bonusFiredForHandRef.current !== vm.handNumber) {
+      const me = vm.myPlayer;
+      if (me && me.bet !== null && me.tricksWon === me.bet) {
+        bonusEarnedHaptic();
+      }
+      bonusFiredForHandRef.current = vm.handNumber;
+    }
+    if (vm.phase === 'lobby' || vm.phase === 'betting') {
+      // Reset gates as we move into the next hand.
+      bonusFiredForHandRef.current = null;
+    }
+
+    // Game-won haptic — fires once when phase first becomes 'finished'
+    // and the local player is the leader.
+    if (vm.phase === 'finished' && !winFiredForGameRef.current) {
+      const sorted = [...vm.players].sort((a, b) => (b.score + b.bonus) - (a.score + a.bonus));
+      if (sorted[0]?.id === vm.myPlayer?.id) {
+        gameWonHaptic();
+      }
+      winFiredForGameRef.current = true;
+    }
+    if (vm.phase === 'lobby') {
+      winFiredForGameRef.current = false;
+    }
+  }, [vm.phase, vm.handNumber]);
 
   // Trump display helpers
   const getTrumpSymbol = (trump: string): string => {
