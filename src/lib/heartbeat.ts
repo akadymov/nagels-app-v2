@@ -21,6 +21,10 @@ export function useHeartbeat(): void {
     const supabase = getSupabaseClient();
 
     const ping = async () => {
+      // Skip ticks while the tab is hidden. notifyPush keys "user is here"
+      // off room_players.last_seen_at; if heartbeats keep firing in a hidden
+      // tab the 15-second visibility filter for your_turn becomes a no-op.
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       try {
         await supabase.rpc('heartbeat', { p_room_id: roomId });
       } catch {
