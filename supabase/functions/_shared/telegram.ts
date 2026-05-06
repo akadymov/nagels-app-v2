@@ -105,3 +105,19 @@ export async function sendTelegram(opts: SendOptions): Promise<void> {
     clearTimeout(timer);
   }
 }
+
+/**
+ * Post the "new room" notification to the configured Telegram channel.
+ * One-shot — does not store message_id and never updates the post.
+ *
+ * Errors are caught inside sendTelegram; this function never throws.
+ */
+export async function notifyNewRoom(n: RoomNotification): Promise<void> {
+  const joinUrl = buildJoinUrl(n.appOrigin, n.roomCode);
+  await sendTelegram({
+    htmlText: formatRoomMessage(n),
+    replyMarkup: {
+      inline_keyboard: [[{ text: 'Join', url: joinUrl }]],
+    },
+  });
+}
