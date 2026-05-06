@@ -18,10 +18,6 @@ Application + bot token.
 ### Custom game modes — replace 1-card rounds with 2-card rounds
 
 
-### Improved TTLs for rooms and anonyms
-
-  - defaultExpanded: false
-
 ### Offline scorekeeper — record real-life game results without card dealing, manual score entry
 
 
@@ -50,6 +46,30 @@ Application + bot token.
 ## In Progress
 
 ## Done
+
+### TTL cleanup — 24h auto-delete of stale rooms and inactive guest accounts
+
+pg_cron jobs run hourly: stale-rooms at :15, stale-guests at :45.
+Rooms with no player heartbeat in 24h are dropped (cascades to hands,
+plays, events). Anonymous auth.users with no recent room activity AND
+no recent sign-in in 24h are deleted (cascades to room_sessions).
+Email-confirmed users are never touched. First pass cleared 47/49
+rooms and 1003/1083 guests.
+
+### Haptic feedback on key gameplay events
+
+cardSelect, betPlaced, trickWonByMe, bonusEarned (perfect bid), and
+gameWon all fire native haptics via expo-haptics on iOS/Android, with
+a navigator.vibrate fallback on Android web (iOS Safari has no
+Vibration API). Settings → Vibration toggle persists to AsyncStorage
++ user_metadata.
+
+### Installable PWA — manifest + service worker + icons
+
+Site is now installable on Android Chrome ("Install app" prompt) and
+iOS Safari ("Add to Home Screen" → standalone shell). Minimal
+service worker is pass-through only (no offline cache, deliberately —
+keeps every Vercel deploy authoritative).
 
 ### Reconnect resilience — graceful disconnect, rejoin, bot takeover on timeout, fix realtime subscriptions
 
