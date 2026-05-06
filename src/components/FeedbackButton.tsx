@@ -110,7 +110,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const { user, isGuest, displayName } = useAuthStore();
   const currentRoom = useRoomStore((s) => s.snapshot?.room ?? null);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
-  const { theme: themeResolved } = useTheme();
+  const { theme: themeResolved, colors: themeColors } = useTheme();
 
   const isLoggedIn = !!user && !isGuest;
   const defaultName = isLoggedIn ? displayName : '';
@@ -223,26 +223,36 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.overlay} onPress={handleClose}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation?.()}>
+          <Pressable
+            style={[styles.sheet, { backgroundColor: themeColors.surface, borderColor: themeColors.glassLight }]}
+            onPress={(e) => e.stopPropagation?.()}
+          >
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.title}>{t('feedback.title')}</Text>
-              <Text style={styles.subtitle}>{t('feedback.subtitle')}</Text>
+              <Text style={[styles.title, { color: themeColors.textPrimary }]}>{t('feedback.title')}</Text>
+              <Text style={[styles.subtitle, { color: themeColors.textMuted }]}>{t('feedback.subtitle')}</Text>
 
               {submitted ? (
-                <Text style={styles.successText}>{t('feedback.successMessage')}</Text>
+                <Text style={[styles.successText, { color: themeColors.success }]}>{t('feedback.successMessage')}</Text>
               ) : (
                 <>
                   {/* Name (optional, only for non-logged-in users) */}
                   {!isLoggedIn && (
                     <TextInput
-                      style={styles.input}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: themeColors.surfaceSecondary,
+                          borderColor: themeColors.glassLight,
+                          color: themeColors.textPrimary,
+                        },
+                      ]}
                       value={name}
                       onChangeText={setName}
                       placeholder={t('feedback.namePlaceholder')}
-                      placeholderTextColor={Colors.textMuted}
+                      placeholderTextColor={themeColors.textMuted}
                       autoCapitalize="words"
                       autoCorrect={false}
                       maxLength={60}
@@ -258,11 +268,19 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                         <Pressable
                           key={c.value}
                           onPress={() => setCategory(c.value)}
-                          style={[styles.chip, active && styles.chipActive]}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: themeColors.surfaceSecondary,
+                              borderColor: themeColors.glassLight,
+                            },
+                            active && { backgroundColor: themeColors.accent, borderColor: themeColors.accent },
+                          ]}
                         >
                           <Text
                             style={[
                               styles.chipText,
+                              { color: themeColors.textSecondary },
                               active && styles.chipTextActive,
                             ]}
                           >
@@ -275,21 +293,29 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
                   {/* Message */}
                   <TextInput
-                    style={[styles.input, styles.textarea]}
+                    style={[
+                      styles.input,
+                      styles.textarea,
+                      {
+                        backgroundColor: themeColors.surfaceSecondary,
+                        borderColor: themeColors.glassLight,
+                        color: themeColors.textPrimary,
+                      },
+                    ]}
                     value={message}
                     onChangeText={setMessage}
                     placeholder={t('feedback.messagePlaceholder')}
-                    placeholderTextColor={Colors.textMuted}
+                    placeholderTextColor={themeColors.textMuted}
                     multiline
                     textAlignVertical="top"
                     maxLength={4000}
                   />
 
-                  {error && <Text style={styles.errorText}>{error}</Text>}
+                  {error && <Text style={[styles.errorText, { color: themeColors.error }]}>{error}</Text>}
 
                   {submitting ? (
                     <ActivityIndicator
-                      color={Colors.accent}
+                      color={themeColors.accent}
                       style={{ marginVertical: Spacing.md }}
                     />
                   ) : (
@@ -298,14 +324,14 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
                       onPress={handleSubmit}
                       variant="primary"
                       size="large"
-                      accentColor={Colors.accent}
+                      accentColor={themeColors.accent}
                       style={styles.fullWidth}
                       disabled={!message.trim()}
                     />
                   )}
 
                   <Pressable onPress={handleClose} style={styles.cancelBtn}>
-                    <Text style={styles.cancelText}>{t('common.cancel')}</Text>
+                    <Text style={[styles.cancelText, { color: themeColors.textMuted }]}>{t('common.cancel')}</Text>
                   </Pressable>
                 </>
               )}

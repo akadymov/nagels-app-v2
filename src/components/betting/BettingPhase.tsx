@@ -209,6 +209,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const setThemePreference = useSettingsStore((s) => s.setThemePreference);
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
   const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
+  const hapticsEnabled = useSettingsStore((s) => s.hapticsEnabled);
+  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
 
@@ -306,8 +308,19 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     return SuitSymbols[trump as keyof typeof SuitSymbols] || trump;
   };
   const getTrumpColor = (trump: string): string => {
-    if (trump === 'notrump') return Colors.textMuted;
-    return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
+    if (trump === 'notrump') return colors.accent;
+    return (colors[trump as keyof typeof colors] as string) || colors.textSecondary;
+  };
+  const getTrumpBgColor = (trump: string): string => {
+    const map: Record<string, [string, string]> = {
+      diamonds: ['rgba(0, 148, 255, 0.16)', 'rgba(0, 148, 255, 0.30)'],
+      hearts:   ['rgba(190, 25, 49, 0.16)', 'rgba(190, 25, 49, 0.32)'],
+      clubs:    ['rgba(48, 133, 82, 0.18)', 'rgba(48, 133, 82, 0.32)'],
+      spades:   ['rgba(26, 26, 26, 0.12)',  'rgba(255, 255, 255, 0.18)'],
+      notrump:  ['rgba(19, 66, 143, 0.10)', 'rgba(93, 194, 252, 0.22)'],
+    };
+    const pair = map[trump] ?? map.notrump;
+    return isDark ? pair[1] : pair[0];
   };
 
   const handleBet = useCallback(
@@ -443,15 +456,21 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               style={[
                 styles.trumpBadge,
                 {
-                  backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)',
-                  borderColor: colors.accent,
+                  backgroundColor: getTrumpBgColor(trumpSuit),
+                  borderColor: getTrumpColor(trumpSuit),
                 },
               ]}
             >
-              <Text style={[styles.trumpBadgeText, { color: getTrumpColor(trumpSuit) }]}>
-                {trumpSuit === 'notrump'
-                  ? t('game.noTrump')
-                  : `${getTrumpSymbol(trumpSuit)} ${t('game.trump')}`}
+              <Text
+                style={[
+                  trumpSuit === 'notrump' ? styles.trumpBadgeNT : styles.trumpBadgeSymbol,
+                  { color: getTrumpColor(trumpSuit) },
+                ]}
+              >
+                {getTrumpSymbol(trumpSuit)}
+              </Text>
+              <Text style={[styles.trumpBadgeLabel, { color: colors.textSecondary }]}>
+                {trumpSuit === 'notrump' ? t('game.noTrump') : t('game.trump')}
               </Text>
             </View>
           </View>
@@ -775,6 +794,32 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               </View>
             </View>
 
+            <View style={styles.settingsSection}>
+              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.haptics', 'Vibration')}</Text>
+              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                {[true, false].map((on) => {
+                  const isActive = hapticsEnabled === on;
+                  return (
+                    <Pressable
+                      key={String(on)}
+                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                      onPress={() => setHapticsEnabled(on)}
+                    >
+                      <Text
+                        style={[
+                          styles.settingsPillText,
+                          { color: colors.textSecondary },
+                          isActive && { color: '#fff', fontWeight: '700' },
+                        ]}
+                      >
+                        {on ? t('settings.on', 'On') : t('settings.off', 'Off')}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
             <Pressable style={styles.settingsCloseBtn} onPress={() => setShowSettingsModal(false)}>
               <Text style={styles.settingsCloseBtnText}>{t('common.close')}</Text>
             </Pressable>
@@ -825,14 +870,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   trumpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   trumpBadgeText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  trumpBadgeSymbol: {
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 26,
+    includeFontPadding: false,
+  },
+  trumpBadgeNT: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    lineHeight: 22,
+  },
+  trumpBadgeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   topBarRow2: {
     flexDirection: 'row',
