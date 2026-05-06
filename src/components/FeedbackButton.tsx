@@ -29,6 +29,8 @@ import { Colors, Spacing, Radius, TextStyles } from '../constants';
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase/client';
 import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
+import { useTheme } from '../hooks/useTheme';
+import { collectFeedbackContext } from '../utils/feedbackContext';
 
 type Category = 'bug' | 'idea' | 'ux' | 'general';
 
@@ -108,6 +110,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
   const { user, isGuest, displayName } = useAuthStore();
   const currentRoom = useRoomStore((s) => s.snapshot?.room ?? null);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
+  const { theme: themeResolved } = useTheme();
 
   const isLoggedIn = !!user && !isGuest;
   const defaultName = isLoggedIn ? displayName : '';
@@ -154,6 +157,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
           ? navigator.userAgent
           : null;
 
+      // Rich debug context — device/browser, locale, settings, viewport,
+      // PWA/online state, timezone. Lives in `extra` JSONB so we don't
+      // bloat the schema while keeping it queryable from the dashboard.
+      const ctx = collectFeedbackContext();
+
       const payload = {
         player_id: user?.id ?? null,
         display_name: (name || displayName || '').trim() || null,
@@ -167,8 +175,10 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
         user_agent: userAgent,
         language: i18n.language,
         extra: {
-          isAnonymous: isGuest,
+          ...ctx,
+          themeResolved,
           myPlayerId: myPlayerId ?? null,
+          isAnonymous: isGuest,
         },
       };
 
