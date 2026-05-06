@@ -133,13 +133,19 @@ export async function notifyPush(
       type: event.type,
     });
     try {
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), TG_TIMEOUT_MS);
-      await webpush.sendNotification(
+      let timer: number | undefined;
+      const sendP = webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_secret } },
         payload,
       );
-      clearTimeout(timer);
+      const timeoutP = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('push_timeout')), TG_TIMEOUT_MS);
+      });
+      try {
+        await Promise.race([sendP, timeoutP]);
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
       await svc.from('push_subscriptions')
         .update({ last_used_at: new Date().toISOString() })
         .eq('endpoint', sub.endpoint);
