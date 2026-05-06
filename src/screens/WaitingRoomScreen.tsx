@@ -5,7 +5,7 @@
  * Reads server-authoritative state from useRoomStore; mutations go through gameClient.
  */
 
-import React, { useEffect, useCallback, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import { useRoomStore } from '../store/roomStore';
 import { gameClient } from '../lib/gameClient';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useHeartbeat } from '../lib/heartbeat';
+import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
 import { avatarColorFor } from '../utils/avatarColor';
@@ -107,6 +108,20 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       onGameStart();
     }
   }, [room?.phase, onGameStart]);
+
+  // Auto-prompt for push permission on the first start_game observed by this
+  // mount. Piggybacks on phase flipping to 'playing'. If state isn't 'default'
+  // (already subscribed / denied / unsupported), skip — Settings is the
+  // recovery path. askedRef caps to one ask per WaitingRoom mount.
+  const push = usePushSubscribe();
+  const askedRef = useRef(false);
+  useEffect(() => {
+    if (askedRef.current) return;
+    if (room?.phase !== 'playing') return;
+    if (push.state !== 'default') return;
+    askedRef.current = true;
+    void push.enable();
+  }, [room?.phase, push]);
 
   // We no longer auto-leave on phase='finished'. The GameTable holds
   // the scoreboard / winner fanfare; from there the host can restart

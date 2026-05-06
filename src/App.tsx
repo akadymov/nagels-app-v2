@@ -192,6 +192,22 @@ export default function App() {
     }
   }, [hydrate]);
 
+  // Service Worker → window bridge: when a push notification is clicked the
+  // SW posts {kind:'push:navigate', room_code} to a focused client. Route into
+  // the room via the same /join/<code> deep-link path Telegram uses.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      const msg = event.data;
+      if (msg?.kind !== 'push:navigate') return;
+      if (typeof msg.room_code !== 'string') return;
+      window.location.assign(`/join/${msg.room_code}`);
+    };
+    navigator.serviceWorker.addEventListener('message', handler);
+    return () => navigator.serviceWorker.removeEventListener('message', handler);
+  }, []);
+
   return (
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
