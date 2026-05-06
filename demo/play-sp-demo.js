@@ -26,6 +26,10 @@ const PLAYERS  = Math.max(2, Math.min(6, parseInt(process.env.SP_PLAYERS || '4',
 const DIFF     = process.env.SP_DIFF || 'medium';
 const HEADLESS = process.env.SP_HEADLESS === '1';
 const SLOW_MO  = parseInt(process.env.SP_SLOW || '80', 10);
+// Optional early-exit cap: stop the loop once we've completed this
+// many hands. Useful for smoke runs ("does it survive a few hands?")
+// without sitting through all 20. Unset / 0 → run to game-over.
+const MAX_HAND = parseInt(process.env.SP_MAX_HAND || '0', 10);
 
 const IPHONE = devices['iPhone 15 Pro Max'];
 const VP     = { width: 430, height: 932 };
@@ -239,6 +243,14 @@ async function main() {
         if (lastHand !== 0) log(`▶ Hand ${handNo}`);
         lastHand = handNo;
         idle = 0;
+        // Early-exit: stop AFTER finishing the configured cap hand,
+        // i.e. once we've advanced past it (handNo > MAX_HAND means
+        // we've moved on to MAX_HAND+1, which means MAX_HAND closed
+        // cleanly).
+        if (MAX_HAND > 0 && handNo > MAX_HAND) {
+          log(`✅ reached SP_MAX_HAND=${MAX_HAND}, exiting`);
+          break;
+        }
       } else {
         idle++;
       }
