@@ -45,8 +45,17 @@ Thumbs.db
 /*.png
 /*.mov
 /*.mp4
+/Screenshot*
+/Screen Recording*
+/IMG_*
+/Telegram*
 /reference_UI_screenshots/
 /telegram-cloud-photo-*
+
+# Auto-exports from the VS Code Markdown Kanban extension —
+# BACKLOG.md is the source of truth, BACKLOG.pdf is regenerated.
+docs/BACKLOG.pdf
+
 .vercel
 
 # Worktrees
