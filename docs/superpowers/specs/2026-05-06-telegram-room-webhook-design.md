@@ -42,29 +42,35 @@ client → game-action (action=create_room)
 
 ### `supabase/functions/_shared/telegram.ts` (new)
 
+The module exposes two layers so future events (game-finished, etc.) reuse the wire layer without re-implementing token plumbing or error handling.
+
 ```ts
+// ── Wire layer ─────────────────────────────────────────────
+// Single Telegram primitive. Reads TELEGRAM_BOT_TOKEN from env;
+// when chatId arg is omitted, falls back to TELEGRAM_CHAT_ID env.
+// Returns void — every failure is caught and console.warn'd.
+// 3s AbortController timeout. Never logs the token.
+export interface SendOptions {
+  chatId?: string;
+  htmlText: string;
+  replyMarkup?: unknown;     // passed through to Telegram as-is
+  disablePreview?: boolean;  // default true
+}
+export async function sendTelegram(opts: SendOptions): Promise<void>;
+
+// ── Event layer ────────────────────────────────────────────
+// Room-creation notification. Builds the HTML body, attaches the
+// inline Join button, and delegates to sendTelegram.
 export interface RoomNotification {
-  hostName: string;        // free text from auth metadata, must be HTML-escaped
-  roomCode: string;        // 6-char alphabet [A-Z2-9]
-  appOrigin: string;       // e.g. "https://nigels.online"
+  hostName: string;     // free text — HTML-escaped before interpolation
+  roomCode: string;     // 6-char alphabet [A-Z2-9]
+  appOrigin: string;    // e.g. "https://nigels.online"
 }
-
-export function formatRoomMessage(n: RoomNotification): string {
-  // Returns HTML-formatted text for Telegram parse_mode=HTML.
-  // HTML-escapes hostName.
-}
-
-export async function notifyNewRoom(n: RoomNotification): Promise<void> {
-  // Reads TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID from Deno.env.
-  // If either is missing → return (no warn — this is the dev/preview path).
-  // Otherwise POST to api.telegram.org/bot<TOKEN>/sendMessage with:
-  //   chat_id, text=formatRoomMessage(n), parse_mode='HTML',
-  //   disable_web_page_preview=true,
-  //   reply_markup={inline_keyboard: [[{ text:'Join', url:joinUrl }]]}
-  // 3s AbortController timeout. Catches all errors; logs status code and
-  // Telegram-returned `description` field on non-200, never the token.
-}
+export function formatRoomMessage(n: RoomNotification): string;
+export async function notifyNewRoom(n: RoomNotification): Promise<void>;
 ```
+
+Future events (e.g. `notifyGameFinished`) follow the same pattern: their own `formatXMessage` + `notifyX` thin wrapper that calls `sendTelegram`. They can target a different chat in the same group by passing `chatId` explicitly — useful when a future event ID lives in env as `TELEGRAM_RESULTS_CHAT_ID` or similar. For this spec, only `notifyNewRoom` is implemented.
 
 ### `supabase/functions/game-action/actions/createRoom.ts` (edited)
 
@@ -139,4 +145,4 @@ If `TELEGRAM_BOT_TOKEN` or `TELEGRAM_CHAT_ID` is missing, `notifyNewRoom` return
 
 - Per-host language for the message text. Today's choice is RU-only.
 - Optional "Closing" edit when the room transitions to `playing` or `cancelled`. Would require persisting `message_id` per room and listening to the room state change. Defer until a real signal demands it.
-- Posting end-of-game results to the same channel. Distinct trigger, distinct message — would be a separate notification event, not a refit of this one.
+- Additional notification events reusing the same bot — e.g. end-of-game results, daily summary, broken-room alert. Each new event adds a `formatXMessage` + `notifyX` wrapper next to `notifyNewRoom`, calls `sendTelegram` from the wire layer, and (if needed) reads its own `TELEGRAM_<EVENT>_CHAT_ID` env var to target a different chat in the same group. The wire layer does not need to change.
