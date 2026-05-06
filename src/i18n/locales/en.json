@@ -248,7 +248,10 @@
     "deckDesc": "Classic uses red/black. Four-color gives each suit a unique color.",
     "classic": "Classic",
     "fourColor": "4-Color",
-    "language": "Language"
+    "language": "Language",
+    "haptics": "Vibration",
+    "on": "On",
+    "off": "Off"
   },
   "onboarding": {
     "gotIt": "Got it",

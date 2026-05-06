@@ -11,8 +11,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius, TextStyles } from '../constants';
@@ -23,13 +21,6 @@ import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationE
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
-import {
-  cardSelectHaptic,
-  betPlacedHaptic,
-  trickWonHaptic,
-  bonusEarnedHaptic,
-  gameWonHaptic,
-} from '../utils/haptics';
 
 export interface SettingsScreenProps {
   onBack: () => void;
@@ -73,7 +64,7 @@ const pillStyles = StyleSheet.create({
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { themePreference, fourColorDeck, setThemePreference, setFourColorDeck } = useSettingsStore();
+  const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
 
   const [nickname, setNickname] = useState(displayName || '');
@@ -140,58 +131,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       setAlertMessage(String(err.message));
       setShowConfirmAlert(true);
     }
-  };
-
-  // Haptic diagnostic. Web Vibration API requires a *user gesture* and
-  // any `await` between the click handler and the vibrate() call drops
-  // the activation. So we fire one combined pattern in a single sync
-  // call from inside the press handler — that satisfies the gesture
-  // requirement and the browser queues the whole sequence. The first
-  // segment is intentionally a 2-second sustained buzz that's
-  // impossible to miss; if even that isn't felt, the system-level
-  // haptics are off (Android system settings or DND mode).
-  const handleTestHaptics = () => {
-    if (Platform.OS !== 'web') {
-      // Native: helpers fire sequentially — no gesture concern.
-      cardSelectHaptic();
-      setTimeout(() => betPlacedHaptic(), 700);
-      setTimeout(() => trickWonHaptic(), 1400);
-      setTimeout(() => bonusEarnedHaptic(), 2100);
-      setTimeout(() => gameWonHaptic(), 3000);
-      setAlertMessage('Native haptics fired (5 patterns).');
-      setShowConfirmAlert(true);
-      return;
-    }
-    if (typeof navigator === 'undefined') return;
-    const fn = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
-    if (typeof fn !== 'function') {
-      setAlertMessage('navigator.vibrate is NOT supported in this browser. Common on iOS Safari.');
-      setShowConfirmAlert(true);
-      return;
-    }
-    // [vibrate, pause, vibrate, pause, ...]:
-    //  2000 control buzz   → 700 pause
-    //  10 cardSelect       → 700 pause
-    //  25 betPlaced        → 700 pause
-    //  25 trickWon         → 700 pause
-    //  20 60 30 (bonus)    → 700 pause (each pulse separate)
-    //  30 80 30 80 50 (gameWon)
-    const pattern = [
-      2000, 700,
-      10, 700,
-      25, 700,
-      25, 700,
-      20, 60, 30, 700,
-      30, 80, 30, 80, 50,
-    ];
-    let ok = false;
-    try { ok = fn.call(navigator, pattern) ?? true; } catch {}
-    setAlertMessage(
-      ok
-        ? 'Vibration queued. The first pulse is a 2-second buzz — if you felt NOTHING, Android system → Sounds & vibration → System haptics is most likely off (or phone is in DND/silent).'
-        : 'navigator.vibrate returned false — the browser refused. Try after a different gesture or check site permissions.',
-    );
-    setShowConfirmAlert(true);
   };
 
   const handleLogout = async () => {
@@ -370,21 +309,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           />
         </View>
 
-        {/* === HAPTIC DIAGNOSTIC === */}
+        {/* === HAPTICS === */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('settings.haptics', 'Vibration')}
           </Text>
-          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
-            {t('settings.hapticsDesc', 'Tap to fire a control buzz followed by every in-game pattern. If nothing is felt on Android, the system-level haptic feedback is most likely off.')}
-          </Text>
-          <Pressable
-            style={[styles.saveBtn, { backgroundColor: colors.accent }]}
-            onPress={handleTestHaptics}
-            testID="settings-test-haptics"
-          >
-            <Text style={styles.saveBtnText}>{t('settings.testHaptics', 'Test vibration')}</Text>
-          </Pressable>
+          <View style={{ height: Spacing.md }} />
+          <OptionPills
+            options={[
+              { key: 'on', label: t('settings.on', 'On') },
+              { key: 'off', label: t('settings.off', 'Off') },
+            ]}
+            selected={hapticsEnabled ? 'on' : 'off'}
+            onSelect={(key) => setHapticsEnabled(key === 'on')}
+            accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
+            testIDPrefix="haptics"
+          />
         </View>
 
         {/* === LOGOUT === */}
