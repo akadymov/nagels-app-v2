@@ -68,6 +68,14 @@ export default function App() {
           display: flex;
           flex-direction: column;
         }
+        /* Force the first 4 levels of wrapper divs (RN-web,
+           SafeAreaProvider, navigation stack, screen wrapper) to be a
+           flex column that doesn't introduce its own min-height. We
+           deliberately do NOT clamp max-height here — body already
+           pins the viewport via position:fixed + var(--app-height),
+           and a max-height clamp on every nested div was suffocating
+           ScrollView's internal overflow:auto wrapper, breaking
+           vertical scroll on Settings/Profile across browsers. */
         #root > div,
         #root > div > div,
         #root > div > div > div,
@@ -76,7 +84,6 @@ export default function App() {
           flex-direction: column !important;
           flex: 1 !important;
           min-height: 0 !important;
-          max-height: var(--app-height) !important;
         }
         div[style*="overflow"][style*="auto"],
         div[style*="overflow"][style*="scroll"] {
