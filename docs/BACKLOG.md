@@ -47,6 +47,28 @@ Application + bot token.
 
 ## Done
 
+### Project principles + repo hygiene
+
+docs/principles.md captures the working agreement: file roles
+(CLAUDE.md / README.md / docs/BACKLOG.md / docs/<topic>.md), commit
+discipline (Conventional Commits, ≥1 commit/6h, no force-push to
+main, cherry-pick-first integration), kanban backlog structure, and
+the personal-memory vs shared-docs split. CLAUDE.md links to it; no
+duplication. Repo root cleaned (PROJECT_STATUS.md, BACKLOG.pdf, stray
+screenshots/recordings dropped); .gitignore tightened with anchored
+patterns. .env.example added documenting all EXPO_PUBLIC_* vars.
+
+### Rich feedback metadata — device, browser, settings, viewport
+
+Feedback submissions now ship a debug context object in the `extra`
+JSONB column: deviceType (mobile/tablet/desktop), deviceModel,
+osVersion, browser, appLanguage + systemLocale + systemLocales,
+userType (guest / guest-pending-email / registered),
+themePreference + themeResolved + fourColorDeck + hapticsEnabled,
+viewport WxH + visualViewport height (catches iOS Safari URL-bar
+state), pixelRatio, orientation, isPWA, online, timezone,
+tzOffsetMin, timestamp. Best-effort UA parsing without a dep.
+
 ### TTL cleanup — 24h auto-delete of stale rooms and inactive guest accounts
 
 pg_cron jobs run hourly: stale-rooms at :15, stale-guests at :45.
