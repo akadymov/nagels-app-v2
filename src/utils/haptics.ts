@@ -12,6 +12,12 @@
 
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+import { useSettingsStore } from '../store/settingsStore';
+
+// Single user-facing kill-switch for every helper in this module —
+// reads the live store so a Settings toggle takes effect on the very
+// next call without restarting the app.
+const isEnabled = () => useSettingsStore.getState().hapticsEnabled;
 
 // Web fallback. navigator.vibrate exists on Android Chrome/Firefox/etc.
 // but not on iOS Safari or desktop Chrome on most platforms.
@@ -32,6 +38,7 @@ const vibrate = (pattern: VibratePattern) => {
  * Light haptic feedback for card selection
  */
 export const cardSelectHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     // 10 ms was too subtle for Android linear motors to register over
     // the touch sensation itself — bumped to 20 ms after Akula
@@ -52,6 +59,7 @@ export const cardSelectHaptic = async () => {
  * Medium haptic feedback for bet placement
  */
 export const betPlacedHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     vibrate(45);
     return;
@@ -69,6 +77,7 @@ export const betPlacedHaptic = async () => {
  * (Note: winning a trick isn't always positive - depends on your bet)
  */
 export const trickWonHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     vibrate(45);
     return;
@@ -85,6 +94,7 @@ export const trickWonHaptic = async () => {
  * Light haptic feedback for button presses
  */
 export const buttonPressHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     vibrate(20);
     return;
@@ -101,6 +111,7 @@ export const buttonPressHaptic = async () => {
  * Selection change haptic feedback
  */
 export const selectionHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     vibrate(15);
     return;
@@ -119,6 +130,7 @@ export const selectionHaptic = async () => {
  * (two-pulse on iOS) signals that an objective was met.
  */
 export const bonusEarnedHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     // Double-pulse to mirror the iOS Success notification pattern.
     vibrate([45, 90, 60]);
@@ -137,6 +149,7 @@ export const bonusEarnedHaptic = async () => {
  * mounts and the local player is the winner.
  */
 export const gameWonHaptic = async () => {
+  if (!isEnabled()) return;
   if (Platform.OS === 'web') {
     // Triple-pulse celebration — longer than bonus so the user can tell
     // "I won the whole game" from "I made my bid this hand".

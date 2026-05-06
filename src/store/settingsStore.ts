@@ -23,6 +23,7 @@ const DEFAULT_SHOWN_TIPS: ShownTips = {
 export interface SettingsStore {
   themePreference: ThemePreference;
   fourColorDeck: boolean;
+  hapticsEnabled: boolean;
   language: string;
   gamesPlayedUnconfirmed: number;
   pendingEmail: string | null;
@@ -31,6 +32,7 @@ export interface SettingsStore {
 
   setThemePreference: (pref: ThemePreference) => void;
   setFourColorDeck: (enabled: boolean) => void;
+  setHapticsEnabled: (enabled: boolean) => void;
   setLanguage: (lang: string) => void;
   incrementGamesPlayed: () => void;
   resetGamesPlayed: () => void;
@@ -46,6 +48,7 @@ const STORAGE_KEY = 'nagels_settings';
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   themePreference: 'system',
   fourColorDeck: true,
+  hapticsEnabled: true,
   language: 'en',
   gamesPlayedUnconfirmed: 0,
   pendingEmail: null,
@@ -60,6 +63,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setFourColorDeck: (enabled) => {
     set({ fourColorDeck: enabled });
+    persistSettings(get());
+    syncToProfile(get());
+  },
+
+  setHapticsEnabled: (enabled) => {
+    set({ hapticsEnabled: enabled });
     persistSettings(get());
     syncToProfile(get());
   },
@@ -99,6 +108,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const updates: Partial<SettingsStore> = {};
     if (metadata.theme_preference) updates.themePreference = metadata.theme_preference;
     if (metadata.four_color_deck !== undefined) updates.fourColorDeck = metadata.four_color_deck;
+    if (metadata.haptics_enabled !== undefined) updates.hapticsEnabled = metadata.haptics_enabled;
     if (metadata.language) updates.language = metadata.language;
     if (Object.keys(updates).length > 0) {
       set(updates);
@@ -114,6 +124,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         set({
           themePreference: parsed.themePreference ?? 'system',
           fourColorDeck: parsed.fourColorDeck ?? true,
+          hapticsEnabled: parsed.hapticsEnabled ?? true,
           language: parsed.language ?? 'en',
           gamesPlayedUnconfirmed: parsed.gamesPlayedUnconfirmed ?? 0,
           pendingEmail: parsed.pendingEmail ?? null,
@@ -133,6 +144,7 @@ function persistSettings(state: SettingsStore) {
   const data = {
     themePreference: state.themePreference,
     fourColorDeck: state.fourColorDeck,
+    hapticsEnabled: state.hapticsEnabled,
     language: state.language,
     gamesPlayedUnconfirmed: state.gamesPlayedUnconfirmed,
     pendingEmail: state.pendingEmail,
@@ -146,6 +158,7 @@ function syncToProfile(state: SettingsStore) {
   updateUserMetadata({
     theme_preference: state.themePreference,
     four_color_deck: state.fourColorDeck,
+    haptics_enabled: state.hapticsEnabled,
     language: state.language,
   }).catch(() => {
     // Silent — user might not be logged in

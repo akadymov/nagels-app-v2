@@ -248,7 +248,10 @@
     "deckDesc": "Clásica: rojo/negro. Cuatro colores: cada palo con su color.",
     "classic": "Clásica",
     "fourColor": "4 colores",
-    "language": "Idioma"
+    "language": "Idioma",
+    "haptics": "Vibración",
+    "on": "Activar",
+    "off": "Desactivar"
   },
   "onboarding": {
     "gotIt": "Entendido",
