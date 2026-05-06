@@ -17,105 +17,17 @@ export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room' | 'ready' | 'start_game'
   | 'place_bet'   | 'play_card' | 'continue_hand' | 'request_timeout' | 'restart_game';
 
-/**
- * A structurally compatible but deliberately looser version of RoomSnapshot
- * that accepts string-typed phase fields. This allows test fixtures that build
- * room objects from helper functions (where TypeScript widens the literal type
- * to string) to pass without requiring `as any` at every call site.
- *
- * Production callers can pass a real RoomSnapshot — the type is a supertype.
- */
-type LooseRoom = {
-  id: string;
-  code: string;
-  host_session_id: string;
-  phase: string;
-  current_hand_id: string | null;
-  player_count: number;
-  max_cards: number;
-  version: number;
-  [key: string]: unknown;
-} | null;
-
-type LoosePlayer = {
-  session_id: string;
-  display_name: string;
-  seat_index: number;
-  is_ready: boolean;
-  is_connected: boolean;
-  last_seen_at: string;
-  [key: string]: unknown;
-};
-
-type LooseHand = {
-  id: string;
-  room_id: string;
-  hand_number: number;
-  cards_per_player: number;
-  trump_suit: string;
-  starting_seat: number;
-  current_seat: number;
-  phase: string;
-  deck_seed: string;
-  started_at: string;
-  closed_at: string | null;
-} | null;
-
-type LooseHandScore = {
-  hand_id: string;
-  session_id: string;
-  bet: number;
-  taken_tricks: number;
-  hand_score: number;
-};
-
-type LooseTrick = {
-  id?: string;
-  trick_number: number;
-  lead_seat?: number;
-  winner_seat?: number | null;
-  cards?: Array<{ seat: number; card: string }>;
-} | null;
-
-type LooseScoreHistory = Array<{
-  hand_number: number;
-  closed_at: string | null;
-  scores: Array<{
-    hand_id: string;
-    session_id: string;
-    bet: number;
-    taken_tricks: number;
-    hand_score: number;
-  }>;
-}>;
-
-type LooseSnapshot = {
-  room: LooseRoom;
-  players: LoosePlayer[];
-  current_hand: LooseHand;
-  hand_scores: LooseHandScore[];
-  current_trick: LooseTrick;
-  last_closed_trick?: LooseTrick;
-  score_history: LooseScoreHistory;
-  my_hand?: string[];
-};
-
-// Verify that a real RoomSnapshot is assignable to LooseSnapshot at compile time.
-// If this line errors, LooseSnapshot has drifted from the production type.
-const _typeCheck: LooseSnapshot = null as unknown as RoomSnapshot;
-void _typeCheck;
-
-function seatToSession(snap: LooseSnapshot, seat: number): string | null {
+function seatToSession(snap: RoomSnapshot, seat: number): string | null {
   return snap.players.find((p) => p.seat_index === seat)?.session_id ?? null;
 }
 
-function allSessionIds(snap: LooseSnapshot): string[] {
+function allSessionIds(snap: RoomSnapshot): string[] {
   return snap.players.map((p) => p.session_id);
 }
 
 export function detectTransitions(
-  prev: LooseSnapshot | null,
-  next: LooseSnapshot,
+  prev: RoomSnapshot | null,
+  next: RoomSnapshot,
   actor: ActorContext,
   action_kind: ActionKind,
 ): PushEvent[] {
