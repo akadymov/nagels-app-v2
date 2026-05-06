@@ -71,3 +71,32 @@ export const selectionHaptic = async () => {
     console.warn('[Haptics] Selection feedback failed:', error);
   }
 };
+
+/**
+ * Success notification — fires on a "perfect-bid" bonus at hand close.
+ * Distinct from a plain trick-win impact: the system "success" pattern
+ * (two-pulse on iOS) signals that an objective was met.
+ */
+export const bonusEarnedHaptic = async () => {
+  if (Platform.OS === 'web') return;
+
+  try {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  } catch (error) {
+    console.warn('[Haptics] Bonus earned feedback failed:', error);
+  }
+};
+
+/**
+ * Game-won celebration haptic — fires once when the winner banner
+ * mounts and the local player is the winner.
+ */
+export const gameWonHaptic = async () => {
+  if (Platform.OS === 'web') return;
+
+  try {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  } catch (error) {
+    console.warn('[Haptics] Game won feedback failed:', error);
+  }
+};
