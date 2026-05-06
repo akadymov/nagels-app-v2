@@ -2,7 +2,7 @@
 -- Browser-side Web Push endpoints, one row per browser instance.
 -- Bound to auth_user_id (stable across rooms), NOT session_id (transient).
 
-CREATE TABLE public.push_subscriptions (
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_user_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   endpoint      TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE public.push_subscriptions (
   UNIQUE (endpoint)
 );
 
-CREATE INDEX idx_push_subs_user ON public.push_subscriptions(auth_user_id);
+CREATE INDEX IF NOT EXISTS idx_push_subs_user ON public.push_subscriptions(auth_user_id);
 
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
