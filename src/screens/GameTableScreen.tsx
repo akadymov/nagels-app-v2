@@ -677,6 +677,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   };
   const getTrumpColor = (trump: string): string => {
     if (trump === 'notrump') return colors.accent;
+    // Dark suits sit on a dark backdrop here (top-bar badge, on-felt icon),
+    // so lift them to a light gray. Cards keep their original near-black
+    // because they render on a white face.
+    if (isDark && (trump === 'spades' || (trump === 'clubs' && !fourColorDeck))) {
+      return '#D4D4D8';
+    }
     return (colors[trump as keyof typeof colors] as string) || colors.textSecondary;
   };
   const getTrumpBgColor = (trump: string): string => {
@@ -969,7 +975,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                         isTrump
                           ? styles.tableSuitSymbolTrump
                           : { color: '#ffffff', opacity: 0.12 },
-                        isTrump ? { color: colors[suit] as string } : null,
+                        isTrump ? { color: getTrumpColor(suit) } : null,
                       ]}
                     >
                       {SuitSymbols[suit]}

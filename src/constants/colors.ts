@@ -89,12 +89,6 @@ export const lightColors = {
 export const darkColors = {
   ...shared,
 
-  // Spades adopt a light gray on dark backgrounds — the shared near-black
-  // (#1a1a1a) is invisible on the dark surface, top bars, and the green felt.
-  // This also fixes the classic 2-color deck where clubs inherit the spades
-  // color via useTheme.
-  spades: '#D4D4D8',
-
   // Backgrounds
   background: '#141720',
   backgroundDark: '#0E1016',
