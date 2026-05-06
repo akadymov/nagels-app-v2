@@ -93,15 +93,14 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Fire-and-forget Web Push for every event the action triggered.
-  // notifyPush never throws; it's awaited only so 410-cleanup deletes and
-  // last_used_at updates settle before the function context tears down.
+  // Fire-and-forget Web Push for every event the action triggered. Awaited
+  // (in parallel) only so 410-cleanup deletes and last_used_at updates settle
+  // before the function context tears down — sequential await would stack
+  // up to 3s × N events of latency on the response.
   if (result.ok) {
     try {
       const events = detectTransitions(prev, result.state, actor, action.kind as ActionKind);
-      for (const ev of events) {
-        await notifyPush(svc, ev);
-      }
+      await Promise.all(events.map((ev) => notifyPush(svc, ev)));
     } catch (err) {
       console.warn('[game-action] push detection threw:', err);
     }

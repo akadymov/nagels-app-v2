@@ -63,7 +63,8 @@ export function formatPushBody(
     case 'player_joined': return dict.player_joined({ name: event.joiner_name });
     case 'game_end': {
       const you_won = event.winner_session_id === ctx.recipient_session_id;
-      return dict.game_end({ you_won, winner: ctx.winner_name ?? 'Anon' });
+      const fallback = lang === 'ru' ? 'Кто-то' : lang === 'es' ? 'Alguien' : 'Someone';
+      return dict.game_end({ you_won, winner: ctx.winner_name ?? fallback });
     }
   }
 }

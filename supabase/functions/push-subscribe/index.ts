@@ -35,11 +35,24 @@ Deno.serve(async (req: Request) => {
     auth_secret: body.auth_secret,
     lang,
     last_used_at: new Date().toISOString(),
-  }, { onConflict: 'endpoint' });
+  }, { onConflict: 'auth_user_id,endpoint' });
 
   if (error) {
     console.warn(`[push-subscribe] upsert failed: code=${error.code ?? '<none>'}`);
     return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+  }
+
+  // Claim the endpoint: drop rows owned by other users for the same browser.
+  // Account-switch on a shared device (guest → real account, or A logs out
+  // and B logs in) leaves the previous user's row pointing at the same SW
+  // endpoint until this cleanup runs. The new owner subscribing is the
+  // signal that the device has changed hands.
+  const { error: claimErr } = await svc.from('push_subscriptions')
+    .delete()
+    .eq('endpoint', body.endpoint)
+    .neq('auth_user_id', actor.auth_user_id);
+  if (claimErr) {
+    console.warn(`[push-subscribe] claim cleanup failed: code=${claimErr.code ?? '<none>'}`);
   }
 
   return jsonResponse({ ok: true });
