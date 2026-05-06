@@ -309,6 +309,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   };
   const getTrumpColor = (trump: string): string => {
     if (trump === 'notrump') return colors.accent;
+    // Dark suits would otherwise vanish on the dark trump-badge backdrop;
+    // cards on a white face keep the original near-black, so this lift is
+    // scoped to this badge.
+    if (isDark && (trump === 'spades' || (trump === 'clubs' && !fourColorDeck))) {
+      return '#D4D4D8';
+    }
     return (colors[trump as keyof typeof colors] as string) || colors.textSecondary;
   };
   const getTrumpBgColor = (trump: string): string => {
