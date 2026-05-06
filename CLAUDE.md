@@ -1,6 +1,6 @@
 # CLAUDE.md — Nagels Online
 
-См. [Принципы проекта](docs/principles.md). Перечитать в начале каждой сессии.
+See [Project principles](docs/principles.md). Re-read at the start of every session.
 
 ## Stack
 Expo (React Native) + TypeScript + Supabase + Zustand

@@ -2,7 +2,7 @@
 
 A real-time multiplayer trick-taking card game built with Expo, Supabase, and Zustand.
 
-> Связанные документы: [`docs/principles.md`](docs/principles.md) (рабочее соглашение по репо/коммитам/доке) • [`docs/BACKLOG.md`](docs/BACKLOG.md) (канбан задач) • [`CLAUDE.md`](CLAUDE.md) (инструкции для агента)
+> Related docs: [`docs/principles.md`](docs/principles.md) (working agreement on repo/commits/docs) • [`docs/BACKLOG.md`](docs/BACKLOG.md) (task kanban) • [`CLAUDE.md`](CLAUDE.md) (agent instructions)
 
 ## Features
 
