@@ -81,20 +81,30 @@ export default function App() {
           min-height: 0 !important;
         }
         /* Propagate min-height/width: 0 to *every* descendant of
-           #root. Without this, intermediate non-View wrappers from
-           React Navigation and SafeAreaProvider default to min-height:
-           auto (content size) — which prevents a flex parent of a
-           ScrollView from shrinking, which in turn disables the
-           overflow:auto on the ScrollView and kills vertical scroll
-           on Profile/Settings across mobile browsers. */
+           #root with !important. Without this override, intermediate
+           non-View wrappers from React Navigation and SafeAreaProvider
+           default to min-height: auto (= content size). A flex parent
+           of a ScrollView with min-height: auto cannot shrink, so its
+           overflow:auto child never clips, and vertical scroll dies on
+           every screen deeper than the navigation card. */
         #root div {
-          min-height: 0;
-          min-width: 0;
+          min-height: 0 !important;
+          min-width: 0 !important;
         }
-        div[style*="overflow"][style*="auto"],
-        div[style*="overflow"][style*="scroll"] {
+        /* Force scroll on RN-web ScrollView wrappers explicitly.
+           ScrollView renders the outer div with inline
+           overflow-y:auto/scroll; on iOS Safari that occasionally
+           shows but the touch-scroll handler doesn't engage unless
+           -webkit-overflow-scrolling:touch is set with !important. */
+        div[style*="overflow-y: auto"],
+        div[style*="overflow-y: scroll"],
+        div[style*="overflow:auto"],
+        div[style*="overflow: auto"],
+        div[style*="overflow:scroll"],
+        div[style*="overflow: scroll"] {
           -webkit-overflow-scrolling: touch !important;
           touch-action: pan-y !important;
+          overflow-y: auto !important;
         }
       `;
       document.head.appendChild(style);

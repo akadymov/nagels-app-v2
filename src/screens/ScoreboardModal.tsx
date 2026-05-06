@@ -436,13 +436,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   closeBtn: {
+    // Top: 0 inside SafeAreaView lines the ✕ up with the title row's
+    // top edge — modal paddingTop:Spacing.lg already pushes both down
+    // by the same amount, so they share a baseline. The previous
+    // top:Spacing.md sat the ✕ a Spacing.md below the title text.
     position: 'absolute',
-    top: Spacing.md,
+    top: 0,
     right: Spacing.md,
     zIndex: 10,
   },
   closeText: {
     fontSize: 22,
+    lineHeight: 28,
   },
   title: {
     fontSize: 20,
