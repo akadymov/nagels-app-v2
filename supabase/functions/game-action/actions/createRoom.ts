@@ -1,6 +1,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { ActorContext, Action, ActionResult, RoomSnapshot } from '../../_shared/types.ts';
 import { buildSnapshot } from '../snapshot.ts';
+import { notifyNewRoom } from '../../_shared/telegram.ts';
 
 function generateCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -49,7 +50,7 @@ export async function createRoom(
     };
   }
 
-  let inserted: { id: string; version: number } | null = null;
+  let inserted: { id: string; version: number; code: string } | null = null;
   for (let attempt = 0; attempt < 5 && !inserted; attempt++) {
     const code = generateCode();
     const { data, error } = await svc
@@ -61,7 +62,7 @@ export async function createRoom(
         max_cards: action.max_cards ?? 10,
         phase: 'waiting',
       })
-      .select('id, version')
+      .select('id, version, code')
       .single();
     if (!error) {
       inserted = data as any;
@@ -89,5 +90,16 @@ export async function createRoom(
   await svc.from('rooms').update({ version: inserted.version + 1 }).eq('id', inserted.id);
 
   const snapshot = await buildSnapshot(svc, inserted.id, actor.session_id);
+
+  // Fire-and-forget Telegram notification. notifyNewRoom never throws —
+  // a bad token, missing chat id, or TG outage cannot block room creation.
+  // Awaited only so the AbortController inside sendTelegram has time to
+  // run before the edge-function request context is torn down.
+  await notifyNewRoom({
+    hostName: actor.display_name,
+    roomCode: inserted.code,
+    appOrigin: Deno.env.get('PUBLIC_APP_ORIGIN') ?? 'https://nigels.online',
+  });
+
   return { ok: true, state: snapshot, version: inserted.version + 1 };
 }
