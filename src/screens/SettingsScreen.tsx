@@ -142,35 +142,55 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
     }
   };
 
-  // Haptic diagnostic — fires a plain control buzz first, then each
-  // wrapped helper in sequence so the user can tell whether the system
-  // permits vibration at all and whether each helper triggers.
-  // Reports feedback via the existing toast.
-  const handleTestHaptics = async () => {
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    let webSupported: boolean | null = null;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
-      const fn = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
-      webSupported = typeof fn === 'function';
-      if (webSupported) {
-        try { fn!.call(navigator, 500); } catch {}
-      }
-    }
-    await sleep(800);
-    cardSelectHaptic();   await sleep(700);
-    betPlacedHaptic();    await sleep(700);
-    trickWonHaptic();     await sleep(700);
-    bonusEarnedHaptic();  await sleep(900);
-    gameWonHaptic();
-    let msg: string;
+  // Haptic diagnostic. Web Vibration API requires a *user gesture* and
+  // any `await` between the click handler and the vibrate() call drops
+  // the activation. So we fire one combined pattern in a single sync
+  // call from inside the press handler — that satisfies the gesture
+  // requirement and the browser queues the whole sequence. The first
+  // segment is intentionally a 2-second sustained buzz that's
+  // impossible to miss; if even that isn't felt, the system-level
+  // haptics are off (Android system settings or DND mode).
+  const handleTestHaptics = () => {
     if (Platform.OS !== 'web') {
-      msg = 'Native haptics fired (5 patterns).';
-    } else if (webSupported) {
-      msg = 'navigator.vibrate present — fired 6 patterns. If you felt nothing, check Android system → Sounds & vibration → System haptics.';
-    } else {
-      msg = 'navigator.vibrate is NOT supported in this browser. Common on iOS Safari.';
+      // Native: helpers fire sequentially — no gesture concern.
+      cardSelectHaptic();
+      setTimeout(() => betPlacedHaptic(), 700);
+      setTimeout(() => trickWonHaptic(), 1400);
+      setTimeout(() => bonusEarnedHaptic(), 2100);
+      setTimeout(() => gameWonHaptic(), 3000);
+      setAlertMessage('Native haptics fired (5 patterns).');
+      setShowConfirmAlert(true);
+      return;
     }
-    setAlertMessage(msg);
+    if (typeof navigator === 'undefined') return;
+    const fn = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
+    if (typeof fn !== 'function') {
+      setAlertMessage('navigator.vibrate is NOT supported in this browser. Common on iOS Safari.');
+      setShowConfirmAlert(true);
+      return;
+    }
+    // [vibrate, pause, vibrate, pause, ...]:
+    //  2000 control buzz   → 700 pause
+    //  10 cardSelect       → 700 pause
+    //  25 betPlaced        → 700 pause
+    //  25 trickWon         → 700 pause
+    //  20 60 30 (bonus)    → 700 pause (each pulse separate)
+    //  30 80 30 80 50 (gameWon)
+    const pattern = [
+      2000, 700,
+      10, 700,
+      25, 700,
+      25, 700,
+      20, 60, 30, 700,
+      30, 80, 30, 80, 50,
+    ];
+    let ok = false;
+    try { ok = fn.call(navigator, pattern) ?? true; } catch {}
+    setAlertMessage(
+      ok
+        ? 'Vibration queued. The first pulse is a 2-second buzz — if you felt NOTHING, Android system → Sounds & vibration → System haptics is most likely off (or phone is in DND/silent).'
+        : 'navigator.vibrate returned false — the browser refused. Try after a different gesture or check site permissions.',
+    );
     setShowConfirmAlert(true);
   };
 
