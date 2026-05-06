@@ -7,9 +7,12 @@
  */
 
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
-import type { Action, ActionResult, ActorContext } from '../_shared/types.ts';
+import type { Action, ActionResult, ActorContext, RoomSnapshot } from '../_shared/types.ts';
 import { authenticate, makeServiceClient } from './auth.ts';
 import { broadcastStateChanged } from './broadcast.ts';
+import { buildSnapshot } from './snapshot.ts';
+import { detectTransitions, type ActionKind } from '../_shared/push/transitions.ts';
+import { notifyPush } from '../_shared/push/notifyPush.ts';
 
 import { createRoom }     from './actions/createRoom.ts';
 import { joinRoom }       from './actions/joinRoom.ts';
@@ -44,6 +47,18 @@ Deno.serve(async (req: Request) => {
   const action = body.action;
   const room_id = (action as any).room_id ?? null;
 
+  // Snapshot of room state BEFORE the action — needed by the push detector.
+  // Skipped for create_room (room doesn't exist yet) and join_room (the
+  // detector handles join_room with prev=null using actor + action_kind).
+  let prev: RoomSnapshot | null = null;
+  if (room_id && action.kind !== 'create_room' && action.kind !== 'join_room') {
+    try {
+      prev = await buildSnapshot(svc, room_id, actor.session_id);
+    } catch (err) {
+      console.warn('[game-action] prev snapshot failed (push detector will skip):', err);
+    }
+  }
+
   let result: ActionResult;
   try {
     if (action.kind === 'create_room') {
@@ -76,6 +91,20 @@ Deno.serve(async (req: Request) => {
     void broadcastStateChanged(svc, room_id, result.version).catch((e) =>
       console.error('[game-action] broadcast failed:', e),
     );
+  }
+
+  // Fire-and-forget Web Push for every event the action triggered.
+  // notifyPush never throws; it's awaited only so 410-cleanup deletes and
+  // last_used_at updates settle before the function context tears down.
+  if (result.ok) {
+    try {
+      const events = detectTransitions(prev, result.state, actor, action.kind as ActionKind);
+      for (const ev of events) {
+        await notifyPush(svc, ev);
+      }
+    } catch (err) {
+      console.warn('[game-action] push detection threw:', err);
+    }
   }
 
   // Always include the actor's session_id so the client can identify itself
