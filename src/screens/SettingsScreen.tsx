@@ -23,6 +23,13 @@ import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationE
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
+import {
+  cardSelectHaptic,
+  betPlacedHaptic,
+  trickWonHaptic,
+  bonusEarnedHaptic,
+  gameWonHaptic,
+} from '../utils/haptics';
 
 export interface SettingsScreenProps {
   onBack: () => void;
@@ -133,6 +140,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
       setAlertMessage(String(err.message));
       setShowConfirmAlert(true);
     }
+  };
+
+  // Haptic diagnostic — fires a plain control buzz first, then each
+  // wrapped helper in sequence so the user can tell whether the system
+  // permits vibration at all and whether each helper triggers.
+  // Reports feedback via the existing toast.
+  const handleTestHaptics = async () => {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    let webSupported: boolean | null = null;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+      const fn = (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate;
+      webSupported = typeof fn === 'function';
+      if (webSupported) {
+        try { fn!.call(navigator, 500); } catch {}
+      }
+    }
+    await sleep(800);
+    cardSelectHaptic();   await sleep(700);
+    betPlacedHaptic();    await sleep(700);
+    trickWonHaptic();     await sleep(700);
+    bonusEarnedHaptic();  await sleep(900);
+    gameWonHaptic();
+    let msg: string;
+    if (Platform.OS !== 'web') {
+      msg = 'Native haptics fired (5 patterns).';
+    } else if (webSupported) {
+      msg = 'navigator.vibrate present — fired 6 patterns. If you felt nothing, check Android system → Sounds & vibration → System haptics.';
+    } else {
+      msg = 'navigator.vibrate is NOT supported in this browser. Common on iOS Safari.';
+    }
+    setAlertMessage(msg);
+    setShowConfirmAlert(true);
   };
 
   const handleLogout = async () => {
@@ -309,6 +348,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
             testIDPrefix="lang"
           />
+        </View>
+
+        {/* === HAPTIC DIAGNOSTIC === */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('settings.haptics', 'Vibration')}
+          </Text>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            {t('settings.hapticsDesc', 'Tap to fire a control buzz followed by every in-game pattern. If nothing is felt on Android, the system-level haptic feedback is most likely off.')}
+          </Text>
+          <Pressable
+            style={[styles.saveBtn, { backgroundColor: colors.accent }]}
+            onPress={handleTestHaptics}
+            testID="settings-test-haptics"
+          >
+            <Text style={styles.saveBtnText}>{t('settings.testHaptics', 'Test vibration')}</Text>
+          </Pressable>
         </View>
 
         {/* === LOGOUT === */}
