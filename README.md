@@ -2,6 +2,8 @@
 
 A real-time multiplayer trick-taking card game built with Expo, Supabase, and Zustand.
 
+> Связанные документы: [`docs/principles.md`](docs/principles.md) (рабочее соглашение по репо/коммитам/доке) • [`docs/BACKLOG.md`](docs/BACKLOG.md) (канбан задач) • [`CLAUDE.md`](CLAUDE.md) (инструкции для агента)
+
 ## Features
 
 - **Full game engine** — 20 hands per game, trump suits, bidding, tricks, scoring

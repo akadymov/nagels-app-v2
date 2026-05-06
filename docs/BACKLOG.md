@@ -1,3 +1,8 @@
+<!--
+Связанные документы: [principles](principles.md) • [README](../README.md) • [CLAUDE](../CLAUDE.md)
+Колонки внизу читаются расширением Markdown Kanban для VS Code как доска (## = column, ### = card). Карточки описаны кратко; расширенные обсуждения и ADR живут отдельными файлами в docs/.
+-->
+
 ## Backlog
 
 ### Discord integration
