@@ -331,7 +331,15 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
           initialRouteName="Welcome"
           screenOptions={{
             headerShown: false,
-            cardStyle: { backgroundColor: Colors.backgroundDark },
+            // flex:1 here is *load-bearing on web*. Without it the
+            // Stack card renders with flex: 0 0 auto, so the card grows
+            // to the height of its content (e.g. all Settings sections
+            // stacked, ~1180 px) instead of clamping to the viewport
+            // (~932 px). The ScrollView inside SettingsScreen then sees
+            // a 1136 px tall parent slot, fits its content with no
+            // overflow, and `overflow:auto` never engages — vertical
+            // scroll dies on Settings/Profile across mobile browsers.
+            cardStyle: { backgroundColor: Colors.backgroundDark, flex: 1 },
             transitionSpec: {
               open: { animation: 'timing', config: { duration: 300 } },
               close: { animation: 'timing', config: { duration: 300 } },
