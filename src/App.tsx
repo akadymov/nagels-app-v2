@@ -70,12 +70,7 @@ export default function App() {
         }
         /* Force the first 4 levels of wrapper divs (RN-web,
            SafeAreaProvider, navigation stack, screen wrapper) to be a
-           flex column that doesn't introduce its own min-height. We
-           deliberately do NOT clamp max-height here — body already
-           pins the viewport via position:fixed + var(--app-height),
-           and a max-height clamp on every nested div was suffocating
-           ScrollView's internal overflow:auto wrapper, breaking
-           vertical scroll on Settings/Profile across browsers. */
+           flex column that doesn't introduce its own min-height. */
         #root > div,
         #root > div > div,
         #root > div > div > div,
@@ -84,6 +79,17 @@ export default function App() {
           flex-direction: column !important;
           flex: 1 !important;
           min-height: 0 !important;
+        }
+        /* Propagate min-height/width: 0 to *every* descendant of
+           #root. Without this, intermediate non-View wrappers from
+           React Navigation and SafeAreaProvider default to min-height:
+           auto (content size) — which prevents a flex parent of a
+           ScrollView from shrinking, which in turn disables the
+           overflow:auto on the ScrollView and kills vertical scroll
+           on Profile/Settings across mobile browsers. */
+        #root div {
+          min-height: 0;
+          min-width: 0;
         }
         div[style*="overflow"][style*="auto"],
         div[style*="overflow"][style*="scroll"] {
