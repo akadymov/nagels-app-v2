@@ -33,7 +33,11 @@ const vibrate = (pattern: VibratePattern) => {
  */
 export const cardSelectHaptic = async () => {
   if (Platform.OS === 'web') {
-    vibrate(10);
+    // 10 ms was too subtle for Android linear motors to register over
+    // the touch sensation itself — bumped to 20 ms after Akula
+    // reported nothing felt during play. iOS Safari ignores Vibration
+    // API regardless, so this only affects Android web.
+    vibrate(20);
     return;
   }
 
@@ -49,7 +53,7 @@ export const cardSelectHaptic = async () => {
  */
 export const betPlacedHaptic = async () => {
   if (Platform.OS === 'web') {
-    vibrate(25);
+    vibrate(45);
     return;
   }
 
@@ -66,7 +70,7 @@ export const betPlacedHaptic = async () => {
  */
 export const trickWonHaptic = async () => {
   if (Platform.OS === 'web') {
-    vibrate(25);
+    vibrate(45);
     return;
   }
 
@@ -82,7 +86,7 @@ export const trickWonHaptic = async () => {
  */
 export const buttonPressHaptic = async () => {
   if (Platform.OS === 'web') {
-    vibrate(10);
+    vibrate(20);
     return;
   }
 
@@ -98,7 +102,7 @@ export const buttonPressHaptic = async () => {
  */
 export const selectionHaptic = async () => {
   if (Platform.OS === 'web') {
-    vibrate(8);
+    vibrate(15);
     return;
   }
 
@@ -117,7 +121,7 @@ export const selectionHaptic = async () => {
 export const bonusEarnedHaptic = async () => {
   if (Platform.OS === 'web') {
     // Double-pulse to mirror the iOS Success notification pattern.
-    vibrate([20, 60, 30]);
+    vibrate([45, 90, 60]);
     return;
   }
 
@@ -136,7 +140,7 @@ export const gameWonHaptic = async () => {
   if (Platform.OS === 'web') {
     // Triple-pulse celebration — longer than bonus so the user can tell
     // "I won the whole game" from "I made my bid this hand".
-    vibrate([30, 80, 30, 80, 50]);
+    vibrate([60, 120, 60, 120, 100]);
     return;
   }
 
