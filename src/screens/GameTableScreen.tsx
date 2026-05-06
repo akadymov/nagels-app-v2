@@ -674,8 +674,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     return SuitSymbols[trump as keyof typeof SuitSymbols] || trump;
   };
   const getTrumpColor = (trump: string): string => {
-    if (trump === 'notrump') return Colors.textMuted;
+    if (trump === 'notrump') return colors.accent;
     return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
+  };
+  const getTrumpBgColor = (trump: string): string => {
+    // Tinted backdrop in the suit's own color so the trump is recognizable at a glance.
+    const map: Record<string, [string, string]> = {
+      diamonds: ['rgba(0, 148, 255, 0.16)', 'rgba(0, 148, 255, 0.30)'],
+      hearts:   ['rgba(190, 25, 49, 0.16)', 'rgba(190, 25, 49, 0.32)'],
+      clubs:    ['rgba(48, 133, 82, 0.18)', 'rgba(48, 133, 82, 0.32)'],
+      spades:   ['rgba(26, 26, 26, 0.12)',  'rgba(255, 255, 255, 0.18)'],
+      notrump:  ['rgba(19, 66, 143, 0.10)', 'rgba(93, 194, 252, 0.22)'],
+    };
+    const pair = map[trump] ?? map.notrump;
+    return isDark ? pair[1] : pair[0];
   };
 
   // Player positioning around the table
@@ -829,15 +841,21 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[
                 styles.trumpBadgeGame,
                 {
-                  backgroundColor: isDark ? 'rgba(19,66,143,0.2)' : 'rgba(19,66,143,0.08)',
-                  borderColor: colors.accent,
+                  backgroundColor: getTrumpBgColor(vm.trumpSuit),
+                  borderColor: getTrumpColor(vm.trumpSuit),
                 },
               ]}
             >
-              <Text style={[styles.trumpBadgeText, { color: getTrumpColor(vm.trumpSuit) }]}>
-                {vm.trumpSuit === 'notrump'
-                  ? t('game.noTrump')
-                  : `${getTrumpSymbol(vm.trumpSuit)} ${t('game.trump')}`}
+              <Text
+                style={[
+                  vm.trumpSuit === 'notrump' ? styles.trumpBadgeNT : styles.trumpBadgeSymbol,
+                  { color: getTrumpColor(vm.trumpSuit) },
+                ]}
+              >
+                {getTrumpSymbol(vm.trumpSuit)}
+              </Text>
+              <Text style={[styles.trumpBadgeLabel, { color: colors.textSecondary }]}>
+                {vm.trumpSuit === 'notrump' ? t('game.noTrump') : t('game.trump')}
               </Text>
             </View>
           </View>
@@ -1372,14 +1390,35 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   trumpBadgeGame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: Radius.lg,
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   trumpBadgeText: {
     fontSize: 13,
     fontWeight: '700',
+  },
+  trumpBadgeSymbol: {
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 26,
+    includeFontPadding: false,
+  },
+  trumpBadgeNT: {
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    lineHeight: 22,
+  },
+  trumpBadgeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   topBarRow3: {
     flexDirection: 'row',
