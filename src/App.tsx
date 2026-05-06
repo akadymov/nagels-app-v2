@@ -44,13 +44,23 @@ export default function App() {
           :root { --app-height: 100vh; }
         }
         * { -webkit-overflow-scrolling: touch !important; }
+        /* Pin html+body to the visual viewport so the document can never
+           scroll the app behind the browser chrome. iOS Safari ignores
+           plain "overflow: hidden" once a Modal mounts and unmounts —
+           position:fixed plus inset:0 keeps the root anchored regardless. */
         html, body {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100%;
           height: var(--app-height);
           margin: 0;
-          touch-action: pan-y !important;
+          overflow: hidden !important;
           overscroll-behavior: none;
+          touch-action: pan-y !important;
         }
-        body { overflow: hidden !important; }
         #root {
           touch-action: pan-y !important;
           overflow: hidden;
@@ -76,19 +86,28 @@ export default function App() {
       `;
       document.head.appendChild(style);
 
-      // Keep --app-height in sync with the *visible* viewport.
-      // visualViewport reflects the area not covered by browser UI on
-      // iOS Safari, Chrome address bar, and the on-screen keyboard.
+      // Keep --app-height in sync with the *visible* viewport, and
+      // force the document back to scrollY=0. iOS Safari leaves a stray
+      // scroll offset after a Modal closes (the chat panel, scoreboard,
+      // settings, etc.) which yanks the top of the app behind the URL
+      // bar; resetting on every resize/scroll/visibility tick keeps the
+      // root anchored.
       const setAppHeight = () => {
         const h =
           (typeof window !== 'undefined' && window.visualViewport?.height) ||
           window.innerHeight;
         document.documentElement.style.setProperty('--app-height', `${h}px`);
+        // Re-anchor — cheap and idempotent.
+        if (window.scrollY !== 0 || window.scrollX !== 0) {
+          window.scrollTo(0, 0);
+        }
       };
 
       setAppHeight();
       window.addEventListener('resize', setAppHeight);
       window.addEventListener('orientationchange', setAppHeight);
+      window.addEventListener('focus', setAppHeight);
+      document.addEventListener('visibilitychange', setAppHeight);
       window.visualViewport?.addEventListener('resize', setAppHeight);
       window.visualViewport?.addEventListener('scroll', setAppHeight);
     }
