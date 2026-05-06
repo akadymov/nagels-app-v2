@@ -21,6 +21,7 @@ import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationE
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
+import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 
 export interface SettingsScreenProps {
   onBack: () => void;
@@ -66,6 +67,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const { colors } = useTheme();
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
+  const push = usePushSubscribe();
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(user?.user_metadata?.avatar || null);
@@ -325,6 +327,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
             testIDPrefix="haptics"
           />
+        </View>
+
+        {/* === NOTIFICATIONS === */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            {t('settings.notifications', 'Notifications')}
+          </Text>
+          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+            {t('settings.notificationsDesc', 'Wake me when it is my turn or the game starts.')}
+          </Text>
+          <OptionPills
+            options={[
+              { key: 'on',  label: t('settings.on',  'On') },
+              { key: 'off', label: t('settings.off', 'Off') },
+            ]}
+            selected={push.state === 'subscribed' ? 'on' : 'off'}
+            onSelect={(key) => { void (key === 'on' ? push.enable() : push.disable()); }}
+            accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
+            testIDPrefix="notifications"
+          />
+          {push.state === 'denied' && (
+            <Text style={[styles.sectionDesc, { color: colors.textMuted, marginTop: Spacing.sm }]}>
+              {t('settings.notificationsDenied', 'Enable notifications in your browser site settings, then come back.')}
+            </Text>
+          )}
+          {push.state === 'ios-needs-pwa' && (
+            <Text style={[styles.sectionDesc, { color: colors.textMuted, marginTop: Spacing.sm }]}>
+              {t('settings.notificationsPwa', 'Add this site to your home screen first (Share → Add to Home Screen).')}
+            </Text>
+          )}
+          {push.state === 'unsupported' && (
+            <Text style={[styles.sectionDesc, { color: colors.textMuted, marginTop: Spacing.sm }]}>
+              {t('settings.notificationsUnsupported', 'Your browser does not support push notifications.')}
+            </Text>
+          )}
         </View>
 
         {/* === LOGOUT === */}
