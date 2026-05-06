@@ -86,6 +86,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const setThemePreference = useSettingsStore((s) => s.setThemePreference);
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
   const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
+  const hapticsEnabled = useSettingsStore((s) => s.hapticsEnabled);
+  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
   const biddingTipDismissed = useSettingsStore((s) => s.shownTips.bidding);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authDisplayName = useAuthStore((s) => s.displayName);
@@ -675,7 +677,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   };
   const getTrumpColor = (trump: string): string => {
     if (trump === 'notrump') return colors.accent;
-    return (Colors[trump as keyof typeof Colors] as string) || Colors.textSecondary;
+    return (colors[trump as keyof typeof colors] as string) || colors.textSecondary;
   };
   const getTrumpBgColor = (trump: string): string => {
     // Tinted backdrop in the suit's own color so the trump is recognizable at a glance.
@@ -916,11 +918,16 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              disabled={!isMultiplayer}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                !isMultiplayer && { opacity: 0.3 },
+              ]}
               testID="game-btn-chat"
             >
               <Text style={styles.iconBtnEmoji}>💬</Text>
-              {chatUnread > 0 && (
+              {isMultiplayer && chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
                   minWidth: 16, height: 16, paddingHorizontal: 4,
@@ -960,8 +967,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                       style={[
                         styles.tableSuitSymbol,
                         isTrump
-                          ? { color: '#d0d0d0', opacity: 0.95, fontSize: 22 }
+                          ? styles.tableSuitSymbolTrump
                           : { color: '#ffffff', opacity: 0.12 },
+                        isTrump ? { color: colors[suit] as string } : null,
                       ]}
                     >
                       {SuitSymbols[suit]}
@@ -1354,6 +1362,32 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               </View>
 
+              <View style={styles.settingsSection}>
+                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.haptics', 'Vibration')}</Text>
+                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
+                  {[true, false].map((on) => {
+                    const isActive = hapticsEnabled === on;
+                    return (
+                      <Pressable
+                        key={String(on)}
+                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
+                        onPress={() => setHapticsEnabled(on)}
+                      >
+                        <Text
+                          style={[
+                            styles.settingsPillText,
+                            { color: colors.textSecondary },
+                            isActive && { color: '#fff', fontWeight: '700' },
+                          ]}
+                        >
+                          {on ? t('settings.on', 'On') : t('settings.off', 'Off')}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
               <Pressable style={[styles.modalButton, { marginTop: Spacing.md }]} onPress={() => setShowSettingsModal(false)}>
                 <Text style={styles.modalButtonText}>{t('common.close')}</Text>
               </Pressable>
@@ -1496,6 +1530,14 @@ const styles = StyleSheet.create({
   },
   tableSuitSymbol: {
     fontSize: 18,
+  },
+  tableSuitSymbolTrump: {
+    fontSize: 40,
+    fontWeight: '900',
+    opacity: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   tableInfoArea: {
     position: 'absolute',
