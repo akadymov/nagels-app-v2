@@ -251,7 +251,12 @@
     "language": "Language",
     "haptics": "Vibration",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "notifications": "Notifications",
+    "notificationsDesc": "Wake me when it is my turn or the game starts.",
+    "notificationsDenied": "Enable notifications in your browser site settings, then come back.",
+    "notificationsPwa": "Add this site to your home screen first (Share → Add to Home Screen).",
+    "notificationsUnsupported": "Your browser does not support push notifications."
   },
   "onboarding": {
     "gotIt": "Got it",

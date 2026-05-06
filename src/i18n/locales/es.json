@@ -251,7 +251,12 @@
     "language": "Idioma",
     "haptics": "Vibración",
     "on": "Activar",
-    "off": "Desactivar"
+    "off": "Desactivar",
+    "notifications": "Notificaciones",
+    "notificationsDesc": "Avísame cuando sea mi turno o empiece la partida.",
+    "notificationsDenied": "Activa las notificaciones en los ajustes del sitio en el navegador y vuelve.",
+    "notificationsPwa": "Primero añade este sitio a tu pantalla de inicio (Compartir → Añadir a inicio).",
+    "notificationsUnsupported": "Tu navegador no admite notificaciones push."
   },
   "onboarding": {
     "gotIt": "Entendido",
