@@ -1187,6 +1187,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           handNumber={vm.handNumber}
           totalHands={vm.totalHands}
           players={scoreboardPlayers}
+          scoreHistory={isMultiplayer ? undefined : sp.scoreHistory}
           startingPlayerIndex={vm.startingPlayerIndex}
           // Game-over is the SERVER's "room.phase='finished'" signal,
           // not just a hand-count match. Using vm.handNumber >=
