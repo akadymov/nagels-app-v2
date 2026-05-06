@@ -59,7 +59,7 @@ const TG_TIMEOUT_MS = 3_000;
  */
 export async function sendTelegram(opts: SendOptions): Promise<void> {
   const token = Deno.env.get('TELEGRAM_BOT_TOKEN');
-  const chatId = opts.chatId ?? Deno.env.get('TELEGRAM_CHAT_ID');
+  const chatId = opts.chatId || Deno.env.get('TELEGRAM_CHAT_ID');
   if (!token || !chatId) {
     // Dev / preview path — no secrets configured. Silently no-op so
     // `npm run demo` and local supabase functions serve work without TG.
@@ -96,7 +96,10 @@ export async function sendTelegram(opts: SendOptions): Promise<void> {
   } catch (err) {
     // AbortError on timeout, TypeError on network failure.
     const name = err instanceof Error ? err.name : 'unknown';
-    const msg = err instanceof Error ? err.message : String(err);
+    const raw = err instanceof Error ? err.message : String(err);
+    // Bot tokens look like 123456789:AAGm... — they ride in the URL path,
+    // so any fetch error string referring to the URL leaks the token.
+    const msg = raw.replace(/bot\d+:[A-Za-z0-9_-]+/g, 'bot<redacted>');
     console.warn(`[telegram] sendMessage threw: ${name}: ${msg}`);
   } finally {
     clearTimeout(timer);
