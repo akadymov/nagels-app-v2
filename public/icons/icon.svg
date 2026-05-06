@@ -1,0 +1,5 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#1A1A2E" rx="200"/>
+  <text x="512" y="600" font-family="Arial" font-size="400" fill="#FF6B6B" text-anchor="middle">♠</text>
+  <text x="512" y="320" font-family="Arial" font-size="120" fill="#4ECDC4" text-anchor="middle">NÄGELS</text>
+</svg>

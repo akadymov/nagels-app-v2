@@ -1,0 +1,19 @@
+{
+  "name": "Nägels Online",
+  "short_name": "Nägels",
+  "description": "Online card game in the trick-taking family — bid your tricks, take exactly that many.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#13428f",
+  "theme_color": "#13428f",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

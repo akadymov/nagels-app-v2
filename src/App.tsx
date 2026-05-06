@@ -133,6 +133,62 @@ export default function App() {
       document.addEventListener('visibilitychange', setAppHeight);
       window.visualViewport?.addEventListener('resize', setAppHeight);
       window.visualViewport?.addEventListener('scroll', setAppHeight);
+
+      // PWA install support — manifest link, theme color, apple-touch
+      // hints, and service worker registration. The default Expo web
+      // template ships none of these, so Chrome won't surface the
+      // "Install app" affordance and Android's add-to-home-screen
+      // creates a plain bookmark instead of a standalone PWA. Inject
+      // them at runtime instead of forking the HTML template.
+      const ensureHead = (selector: string, build: () => HTMLElement) => {
+        if (!document.head.querySelector(selector)) {
+          document.head.appendChild(build());
+        }
+      };
+      ensureHead('link[rel="manifest"]', () => {
+        const l = document.createElement('link');
+        l.rel = 'manifest';
+        l.href = '/manifest.json';
+        return l;
+      });
+      ensureHead('meta[name="theme-color"]', () => {
+        const m = document.createElement('meta');
+        m.name = 'theme-color';
+        m.content = '#13428f';
+        return m;
+      });
+      ensureHead('meta[name="apple-mobile-web-app-capable"]', () => {
+        const m = document.createElement('meta');
+        m.name = 'apple-mobile-web-app-capable';
+        m.content = 'yes';
+        return m;
+      });
+      ensureHead('meta[name="apple-mobile-web-app-status-bar-style"]', () => {
+        const m = document.createElement('meta');
+        m.name = 'apple-mobile-web-app-status-bar-style';
+        m.content = 'black-translucent';
+        return m;
+      });
+      ensureHead('link[rel="apple-touch-icon"]', () => {
+        const l = document.createElement('link');
+        l.rel = 'apple-touch-icon';
+        l.href = '/icons/icon.svg';
+        return l;
+      });
+
+      // Register the service worker. Required for Chrome installability.
+      // Wrapped in a load handler so it doesn't block first paint, and
+      // gated on navigator.serviceWorker because some embedded
+      // browsers (e.g. older Telegram in-app browser) don't ship it.
+      if ('serviceWorker' in navigator) {
+        const register = () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .catch((err) => console.warn('[SW] registration failed:', err));
+        };
+        if (document.readyState === 'complete') register();
+        else window.addEventListener('load', register, { once: true });
+      }
     }
   }, [hydrate]);
 
