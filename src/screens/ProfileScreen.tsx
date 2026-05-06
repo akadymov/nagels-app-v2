@@ -97,7 +97,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={[styles.avatarCircle, { backgroundColor: avatarColor }]}>
@@ -236,6 +236,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  // ScrollView needs flex:1 on its outer wrapper so it claims the
+  // space below the header and becomes scrollable. Without this it
+  // collapses to content height on web/iOS Safari and the longer-than-
+  // viewport sections (avatar grid + email + actions) hide behind the
+  // viewport edge with no way to reach them.
+  scrollFlex: {
+    flex: 1,
   },
   scroll: {
     padding: Spacing.lg,
