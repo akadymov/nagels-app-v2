@@ -214,7 +214,15 @@ const RejoinGuard: React.FC = () => {
       try {
         const { tryRestoreActiveRoom } = await import('../lib/activeRoom');
         const target = await tryRestoreActiveRoom();
-        if (target) navigation.navigate(target);
+        if (target === 'GameTable') {
+          // Restored room is always multiplayer (active_room_id_v1 is only
+          // written by Lobby create/join). GameTableScreen defaults
+          // isMultiplayer to false, so without this param it would mount
+          // in solo-bot mode and ignore the hydrated room store.
+          (navigation as any).navigate('GameTable', { isMultiplayer: true });
+        } else if (target === 'WaitingRoom') {
+          navigation.navigate(target);
+        }
       } catch (err) {
         console.warn('[rejoin] tryRestoreActiveRoom threw:', err);
       }
