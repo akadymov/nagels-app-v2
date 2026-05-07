@@ -869,13 +869,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
           <View style={styles.topBarRow3}>
             <Pressable
-              onPress={onExit}
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
-              testID="game-btn-exit"
-            >
-              <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
-            </Pressable>
-            <Pressable
               onPress={() => setShowSettingsModal(true)}
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-settings"
