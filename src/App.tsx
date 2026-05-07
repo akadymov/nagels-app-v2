@@ -193,16 +193,20 @@ export default function App() {
   }, [hydrate]);
 
   // Service Worker → window bridge: when a push notification is clicked the
-  // SW posts {kind:'push:navigate', room_code} to a focused client. Route into
-  // the room via the same /join/<code> deep-link path Telegram uses.
+  // SW posts {kind:'push:navigate'} to a focused client. Delegate to
+  // tryRestoreActiveRoom so RejoinGuard places the user back into their room.
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
-    const handler = (event: MessageEvent) => {
+    const handler = async (event: MessageEvent) => {
       const msg = event.data;
       if (msg?.kind !== 'push:navigate') return;
-      if (typeof msg.room_code !== 'string') return;
-      window.location.assign(`/join/${msg.room_code}`);
+      try {
+        const { tryRestoreActiveRoom } = await import('./lib/activeRoom');
+        await tryRestoreActiveRoom();
+      } catch (err) {
+        console.warn('[push] navigate handler failed:', err);
+      }
     };
     navigator.serviceWorker.addEventListener('message', handler);
     return () => navigator.serviceWorker.removeEventListener('message', handler);
