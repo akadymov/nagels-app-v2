@@ -5,7 +5,8 @@ import { buildSnapshot } from '../snapshot.ts';
 function emptySnapshot(): RoomSnapshot {
   return {
     room: null, players: [], current_hand: null,
-    hand_scores: [], current_trick: null, score_history: [], my_hand: [],
+    hand_scores: [], current_trick: null, last_closed_trick: null,
+    score_history: [], my_hand: [],
   };
 }
 
@@ -16,7 +17,7 @@ export async function leaveRoom(
 ): Promise<ActionResult> {
   const { data: room } = await svc
     .from('rooms')
-    .select('id, host_session_id, phase, version')
+    .select('id, host_session_id, phase, version, current_hand_id')
     .eq('id', action.room_id)
     .maybeSingle();
   if (!room) return { ok: false, error: 'unknown_room', state: emptySnapshot(), version: 0 };
@@ -64,6 +65,50 @@ export async function leaveRoom(
       room_id: room.id, session_id: actor.session_id,
       kind: 'host_left', payload: {},
     });
+
+    const snapshot = await buildSnapshot(svc, room.id, actor.session_id);
+    return { ok: true, state: snapshot, version: snapshot.room?.version ?? 0 };
+  }
+
+  // Non-host leaving while a hand is in progress — abandon the hand and
+  // snap the room back to waiting so the host can restart with the
+  // remaining players. Past hand_scores from already-closed hands stay
+  // intact; only the current_hand and its child rows are dropped.
+  if (!isHostLeaving && room.phase === 'playing' && room.current_hand_id) {
+    const hid = room.current_hand_id as string;
+    const trickRows = await svc.from('tricks').select('id').eq('hand_id', hid);
+    const trickIds = (trickRows.data ?? []).map((r: { id: string }) => r.id);
+    if (trickIds.length > 0) {
+      await svc.from('trick_cards').delete().in('trick_id', trickIds);
+    }
+    await svc.from('tricks').delete().eq('hand_id', hid);
+    await svc.from('hand_scores').delete().eq('hand_id', hid);
+    await svc.from('dealt_cards').delete().eq('hand_id', hid);
+    await svc.from('hands').delete().eq('id', hid);
+
+    await svc.from('rooms').update({
+      phase: 'waiting',
+      current_hand_id: null,
+      version: (room.version ?? 0) + 1,
+    }).eq('id', room.id);
+
+    await svc.from('game_events').insert({
+      room_id: room.id,
+      session_id: actor.session_id,
+      kind: 'player_left_mid_game',
+      payload: { display_name: actor.display_name },
+    });
+
+    const channel = svc.channel(`room:${room.id}`);
+    await new Promise<void>((resolve) => {
+      channel.subscribe((status) => { if (status === 'SUBSCRIBED') resolve(); });
+    });
+    await channel.send({
+      type: 'broadcast',
+      event: 'left_mid_game',
+      payload: { display_name: actor.display_name, at: new Date().toISOString() },
+    });
+    await channel.unsubscribe();
 
     const snapshot = await buildSnapshot(svc, room.id, actor.session_id);
     return { ok: true, state: snapshot, version: snapshot.room?.version ?? 0 };
