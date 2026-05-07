@@ -25,6 +25,7 @@ import { useRoomStore } from '../../store/roomStore';
 import { useGameStore } from '../../store/gameStore';
 import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
+import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { ChatPanel } from '../ChatPanel';
 import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
 import { useAuthStore } from '../../store/authStore';
@@ -223,6 +224,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       setIsRefreshing(false);
     }
   }, [room?.id]);
+
+  const handleLeave = useCallback(async () => {
+    const room_id = useRoomStore.getState().snapshot?.room?.id;
+    if (!room_id) return;
+    await leaveWithConfirm(room_id, t);
+  }, [t]);
 
   // Allowed bets for the current betting player.
   // Computed locally so the UI gives instant feedback; the server still validates.
@@ -518,6 +525,25 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 testID="betting-btn-sync"
               >
                 <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+              </Pressable>
+            )}
+            {isMultiplayer && (
+              <Pressable
+                onPress={handleLeave}
+                style={({ pressed }) => [
+                  styles.iconBtn,
+                  {
+                    backgroundColor: colors.iconButtonBg,
+                    borderWidth: 1,
+                    borderColor: colors.glassLight,
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}
+                hitSlop={8}
+                testID="betting-leave"
+                accessibilityLabel={t('multiplayer.leaveAnyway')}
+              >
+                <Text style={styles.iconBtnEmoji}>🚪</Text>
               </Pressable>
             )}
             <Pressable
