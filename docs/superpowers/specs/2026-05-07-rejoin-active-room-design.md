@@ -9,8 +9,8 @@ This is not a new feature — most of the infrastructure already lives in the re
 ## Non-goals
 
 - Cross-device handoff. We do not discover active rooms from a fresh install on a different browser/device. Active room is keyed in the **local** AsyncStorage on the device that joined.
-- Bot-takeover redesign. If the bot took over the seat after a timeout, rejoin replaces the bot via the existing reconnect path; we do not change the bot logic.
-- "Leave but hold seat" soft leave. Hard leave only. The "soft leave" effect is what every closed tab already produces — server keeps the seat, heartbeat goes stale, bot may take over after timeout per existing rules.
+- Bot replacement of a leaver. Bots in the codebase today don't play well enough to substitute for a human mid-hand, and seating a bot into a partially-played hand involves logic we haven't built. Until that lands, leaving = leaving. The confirm dialog reflects this honestly.
+- "Leave but hold seat" soft leave. Hard leave only. The "soft leave" effect is what every closed tab already produces — server keeps the seat, heartbeat goes stale, the other players can use the existing `request_timeout` action to skip a frozen player's turn.
 
 ## What already exists (and is correct)
 
@@ -74,10 +74,15 @@ Add a Leave control to GameTableScreen — placement mirrors WaitingRoom (top-ba
 
 ```
 Title:  Leave the game?
-Body:   You'll lose your seat and the game will continue without you.
-        A bot may take over your turns.
-Buttons: [Cancel]   [Leave]
+Body:   The game can't continue without you — the other players
+        will have to abandon it.
+
+        If you just need to step away or refresh the page, close
+        the tab instead. You'll come back to the same seat.
+Buttons: [Cancel]   [Leave anyway]
 ```
+
+The body intentionally surfaces the social cost (other players lose their game) and educates the user about the alternative ("close the tab — you can come back"). Bot replacement is **not** mentioned — it does not exist as a reliable mid-game substitute today, and pretending otherwise would mislead the user.
 
 On Confirm → `gameClient.leaveRoom(roomId)` → `clearActiveRoom` (per #2) → `navigation.navigate('Lobby')` → reset `useRoomStore`.
 
@@ -110,8 +115,8 @@ export async function leaveWithConfirm(
 i18n keys to add (EN normative; RU/ES translated alongside):
 
 - `multiplayer.leaveConfirmTitle` — "Leave the game?"
-- `multiplayer.leaveConfirmBody` — "You'll lose your seat and the game will continue without you. A bot may take over your turns."
-- `common.leave` — "Leave"
+- `multiplayer.leaveConfirmBody` — "The game can't continue without you — the other players will have to abandon it.\n\nIf you just need to step away or refresh the page, close the tab instead. You'll come back to the same seat."
+- `multiplayer.leaveAnyway` — "Leave anyway"
 - `common.cancel` — already exists.
 
 ### 5. SW push notification click — drop the `/join/<code>` redirect
@@ -147,7 +152,7 @@ const handler = async (event: MessageEvent) => {
 - **User signed out then back in (different account).** `get_room_state` is RLS-protected; if the session no longer matches the room players, the RPC returns `null` or errors → `clearActiveRoom` → Lobby. Already handled by existing fallback.
 - **Multiple tabs of the same site with the same active room.** Each tab calls RejoinGuard once on its own boot. Both end up in GameTable. They compete on heartbeats but the snapshot is server-authoritative — fine. (No new locking required.)
 - **User has active room A, gets a push for room B.** Push subscriptions are bound to `auth_user_id`, not `room_id`. If user is in only one room at a time, B == A and there's no conflict. If they were in B previously and got a stale push (rare; B's `room_players` row should be gone after they switched), the click brings them to the active room A via RejoinGuard — push-from-B is silently ignored. Acceptable.
-- **Tab close during game with no Leave button pressed.** Server keeps the seat (`room_players` row stays). Heartbeat goes stale → existing `is_connected` flag flips → bot-takeover may activate per existing rules. On reopen, `tryRestoreActiveRoom` rehydrates and the user takes back control via the existing reconnect path.
+- **Tab close during game with no Leave button pressed.** Server keeps the seat (`room_players` row stays). Heartbeat goes stale → `is_connected` flag flips. The other players can use the existing `request_timeout` action to advance through the leaver's turn if they're waiting on it. On reopen, `tryRestoreActiveRoom` rehydrates and the user takes back control. This is the **encouraged** flow for "I'll be right back" situations — the dialog text in §3 explicitly steers users here.
 - **`window.confirm` not available** (very old WebView). `leaveWithConfirm` falls through to `true` (skip confirm) rather than blocking the leave. Unlikely on supported targets.
 
 ## Testing
@@ -173,7 +178,7 @@ const handler = async (event: MessageEvent) => {
 | `src/screens/GameTableScreen.tsx` | Modify | Add Leave button, route through `leaveWithConfirm`. |
 | `public/sw.js` | Modify | `notificationclick` opens `/` instead of `/join/<code>`. |
 | `src/App.tsx` | Modify | `push:navigate` handler uses `tryRestoreActiveRoom` instead of `window.location.assign('/join/<code>')`. |
-| `src/i18n/locales/{en,ru,es}.json` | Modify | Add `multiplayer.leaveConfirmTitle`, `leaveConfirmBody`, `common.leave`. |
+| `src/i18n/locales/{en,ru,es}.json` | Modify | Add `multiplayer.leaveConfirmTitle`, `leaveConfirmBody`, `leaveAnyway`. |
 
 No server-side or migration changes.
 
