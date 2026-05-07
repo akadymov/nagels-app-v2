@@ -226,7 +226,11 @@
     "playerJoined": "{{name}} se unió",
     "playerLeft": "{{name}} se fue",
     "notConfigured": "Multijugador no configurado",
-    "configureFirst": "Primero configura Supabase"
+    "configureFirst": "Primero configura Supabase",
+    "leaveConfirmTitle": "¿Abandonar la partida?",
+    "leaveConfirmBody": "La partida no puede continuar sin ti. Todos vuelven a la sala de espera y tu mano se descarta — el anfitrión puede reiniciar con el resto.\n\nSi sólo necesitas alejarte o actualizar la página — cierra la pestaña. Volverás al mismo asiento.",
+    "leaveAnyway": "Salir igualmente",
+    "leftMidGame": "🚪 {{name}} ha abandonado la partida"
   },
   "profile": {
     "title": "Perfil",
