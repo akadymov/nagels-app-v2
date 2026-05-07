@@ -48,16 +48,14 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const room_code = data.room_code;
-  const target = room_code ? `/join/${room_code}` : '/';
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const ours = all.find((c) => new URL(c.url).origin === self.location.origin);
     if (ours) {
       await ours.focus();
-      ours.postMessage({ kind: 'push:navigate', room_code, room_id: data.room_id });
+      ours.postMessage({ kind: 'push:navigate', room_code: data.room_code, room_id: data.room_id });
       return;
     }
-    await self.clients.openWindow(target);
+    await self.clients.openWindow('/');
   })());
 });
