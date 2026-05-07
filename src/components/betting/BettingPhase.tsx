@@ -489,16 +489,6 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
           </View>
           <View style={styles.topBarRow2}>
             <Pressable
-              onPress={onClose}
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
-              ]}
-              hitSlop={8}
-            >
-              <Text style={[styles.iconBtnText, { color: colors.iconButtonText }]}>←</Text>
-            </Pressable>
-            <Pressable
               onPress={() => setShowSettingsModal(true)}
               style={[
                 styles.iconBtn,
