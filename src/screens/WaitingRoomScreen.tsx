@@ -33,6 +33,7 @@ import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
 import { avatarColorFor } from '../utils/avatarColor';
 import { useChatStore } from '../store/chatStore';
+import { useSystemEventStore } from '../store/systemEventStore';
 import { ChatPanel } from '../components/ChatPanel';
 
 export interface WaitingRoomScreenProps {
@@ -68,6 +69,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const amIReady = myPlayer?.is_ready ?? false;
   const [showChat, setShowChat] = useState(false);
   const chatUnread = useChatStore((s) => s.unread);
+  const lastLeft = useSystemEventStore((s) => s.lastLeftMidGame);
+  const clearLastLeft = useSystemEventStore((s) => s.clearLeftMidGame);
   const playerCount = players.length;
   const readyCount = players.filter((p) => p.is_ready).length;
   // Host is implicitly ready: only count non-host ready players for "canStart"
@@ -260,6 +263,18 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
+        {lastLeft && (
+          <Pressable
+            onPress={clearLastLeft}
+            style={[styles.leftBanner, { backgroundColor: colors.surfaceSecondary, borderColor: colors.glassLight }]}
+            testID="left-mid-game-banner"
+          >
+            <Text style={[styles.leftBannerText, { color: colors.textPrimary }]}>
+              {t('multiplayer.leftMidGame', { name: lastLeft.display_name })}
+            </Text>
+            <Text style={[styles.leftBannerDismiss, { color: colors.textMuted }]}>×</Text>
+          </Pressable>
+        )}
         {/* Room Code Card */}
         {room && (
           <GlassCard style={styles.roomCodeCard}>
@@ -679,6 +694,25 @@ const styles = StyleSheet.create({
   leaveButtonText: {
     ...TextStyles.caption,
     color: Colors.textMuted,
+  },
+  leftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  leftBannerText: {
+    ...TextStyles.caption,
+    flex: 1,
+  },
+  leftBannerDismiss: {
+    ...TextStyles.h3,
+    marginLeft: Spacing.md,
   },
 });
 
