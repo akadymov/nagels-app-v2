@@ -210,9 +210,16 @@ const RejoinGuard: React.FC = () => {
   useEffect(() => {
     if (!isInitialized || rejoinAttempted.current) return;
     rejoinAttempted.current = true;
-    // Rejoin path is being rebuilt on top of the new server-authoritative
-    // pipeline (see plan §M8). For now, just no-op.
-  }, [isInitialized]);
+    void (async () => {
+      try {
+        const { tryRestoreActiveRoom } = await import('../lib/activeRoom');
+        const target = await tryRestoreActiveRoom();
+        if (target) navigation.navigate(target);
+      } catch (err) {
+        console.warn('[rejoin] tryRestoreActiveRoom threw:', err);
+      }
+    })();
+  }, [isInitialized, navigation]);
 
   return null;
 };
