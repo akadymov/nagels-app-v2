@@ -78,8 +78,14 @@ export const gameClient = {
   joinRoom: (displayName: string, code: string) =>
     postAction(displayName, { kind: 'join_room', display_name: displayName, code }),
 
-  leaveRoom: (room_id: string, target_session_id?: string) =>
-    postAction(null, { kind: 'leave_room', room_id, target_session_id }),
+  leaveRoom: async (room_id: string, target_session_id?: string) => {
+    const result = await postAction(null, { kind: 'leave_room', room_id, target_session_id });
+    if (result.ok && !target_session_id) {
+      const { clearActiveRoom } = await import('./activeRoom');
+      await clearActiveRoom();
+    }
+    return result;
+  },
 
   setReady: (room_id: string, is_ready: boolean, target_session_id?: string) =>
     postAction(null, { kind: 'ready', room_id, is_ready, target_session_id }),
