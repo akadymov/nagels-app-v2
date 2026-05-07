@@ -1,6 +1,7 @@
 import { getSupabaseClient } from './supabase/client';
 import { useRoomStore } from '../store/roomStore';
 import { useChatStore, type ChatMessage } from '../store/chatStore';
+import { useSystemEventStore } from '../store/systemEventStore';
 import { gameClient } from './gameClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -46,6 +47,14 @@ export function subscribeRoom(room_id: string) {
       ts: typeof m.ts === 'number' ? m.ts : Date.now(),
       avatar: m.avatar ?? null,
       avatarColor: m.avatarColor ?? null,
+    });
+  });
+
+  channel.on('broadcast', { event: 'left_mid_game' }, ({ payload }) => {
+    if (!payload || typeof payload.display_name !== 'string') return;
+    useSystemEventStore.getState().setLeftMidGame({
+      display_name: payload.display_name,
+      at: payload.at ?? new Date().toISOString(),
     });
   });
 
