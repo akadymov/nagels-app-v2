@@ -226,9 +226,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   }, [room?.id]);
 
   const handleLeave = useCallback(async () => {
-    const room_id = useRoomStore.getState().snapshot?.room?.id;
+    const snap = useRoomStore.getState().snapshot;
+    const myId = useRoomStore.getState().myPlayerId;
+    const room_id = snap?.room?.id;
     if (!room_id) return;
-    await leaveWithConfirm(room_id, t);
+    const isHost = !!myId && snap?.room?.host_session_id === myId;
+    await leaveWithConfirm(room_id, t, { isHost });
   }, [t]);
 
   // Allowed bets for the current betting player.
