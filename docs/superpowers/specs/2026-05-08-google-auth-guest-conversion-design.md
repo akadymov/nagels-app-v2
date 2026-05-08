@@ -1,6 +1,6 @@
 # Google Auth + Guest → Registered Conversion — Design
 
-**Goal:** Anonymous guests can upgrade to a permanent identity via Google OAuth (or existing email/password) without losing their UUID, history, or in-progress state. Conversion is offered at three calibrated moments, all dismissible.
+**Goal:** Anonymous guests can upgrade to a permanent identity via Google OAuth (or existing email/password) without losing their UUID, history, or in-progress state. Conversion is offered at three calibrated moments, all dismissible. As a precondition, the duplicated in-game settings UI is consolidated with the lobby SettingsScreen into a single shared overlay modal — so the new "Save Progress" CTA can live in one place and surface everywhere a gear icon is shown.
 
 **Non-goal:** Replace email/password. Merge two server-side accounts. Apple Sign-In or any other OAuth provider beyond Google.
 
@@ -12,17 +12,56 @@ Today the app signs every fresh visitor in as an anonymous Supabase user (`signI
 
 What's missing: Google OAuth (no `signInWithOAuth` calls anywhere) and a deliberate "save your progress" moment. Today most guests never visit Settings, so the email upgrade affordance is invisible — the email path exists but converts almost nobody.
 
+Settings UI is currently fragmented in three places:
+- `SettingsScreen.tsx` — full-screen route opened from Lobby ⚙️. Has profile, email, theme, deck, language, haptics, push, install-app, logout.
+- `BettingPhase.tsx:740` — inline `<Modal>` opened from in-game ⚙️. Subset: read-only display name, language, theme, deck, haptics.
+- `GameTableScreen.tsx:1311` — near-identical inline `<Modal>` to BettingPhase. Same subset.
+
+The two in-game modals drift out of sync with SettingsScreen on every change. They have different styling. The user's mental model is "settings is one place, regardless of where I am in the app" — current code violates that. Consolidating is a precondition for adding Save Progress cleanly.
+
 ---
+
+## Phase 1: Unified Settings overlay (refactor)
+
+### Architecture
+
+- **Extract** `src/components/SettingsBody.tsx` — pure-content component containing every section currently in `SettingsScreen.tsx` body (profile, password change, email confirmation banner, theme, deck, language, haptics, push notifications, install-app, save-progress (new), logout). No SafeAreaView, no header. Receives `onClose` (used by section-internal navigations like "open AuthScreen").
+- **Create** `src/components/SettingsModal.tsx` — overlay host. RN `<Modal animationType="slide" transparent>` wrapping a sheet that fills 90%+ of viewport (similar to ChatPanel pattern, but taller and with internal `<ScrollView>` for the long body). Renders `<SettingsBody onClose={handleClose} />` inside.
+- **Create** `src/store/settingsUIStore.ts` — tiny zustand store: `{ visible: boolean, open: () => void, close: () => void }`. Mounted once at App root so any screen can call `useSettingsUIStore.getState().open()`.
+- **Mount** `<SettingsModal />` once in `src/App.tsx` (or `AppNavigator.tsx` outside the Stack so it floats over any screen). Modal reads `visible` from the store.
+
+### UI delta
+
+- **`SettingsScreen.tsx`** is removed from `Stack.Navigator` in `AppNavigator.tsx`. Its body migrates into `SettingsBody`.
+- **`LobbyScreen.tsx`**: `onSettings` prop call site `props.navigation.navigate('Settings')` → `useSettingsUIStore.getState().open()`. The screen prop chain is preserved for now (still passes `onSettings={() => open()}`); cleanup of unused props happens in the plan if it's clean.
+- **`BettingPhase.tsx`**: remove the inline settings modal block (lines ~740-853) and the `showSettingsModal` state. The ⚙️ button calls `useSettingsUIStore.getState().open()` directly. Same change in `GameTableScreen.tsx`.
+- **`AuthScreen`** stays a route. Sections inside `SettingsBody` that need to navigate (e.g., "Save Progress" → opens AuthScreen, "Reset password") close the modal first via `onClose`, then call the appropriate navigation.
+
+### Mobile-first ergonomics
+
+- The modal sheet fills the viewport (90%+ height, full width) so it feels like a screen, not a popover. Slide-up animation matches the existing ChatPanel pattern.
+- Header inside the sheet has a clear "✕" close button at top-right (44pt touch). Body is `<ScrollView>` so all sections are reachable.
+- The 🚪 leave / 🚪 end-game buttons on GameTable already use the same modal-overlay pattern, so the visual vocabulary stays consistent.
+
+### Out-of-scope deletions
+
+- Filtering content per host (lobby vs in-game) is out of scope. Every settings section appears in every context. If a section feels heavy mid-game (e.g., avatar picker), that's a future tweak.
+
+---
+
+## Phase 2: Auth (Google OAuth + Save Progress)
 
 ## User flows
 
 ### Flow A — Manual conversion via Settings (always available)
 
-User opens Settings → Profile section. If anonymous: visible "Save Progress" CTA opens `AuthScreen`. If already registered: section shows email + sign-out, as today.
+User taps any ⚙️ (lobby, betting, gameTable) → unified `SettingsModal` opens. Inside `SettingsBody`, when the user is anonymous, a "Save Progress" section is rendered above Profile with a primary CTA. Tap → modal closes (via `onClose` prop) → app navigates to `AuthScreen`.
 
 `AuthScreen` gains a primary Google button above the email form. Tap → `linkGoogleToAnonymous()` (Supabase `auth.linkIdentity({ provider: 'google' })`) → redirect to Google → return → user's session is now linked. Same UUID.
 
 If the user is *not* anonymous (somehow opened AuthScreen while signed in already with email), the Google button calls `signInWithGoogle()` instead — adds Google as an additional identity to the existing account.
+
+When user is registered, the "Save Progress" section is hidden; existing email + sign-out section is shown instead.
 
 ### Flow B — Auto-prompt after first completed game
 
@@ -101,7 +140,7 @@ Supabase returns specific error codes after OAuth callback. Listen in `onAuthSta
 ### UI changes
 
 - `AuthScreen.tsx`: add Google button + "or" divider above the email form. Same UI on Sign In and Sign Up tabs.
-- `SettingsScreen.tsx`: in Profile section, if anonymous, show "Save Progress" button below the avatar/nickname row. Wires to existing AuthScreen navigation.
+- `SettingsBody.tsx` (new from Phase 1): conditional "Save Progress" section above Profile, visible only for anonymous users. Tap closes the modal (`onClose`) and navigates to AuthScreen.
 - `LobbyScreen.tsx`: gate `handleCreateRoom` behind `SaveProgressModal` when `promptGate.shouldShowBeforeCreateRoom()` returns true.
 - `GameTableScreen.tsx` (or wherever the final scorecard renders): on first render of game-over scorecard, check `promptGate.shouldShowAfterGame()` and mount `SaveProgressModal`.
 
@@ -157,13 +196,27 @@ Both wiped on successful sign-in so a future sign-out → guest cycle starts fre
 
 ## Files touched
 
+### Phase 1 — settings consolidation
+| Path | Action |
+|---|---|
+| `src/components/SettingsBody.tsx` | Create — extract every section from `SettingsScreen` body |
+| `src/components/SettingsModal.tsx` | Create — overlay host (RN Modal + sheet + ScrollView wrapping `SettingsBody`) |
+| `src/store/settingsUIStore.ts` | Create — zustand `{ visible, open, close }` |
+| `src/screens/SettingsScreen.tsx` | Delete — body migrated, no callers after route removal |
+| `src/navigation/AppNavigator.tsx` | Modify — drop `Settings` route, mount `<SettingsModal />` once outside Stack |
+| `src/screens/LobbyScreen.tsx` | Modify — `onSettings` calls `useSettingsUIStore.getState().open()` |
+| `src/screens/WaitingRoomScreen.tsx` | Modify — same swap |
+| `src/components/betting/BettingPhase.tsx` | Modify — delete inline settings modal, ⚙️ calls `open()` |
+| `src/screens/GameTableScreen.tsx` | Modify — delete inline settings modal, ⚙️ calls `open()` |
+
+### Phase 2 — auth
 | Path | Action |
 |---|---|
 | `src/lib/supabase/authService.ts` | Modify — add `signInWithGoogle`, `linkGoogleToAnonymous`, `connectGoogle`, `clearLocalGuestState` |
 | `src/lib/auth/promptGate.ts` | Create |
 | `src/components/SaveProgressModal.tsx` | Create |
+| `src/components/SettingsBody.tsx` | Modify — add "Save Progress" section for anonymous users |
 | `src/screens/AuthScreen.tsx` | Modify — Google button + divider |
-| `src/screens/SettingsScreen.tsx` | Modify — "Save Progress" CTA for anonymous users |
 | `src/screens/LobbyScreen.tsx` | Modify — gate `handleCreateRoom` |
 | `src/screens/GameTableScreen.tsx` | Modify — auto-prompt on first scorecard render |
 | `src/i18n/locales/{en,ru,es}.json` | Modify — `auth.*` keys |
