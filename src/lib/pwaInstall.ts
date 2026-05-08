@@ -9,12 +9,25 @@
  *   impossible; we surface a hint to open in the system browser.
  */
 
+import { create } from 'zustand';
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
-let deferredPrompt: BeforeInstallPromptEvent | null = null;
+interface PwaInstallState {
+  deferredPrompt: BeforeInstallPromptEvent | null;
+  setDeferredPrompt: (e: BeforeInstallPromptEvent | null) => void;
+}
+
+// Reactive store so the modal re-renders when beforeinstallprompt fires
+// after the modal has opened (timing-dependent on Chromium).
+const usePwaInstallStore = create<PwaInstallState>((set) => ({
+  deferredPrompt: null,
+  setDeferredPrompt: (e) => set({ deferredPrompt: e }),
+}));
+
 let listenerSetup = false;
 
 export function setupPwaInstallListener(): void {
@@ -23,21 +36,26 @@ export function setupPwaInstallListener(): void {
   listenerSetup = true;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt = e as BeforeInstallPromptEvent;
+    usePwaInstallStore.getState().setDeferredPrompt(e as BeforeInstallPromptEvent);
   });
   window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
+    usePwaInstallStore.getState().setDeferredPrompt(null);
   });
 }
 
 export function hasDeferredPrompt(): boolean {
-  return deferredPrompt !== null;
+  return usePwaInstallStore.getState().deferredPrompt !== null;
+}
+
+/** Reactive variant of hasDeferredPrompt — components re-render on change. */
+export function useHasDeferredPrompt(): boolean {
+  return usePwaInstallStore((s) => s.deferredPrompt !== null);
 }
 
 export async function triggerInstall(): Promise<'accepted' | 'dismissed' | 'unavailable'> {
-  const e = deferredPrompt;
+  const e = usePwaInstallStore.getState().deferredPrompt;
   if (!e) return 'unavailable';
-  deferredPrompt = null;
+  usePwaInstallStore.getState().setDeferredPrompt(null);
   try {
     await e.prompt();
     const choice = await e.userChoice;

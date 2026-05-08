@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, Radius, TextStyles } from '../constants';
 import {
-  hasDeferredPrompt,
+  useHasDeferredPrompt,
   triggerInstall,
   isStandalone,
   isIOS,
@@ -20,14 +20,18 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ visible, onClo
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [installing, setInstalling] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const installed = isStandalone();
   const ios = isIOS();
-  const canPrompt = hasDeferredPrompt();
+  const canPrompt = useHasDeferredPrompt();
   const inApp = isInAppBrowser();
 
   useEffect(() => {
-    if (!visible) setInstalling(false);
+    if (!visible) {
+      setInstalling(false);
+      setLinkCopied(false);
+    }
   }, [visible]);
 
   const onInstallTap = async () => {
@@ -36,6 +40,25 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ visible, onClo
     setInstalling(false);
     if (outcome === 'accepted' || outcome === 'unavailable') onClose();
   };
+
+  const onCopyLinkTap = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.origin);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // Some in-app browsers block clipboard. Best effort — silently fail.
+    }
+  };
+
+  // Decide which body copy + which CTA to show. Three install paths exist:
+  //   - Native install dialog via Chromium's beforeinstallprompt (canPrompt)
+  //   - iOS Safari manual flow (Share → Add to Home Screen)
+  //   - Browser-menu manual flow on Android when prompt didn't fire
+  // Plus an in-app browser case where install is impossible — we offer
+  // "copy link" so the user can paste in Safari/Chrome.
+  const hasNativePrompt = !installed && canPrompt && !ios;
+  const showCopyLink = !installed && inApp;
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
@@ -56,8 +79,10 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ visible, onClo
                 <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('pwa.subtitle')}</Text>
                 {ios ? (
                   <Text style={[styles.bodyText, { color: colors.textPrimary }]}>{t('pwa.iosBody')}</Text>
-                ) : (
+                ) : hasNativePrompt ? (
                   <Text style={[styles.bodyText, { color: colors.textPrimary }]}>{t('pwa.androidBody')}</Text>
+                ) : (
+                  <Text style={[styles.bodyText, { color: colors.textPrimary }]}>{t('pwa.androidNoPromptBody')}</Text>
                 )}
                 {inApp && (
                   <Text style={[styles.hint, { color: colors.textMuted }]}>{t('pwa.inAppHint')}</Text>
@@ -74,15 +99,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ visible, onClo
               >
                 <Text style={styles.primaryBtnText}>{t('pwa.doneBtn')}</Text>
               </Pressable>
-            ) : ios || !canPrompt ? (
-              <Pressable
-                onPress={onClose}
-                style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
-                testID="pwa-done"
-              >
-                <Text style={styles.primaryBtnText}>{t('pwa.doneBtn')}</Text>
-              </Pressable>
-            ) : (
+            ) : hasNativePrompt ? (
               <>
                 <Pressable
                   onPress={onClose}
@@ -98,6 +115,27 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ visible, onClo
                   testID="pwa-install"
                 >
                   <Text style={styles.primaryBtnText}>{t('pwa.installBtn')}</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                {showCopyLink && (
+                  <Pressable
+                    onPress={onCopyLinkTap}
+                    style={[styles.secondaryBtn, { borderColor: colors.glassLight }]}
+                    testID="pwa-copy-link"
+                  >
+                    <Text style={[styles.secondaryBtnText, { color: colors.textPrimary }]}>
+                      {linkCopied ? t('pwa.linkCopied') : t('pwa.copyLink')}
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  onPress={onClose}
+                  style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+                  testID="pwa-done"
+                >
+                  <Text style={styles.primaryBtnText}>{t('pwa.doneBtn')}</Text>
                 </Pressable>
               </>
             )}
