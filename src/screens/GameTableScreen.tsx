@@ -12,9 +12,9 @@ import {
   StyleSheet,
   Pressable,
   Modal,
-  Dimensions,
   ScrollView,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,7 +48,6 @@ import type { PlayerScore } from './ScoreboardModal';
 import { avatarColorFor } from '../utils/avatarColor';
 import { bonusEarnedHaptic, gameWonHaptic } from '../utils/haptics';
 
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export interface GameTableScreenProps {
   onExit?: () => void;
@@ -80,6 +79,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
+  // Live viewport — iOS Safari recomputes innerHeight after Modal opens
+  // (URL bar collapse). Capturing it once at module load left the table /
+  // hand sections sized to a stale value, leaking blank space below.
+  const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = useWindowDimensions();
   const botNames = BOT_NAMES_BY_LANG[i18n.language] ?? BOT_NAMES_BY_LANG.en;
 
   // Settings & auth for in-game settings panel
@@ -1154,7 +1157,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
         {/* Your Hand */}
         {vm.myPlayer && (
-          <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent }]}>
+          <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.42 }]}>
             <View testID="my-hand">
               <CardHand
                 cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
@@ -1234,7 +1237,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           onRequestClose={() => setShowLastTrick(false)}
         >
           <View style={styles.modalOverlay}>
-            <GlassCard style={styles.lastTrickModal}>
+            <GlassCard style={[styles.lastTrickModal, { maxHeight: SCREEN_HEIGHT * 0.75 }]}>
               <View style={styles.modalHeader}>
                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('game.lastTrick')}</Text>
                 <Pressable onPress={() => setShowLastTrick(false)} hitSlop={12}>
@@ -1248,7 +1251,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 return (
                   <>
                     <ScrollView
-                      style={styles.lastTrickScroll}
+                      style={[styles.lastTrickScroll, { maxHeight: SCREEN_HEIGHT * 0.45 }]}
                       contentContainerStyle={[
                         styles.lastTrickContent,
                         !useLarge && styles.lastTrickContentGrid,
@@ -1709,7 +1712,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     paddingBottom: 80,
     backgroundColor: '#ffffff',
-    maxHeight: SCREEN_HEIGHT * 0.42,
   },
   modalOverlay: {
     flex: 1,
@@ -1722,7 +1724,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     padding: Spacing.lg,
-    maxHeight: SCREEN_HEIGHT * 0.75,
     overflow: 'visible',
   },
   modalHeader: {
@@ -1740,9 +1741,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     paddingHorizontal: Spacing.sm,
   },
-  lastTrickScroll: {
-    maxHeight: SCREEN_HEIGHT * 0.45,
-  },
+  lastTrickScroll: {},
   lastTrickContent: {
     alignItems: 'center',
     gap: Spacing.sm,
