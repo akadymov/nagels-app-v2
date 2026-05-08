@@ -234,6 +234,20 @@
     "endGameConfirmTitle": "¿Terminar la partida?",
     "endGameConfirmBody": "Esto cierra la sala para todos. Todos vuelven al lobby y la sala desaparece.\n\nSi sólo necesitas alejarte — cierra la pestaña. Volverás a la misma sala."
   },
+  "pwa": {
+    "title": "Añade Nägels a la pantalla de inicio",
+    "subtitle": "Acceso rápido, notificaciones push de tu turno y modo pantalla completa.",
+    "iosBody": "1. Toca el botón Compartir en la parte inferior de Safari.\n2. Baja y elige \"Añadir a pantalla de inicio\".\n3. Toca \"Añadir\" — listo.",
+    "androidBody": "Toca Instalar para añadir Nägels a la pantalla de inicio.",
+    "installBtn": "Instalar",
+    "notNowBtn": "Ahora no",
+    "doneBtn": "Entendido",
+    "alreadyInstalled": "Ya está instalado — abre Nägels desde la pantalla de inicio.",
+    "inAppHint": "Si abriste el enlace en Telegram u otro navegador integrado, ábrelo en Safari o Chrome para instalar.",
+    "settingsTitle": "Instalar app",
+    "settingsDesc": "Añade Nägels a la pantalla de inicio — acceso rápido y notificaciones push.",
+    "settingsButton": "Añadir a inicio"
+  },
   "profile": {
     "title": "Perfil",
     "editNickname": "Apodo",

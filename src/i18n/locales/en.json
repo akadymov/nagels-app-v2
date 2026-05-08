@@ -234,6 +234,20 @@
     "endGameConfirmTitle": "End the game?",
     "endGameConfirmBody": "This closes the room for everyone. Everyone returns to the lobby and the room is gone for good.\n\nIf you just need to step away — close the tab instead. You'll come back to the same room."
   },
+  "pwa": {
+    "title": "Add Nägels to your home screen",
+    "subtitle": "Faster launch, push notifications when it's your turn, and proper full-screen play.",
+    "iosBody": "1. Tap the Share button at the bottom of Safari.\n2. Scroll down and pick \"Add to Home Screen\".\n3. Tap \"Add\" — done.",
+    "androidBody": "Tap Install to add Nägels to your home screen.",
+    "installBtn": "Install",
+    "notNowBtn": "Not now",
+    "doneBtn": "Got it",
+    "alreadyInstalled": "Already installed — open Nägels from your home screen.",
+    "inAppHint": "If you're reading this in Telegram or another app's browser, open the link in Safari or Chrome to install.",
+    "settingsTitle": "Install App",
+    "settingsDesc": "Add Nägels to your home screen for faster access and push notifications.",
+    "settingsButton": "Add to home screen"
+  },
   "profile": {
     "title": "Profile",
     "editNickname": "Nickname",
