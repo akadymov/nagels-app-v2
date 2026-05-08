@@ -35,6 +35,7 @@ import { useHeartbeat } from '../lib/heartbeat';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
+import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
@@ -160,6 +161,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       setIsRefreshing(false);
     }
   }, [isMultiplayer, room?.id]);
+
+  const isHost = isMultiplayer && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
+  const handleEndGame = useCallback(async () => {
+    if (!room?.id) return;
+    await leaveWithConfirm(room.id, t, { isHost: true });
+  }, [room?.id, t]);
 
   // ── Single-player init (unchanged behavior) ────────────────
   useEffect(() => {
@@ -875,6 +882,23 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             >
               <Text style={styles.iconBtnEmoji}>⚙️</Text>
             </Pressable>
+            {isHost && (
+              <Pressable
+                onPress={handleEndGame}
+                style={({ pressed }) => [
+                  styles.iconBtn,
+                  {
+                    backgroundColor: colors.iconButtonBg,
+                    borderColor: colors.glassLight,
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}
+                testID="game-btn-end"
+                accessibilityLabel={t('multiplayer.endGameConfirmTitle')}
+              >
+                <Text style={styles.iconBtnEmoji}>🚪</Text>
+              </Pressable>
+            )}
             {isMultiplayer && (
               <Pressable
                 onPress={handlePullRefresh}

@@ -230,7 +230,9 @@
     "leaveConfirmTitle": "Leave the game?",
     "leaveConfirmBody": "The game can't continue without you. Everyone goes back to the waiting room and your hand is dropped — the host can restart with the remaining players.\n\nIf you just need to step away or refresh — close the tab instead. You'll come back to the same seat.",
     "leaveAnyway": "Leave anyway",
-    "leftMidGame": "🚪 {{name}} left the game"
+    "leftMidGame": "🚪 {{name}} left the game",
+    "endGameConfirmTitle": "End the game?",
+    "endGameConfirmBody": "This closes the room for everyone. Everyone returns to the lobby and the room is gone for good.\n\nIf you just need to step away — close the tab instead. You'll come back to the same room."
   },
   "profile": {
     "title": "Profile",

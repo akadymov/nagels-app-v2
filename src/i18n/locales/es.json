@@ -230,7 +230,9 @@
     "leaveConfirmTitle": "¿Abandonar la partida?",
     "leaveConfirmBody": "La partida no puede continuar sin ti. Todos vuelven a la sala de espera y tu mano se descarta — el anfitrión puede reiniciar con el resto.\n\nSi sólo necesitas alejarte o actualizar la página — cierra la pestaña. Volverás al mismo asiento.",
     "leaveAnyway": "Salir igualmente",
-    "leftMidGame": "🚪 {{name}} ha abandonado la partida"
+    "leftMidGame": "🚪 {{name}} ha abandonado la partida",
+    "endGameConfirmTitle": "¿Terminar la partida?",
+    "endGameConfirmBody": "Esto cierra la sala para todos. Todos vuelven al lobby y la sala desaparece.\n\nSi sólo necesitas alejarte — cierra la pestaña. Volverás a la misma sala."
   },
   "profile": {
     "title": "Perfil",
