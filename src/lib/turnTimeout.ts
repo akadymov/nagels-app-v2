@@ -18,15 +18,14 @@ import { useEffect, useRef } from 'react';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from './gameClient';
 
-const TURN_TIMEOUT_LONG_MS  = 5 * 60 * 1000;  // 5 min — humans thinking
-const TURN_TIMEOUT_SHORT_MS = 5 * 60 * 1000;  // 5 min — offline player too.
-                                              // Auto-advancing a dropped
-                                              // player faster than this
-                                              // turned out to be punitive
-                                              // (mobile network hiccup, tab
+const TURN_TIMEOUT_LONG_MS  = 60 * 1000;      // 1 min — humans thinking
+const TURN_TIMEOUT_SHORT_MS = 60 * 1000;      // 1 min — offline player too.
+                                              // Kept equal to the long
+                                              // budget intentionally; a
+                                              // shorter offline value used
+                                              // to be punitive (mobile
+                                              // network hiccup, tab
                                               // backgrounded, walked away).
-                                              // Effectively disables the
-                                              // shorter offline budget
                                               // until we have a UX for
                                               // "kick player" / "are you
                                               // still there".
