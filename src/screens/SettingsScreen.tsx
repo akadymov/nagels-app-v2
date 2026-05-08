@@ -22,6 +22,8 @@ import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
+import { PwaInstallModal } from '../components/PwaInstallModal';
+import { isStandalone } from '../lib/pwaInstall';
 
 export interface SettingsScreenProps {
   onBack: () => void;
@@ -68,6 +70,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
   const push = usePushSubscribe();
+  const [showPwaModal, setShowPwaModal] = useState(false);
+  const pwaInstalled = isStandalone();
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(user?.user_metadata?.avatar || null);
@@ -364,6 +368,25 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           )}
         </View>
 
+        {/* === INSTALL APP === */}
+        {!pwaInstalled && (
+          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {t('pwa.settingsTitle')}
+            </Text>
+            <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+              {t('pwa.settingsDesc')}
+            </Text>
+            <Pressable
+              onPress={() => setShowPwaModal(true)}
+              style={[styles.saveBtn, { backgroundColor: colors.accent, alignSelf: 'flex-start', paddingHorizontal: Spacing.lg }]}
+              testID="settings-pwa-install"
+            >
+              <Text style={styles.saveBtnText}>{t('pwa.settingsButton')}</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* === LOGOUT === */}
         {isLoggedIn && (
           <Pressable style={[styles.logoutBtn, { borderColor: colors.error }]} onPress={handleLogout}>
@@ -378,6 +401,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack }) => {
           <Text style={[styles.toastText, { color: colors.textPrimary }]}>{alertMessage}</Text>
         </View>
       )}
+
+      <PwaInstallModal visible={showPwaModal} onClose={() => setShowPwaModal(false)} />
     </SafeAreaView>
   );
 };

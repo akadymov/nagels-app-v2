@@ -189,6 +189,12 @@ export default function App() {
         if (document.readyState === 'complete') register();
         else window.addEventListener('load', register, { once: true });
       }
+
+      // Capture beforeinstallprompt early so the install modal can later
+      // trigger the native prompt without re-listening.
+      void import('./lib/pwaInstall').then(({ setupPwaInstallListener }) => {
+        setupPwaInstallListener();
+      });
     }
   }, [hydrate]);
 

@@ -30,6 +30,9 @@ import { useRoomStore } from '../store/roomStore';
 import { subscribeRoom } from '../lib/realtimeBroadcast';
 import { getCurrentUser, updateUserMetadata } from '../lib/supabase/authService';
 import { setPlayerName as setPlayerNameInStorage, getPlayerName as getPlayerNameFromStorage } from '../lib/supabase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PwaInstallModal } from '../components/PwaInstallModal';
+import { isMobileWeb, isStandalone } from '../lib/pwaInstall';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -60,6 +63,24 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     getPlayerNameFromStorage().then((name) => {
       if (name && name !== 'Guest') setPlayerNameState(name);
     });
+  }, []);
+
+  // First-visit PWA install prompt — mobile-only, suppressed if already
+  // installed or previously dismissed. Delayed so the lobby paints first.
+  const [showPwaModal, setShowPwaModal] = useState(false);
+  useEffect(() => {
+    if (!isMobileWeb() || isStandalone()) return;
+    let cancelled = false;
+    (async () => {
+      const seen = await AsyncStorage.getItem('pwa_install_prompt_seen_v1');
+      if (seen) return;
+      setTimeout(() => { if (!cancelled) setShowPwaModal(true); }, 600);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const dismissPwaModal = useCallback(() => {
+    setShowPwaModal(false);
+    void AsyncStorage.setItem('pwa_install_prompt_seen_v1', '1');
   }, []);
 
   // Sync auth display name when it changes
@@ -471,6 +492,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           </View>
         </View>
       )}
+      <PwaInstallModal visible={showPwaModal} onClose={dismissPwaModal} />
     </SafeAreaView>
   );
 };
