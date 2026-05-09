@@ -12,9 +12,6 @@ export type { GameTableScreenProps } from './GameTableScreen';
 export type { ScoreboardModalProps, PlayerScore } from './ScoreboardModal';
 export type { WaitingRoomScreenProps } from './WaitingRoomScreen';
 
-export { SettingsScreen } from './SettingsScreen';
-export type { SettingsScreenProps } from './SettingsScreen';
-
 export { AuthScreen } from './AuthScreen';
 export type { AuthScreenProps } from './AuthScreen';
 
