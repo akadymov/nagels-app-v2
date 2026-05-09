@@ -303,3 +303,66 @@ function friendlyAuthError(message: string): string {
   if (message.includes('rate limit')) return 'auth.rateLimited';
   return message;
 }
+
+// ============================================================
+// GOOGLE OAUTH
+// ============================================================
+
+/**
+ * Sign in via Google OAuth. Redirects to Google's consent page; resolution
+ * comes back via the URL hash on return. Use this for fresh sign-in (not for
+ * anonymous→Google upgrade — see linkGoogleToAnonymous).
+ */
+export async function signInWithGoogle(): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+  const supabase = getSupabaseClient();
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: redirectTo ? { redirectTo } : undefined,
+  });
+  if (error) throw new Error(friendlyAuthError(error.message));
+}
+
+/**
+ * Link a Google identity to the current anonymous session. UUID preserved,
+ * so all room_players / game_events history stays attached. After return,
+ * user.is_anonymous becomes false.
+ */
+export async function linkGoogleToAnonymous(): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+  const supabase = getSupabaseClient();
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+  const { error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+    options: redirectTo ? { redirectTo } : undefined,
+  });
+  if (error) throw new Error(friendlyAuthError(error.message));
+}
+
+/**
+ * Smart dispatcher: links Google for anonymous users (preserves UUID),
+ * starts a fresh OAuth sign-in for non-anonymous (or absent) sessions.
+ */
+export async function connectGoogle(): Promise<void> {
+  const user = await getCurrentUser();
+  if (user && (user as { is_anonymous?: boolean }).is_anonymous) {
+    await linkGoogleToAnonymous();
+  } else {
+    await signInWithGoogle();
+  }
+}
+
+/**
+ * Wipe local guest-only AsyncStorage so a collision-switch (signing in as
+ * an existing different user) starts fresh on this device. Server-side rows
+ * tied to the previous UUID are untouched. Auth-prompt dismissal flags are
+ * preserved because they encode user *preference*, not identity-bound data.
+ */
+export async function clearLocalGuestState(): Promise<void> {
+  const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+  await Promise.all([
+    AsyncStorage.removeItem('active_room_id_v1'),
+    AsyncStorage.removeItem('player_name'),
+  ]);
+}
