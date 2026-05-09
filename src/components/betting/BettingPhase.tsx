@@ -13,11 +13,9 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
-  Modal,
   RefreshControl,
 } from 'react-native';
 import { CardHand } from '../cards';
-import { LanguageSwitcher } from '../LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
@@ -27,8 +25,8 @@ import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { ChatPanel } from '../ChatPanel';
-import { useSettingsStore, type ThemePreference } from '../../store/settingsStore';
-import { useAuthStore } from '../../store/authStore';
+import { useSettingsStore } from '../../store/settingsStore';
+import { useSettingsUIStore } from '../../store/settingsUIStore';
 import { useTranslation } from 'react-i18next';
 import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
@@ -200,20 +198,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const hasAllBets = playerBets.every((p) => p.bet !== null) && playerBets.length > 0;
 
   // Action bar modals / toggles
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const chatUnread = useChatStore((s) => s.unread);
 
-  // Settings & auth for in-game settings panel
-  const themePreference = useSettingsStore((s) => s.themePreference);
-  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
-  const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
-  const hapticsEnabled = useSettingsStore((s) => s.hapticsEnabled);
-  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
-  const isGuest = useAuthStore((s) => s.isGuest);
-  const authDisplayName = useAuthStore((s) => s.displayName);
 
   const handleRefresh = useCallback(async () => {
     if (!room?.id) return;
@@ -492,7 +481,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
           </View>
           <View style={styles.topBarRow2}>
             <Pressable
-              onPress={() => setShowSettingsModal(true)}
+              onPress={() => useSettingsUIStore.getState().open()}
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
@@ -736,121 +725,6 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         )}
       </ScrollView>
 
-      {/* Settings modal */}
-      <Modal
-        visible={showSettingsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSettingsModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
-          <Pressable
-            onPress={() => {}}
-            style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
-          >
-            <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
-
-            {!isGuest && (
-              <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
-                <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>{authDisplayName}</Text>
-              </View>
-            )}
-
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
-              <LanguageSwitcher />
-            </View>
-
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
-              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
-                  const labels: Record<string, string> = {
-                    system: t('settings.system'),
-                    light: t('settings.light'),
-                    dark: t('settings.dark'),
-                  };
-                  const isActive = themePreference === opt;
-                  return (
-                    <Pressable
-                      key={opt}
-                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                      onPress={() => setThemePreference(opt)}
-                    >
-                      <Text
-                        style={[
-                          styles.settingsPillText,
-                          { color: colors.textSecondary },
-                          isActive && { color: '#fff', fontWeight: '700' },
-                        ]}
-                      >
-                        {labels[opt]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
-              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                {[false, true].map((fc) => {
-                  const isActive = fourColorDeck === fc;
-                  return (
-                    <Pressable
-                      key={String(fc)}
-                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                      onPress={() => setFourColorDeck(fc)}
-                    >
-                      <Text
-                        style={[
-                          styles.settingsPillText,
-                          { color: colors.textSecondary },
-                          isActive && { color: '#fff', fontWeight: '700' },
-                        ]}
-                      >
-                        {fc ? t('settings.fourColor') : t('settings.classic')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.settingsSection}>
-              <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.haptics', 'Vibration')}</Text>
-              <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                {[true, false].map((on) => {
-                  const isActive = hapticsEnabled === on;
-                  return (
-                    <Pressable
-                      key={String(on)}
-                      style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                      onPress={() => setHapticsEnabled(on)}
-                    >
-                      <Text
-                        style={[
-                          styles.settingsPillText,
-                          { color: colors.textSecondary },
-                          isActive && { color: '#fff', fontWeight: '700' },
-                        ]}
-                      >
-                        {on ? t('settings.on', 'On') : t('settings.off', 'Off')}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <Pressable style={styles.settingsCloseBtn} onPress={() => setShowSettingsModal(false)}>
-              <Text style={styles.settingsCloseBtnText}>{t('common.close')}</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 };
@@ -1094,67 +968,6 @@ const styles = StyleSheet.create({
   betsSummaryValue: {
     fontSize: 14,
     fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  settingsPanel: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    padding: Spacing.lg,
-  },
-  settingsPanelTitle: {
-    ...TextStyles.h3,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  settingsSection: {
-    marginBottom: Spacing.md,
-  },
-  settingsSectionTitle: {
-    ...TextStyles.caption,
-    fontWeight: '600',
-    marginBottom: Spacing.xs,
-  },
-  settingsValue: {
-    ...TextStyles.body,
-    fontWeight: '600',
-  },
-  settingsPills: {
-    flexDirection: 'row',
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    padding: 3,
-  },
-  settingsPill: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  settingsPillText: {
-    ...TextStyles.small,
-    fontWeight: '500',
-  },
-  settingsCloseBtn: {
-    backgroundColor: Colors.accent,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: Radius.md,
-    alignSelf: 'center',
-    marginTop: Spacing.sm,
-  },
-  settingsCloseBtnText: {
-    ...TextStyles.body,
-    color: '#ffffff',
-    fontWeight: '600',
   },
 });
 
