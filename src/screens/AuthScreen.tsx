@@ -22,7 +22,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
-import { signInWithEmail, signUpWithEmail, linkEmailToAnonymous, resetPasswordForEmail } from '../lib/supabase/authService';
+import { signInWithEmail, signUpWithEmail, linkEmailToAnonymous, resetPasswordForEmail, connectGoogle } from '../lib/supabase/authService';
 import { GameLogo } from '../components/GameLogo';
 
 type AuthTab = 'signIn' | 'signUp';
@@ -162,8 +162,31 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     </View>
   );
 
+  const handleGoogle = async () => {
+    setErrorMsg('');
+    try {
+      await connectGoogle();
+    } catch (err) {
+      setErrorMsg(String(t((err as Error).message, (err as Error).message)));
+    }
+  };
+
   const renderForm = () => (
     <View style={styles.formSection}>
+      {/* Google sign-in */}
+      <Pressable
+        onPress={handleGoogle}
+        style={[styles.googleBtn, { backgroundColor: '#ffffff', borderColor: colors.glassLight }]}
+        testID="auth-google"
+      >
+        <Text style={styles.googleBtnText}>{`G  ${t('auth.continueWithGoogle')}`}</Text>
+      </Pressable>
+      <View style={styles.divider}>
+        <View style={[styles.dividerLine, { backgroundColor: colors.glassLight }]} />
+        <Text style={[styles.dividerText, { color: colors.textMuted }]}>{t('auth.or', 'or')}</Text>
+        <View style={[styles.dividerLine, { backgroundColor: colors.glassLight }]} />
+      </View>
+
       {/* Tabs */}
       <View style={styles.tabRow}>
         <Pressable
@@ -399,6 +422,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: 'underline',
   },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  googleBtnText: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 12, fontWeight: '500' },
 });
 
 export default AuthScreen;
