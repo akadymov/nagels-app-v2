@@ -25,7 +25,6 @@ import { ScoreboardModal } from './ScoreboardModal';
 import { ChatPanel } from '../components/ChatPanel';
 import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
-import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useGameStore } from '../store';
@@ -37,8 +36,8 @@ import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
 import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
-import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
-import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
+import { useSettingsUIStore } from '../store/settingsUIStore';
 import { useTranslation } from 'react-i18next';
 import {
   isCardPlayable,
@@ -85,16 +84,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = useWindowDimensions();
   const botNames = BOT_NAMES_BY_LANG[i18n.language] ?? BOT_NAMES_BY_LANG.en;
 
-  // Settings & auth for in-game settings panel
-  const themePreference = useSettingsStore((s) => s.themePreference);
-  const setThemePreference = useSettingsStore((s) => s.setThemePreference);
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
-  const setFourColorDeck = useSettingsStore((s) => s.setFourColorDeck);
-  const hapticsEnabled = useSettingsStore((s) => s.hapticsEnabled);
-  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
   const biddingTipDismissed = useSettingsStore((s) => s.shownTips.bidding);
-  const isGuest = useAuthStore((s) => s.isGuest);
-  const authDisplayName = useAuthStore((s) => s.displayName);
 
   // ── Multiplayer state ──────────────────────────────────────
   const snapshot = useRoomStore((s) => s.snapshot);
@@ -447,7 +438,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const [isViewingScores, setIsViewingScores] = useState(false);
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showBetBanner, setShowBetBanner] = useState(false);
 
   const totalBets = vm.players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
@@ -879,7 +869,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
           <View style={styles.topBarRow3}>
             <Pressable
-              onPress={() => setShowSettingsModal(true)}
+              onPress={() => useSettingsUIStore.getState().open()}
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-settings"
             >
@@ -1306,121 +1296,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
         </Modal>
 
-        {/* Settings Modal */}
-        <Modal
-          visible={showSettingsModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowSettingsModal(false)}
-        >
-          <Pressable style={styles.modalOverlay} onPress={() => setShowSettingsModal(false)}>
-            <Pressable
-              onPress={() => {}}
-              style={[styles.settingsPanel, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
-            >
-              <Text style={[styles.settingsPanelTitle, { color: colors.textPrimary }]}>{t('settings.title')}</Text>
-
-              {!isGuest && (
-                <View style={styles.settingsSection}>
-                  <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('profile.title')}</Text>
-                  <Text style={[styles.settingsValue, { color: colors.textPrimary }]}>{authDisplayName}</Text>
-                </View>
-              )}
-
-              <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.language')}</Text>
-                <LanguageSwitcher />
-              </View>
-
-              <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.theme')}</Text>
-                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                  {(['system', 'light', 'dark'] as ThemePreference[]).map((opt) => {
-                    const themeLabels: Record<string, string> = {
-                      system: t('settings.system'),
-                      light: t('settings.light'),
-                      dark: t('settings.dark'),
-                    };
-                    const isActive = themePreference === opt;
-                    return (
-                      <Pressable
-                        key={opt}
-                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                        onPress={() => setThemePreference(opt)}
-                      >
-                        <Text
-                          style={[
-                            styles.settingsPillText,
-                            { color: colors.textSecondary },
-                            isActive && { color: '#fff', fontWeight: '700' },
-                          ]}
-                        >
-                          {themeLabels[opt]}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.deckStyle')}</Text>
-                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                  {[false, true].map((fc) => {
-                    const isActive = fourColorDeck === fc;
-                    return (
-                      <Pressable
-                        key={String(fc)}
-                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                        onPress={() => setFourColorDeck(fc)}
-                      >
-                        <Text
-                          style={[
-                            styles.settingsPillText,
-                            { color: colors.textSecondary },
-                            isActive && { color: '#fff', fontWeight: '700' },
-                          ]}
-                        >
-                          {fc ? t('settings.fourColor') : t('settings.classic')}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.settingsSection}>
-                <Text style={[styles.settingsSectionTitle, { color: colors.textSecondary }]}>{t('settings.haptics', 'Vibration')}</Text>
-                <View style={[styles.settingsPills, { borderColor: colors.glassLight }]}>
-                  {[true, false].map((on) => {
-                    const isActive = hapticsEnabled === on;
-                    return (
-                      <Pressable
-                        key={String(on)}
-                        style={[styles.settingsPill, isActive && { backgroundColor: colors.accent }]}
-                        onPress={() => setHapticsEnabled(on)}
-                      >
-                        <Text
-                          style={[
-                            styles.settingsPillText,
-                            { color: colors.textSecondary },
-                            isActive && { color: '#fff', fontWeight: '700' },
-                          ]}
-                        >
-                          {on ? t('settings.on', 'On') : t('settings.off', 'Off')}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <Pressable style={[styles.modalButton, { marginTop: Spacing.md }]} onPress={() => setShowSettingsModal(false)}>
-                <Text style={styles.modalButtonText}>{t('common.close')}</Text>
-              </Pressable>
-            </Pressable>
-          </Pressable>
-        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1793,48 +1668,6 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: '#ffffff',
     fontWeight: '600' as const,
-  },
-  settingsPanel: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    padding: Spacing.lg,
-  },
-  settingsPanelTitle: {
-    ...TextStyles.h3,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-  },
-  settingsSection: {
-    marginBottom: Spacing.md,
-  },
-  settingsSectionTitle: {
-    ...TextStyles.caption,
-    fontWeight: '600',
-    marginBottom: Spacing.xs,
-  },
-  settingsValue: {
-    ...TextStyles.body,
-    fontWeight: '600',
-  },
-  settingsPills: {
-    flexDirection: 'row',
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.glassLight,
-    padding: 3,
-  },
-  settingsPill: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-  },
-  settingsPillText: {
-    ...TextStyles.small,
-    fontWeight: '500',
   },
   betBannerOverlay: {
     flex: 1,
