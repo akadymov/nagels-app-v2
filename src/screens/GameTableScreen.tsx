@@ -38,6 +38,9 @@ import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore } from '../store/settingsStore';
 import { useSettingsUIStore } from '../store/settingsUIStore';
+import { SaveProgressModal } from '../components/SaveProgressModal';
+import { shouldShowAfterGame } from '../lib/auth/promptGate';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import {
   isCardPlayable,
@@ -439,6 +442,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [showBetBanner, setShowBetBanner] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const navigation = useNavigation<any>();
 
   const totalBets = vm.players.reduce((sum, p) => sum + (p.bet ?? 0), 0);
   const tricksDiff = totalBets - vm.cardsPerPlayer;
@@ -669,6 +674,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       winFiredForGameRef.current = false;
     }
   }, [vm.phase, vm.handNumber]);
+
+  // Save Progress auto-prompt: fire once on transition into game-over.
+  // Subsequent finished games on the same device are gated by the
+  // dismissal flag in promptGate.
+  useEffect(() => {
+    if (vm.phase !== 'finished') return;
+    let cancelled = false;
+    void (async () => {
+      if (!cancelled && (await shouldShowAfterGame())) {
+        setShowSavePrompt(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [vm.phase]);
 
   // Trump display helpers
   const getTrumpSymbol = (trump: string): string => {
@@ -1217,6 +1236,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           onContinue={handleScoreboardContinue}
           onPlayAgain={handleScoreboardPlayAgain}
           onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
+        />
+
+        {/* Save Progress auto-prompt (anonymous, after first finished game) */}
+        <SaveProgressModal
+          visible={showSavePrompt}
+          trigger="afterGame"
+          onResolved={() => setShowSavePrompt(false)}
+          onUseEmail={() => {
+            setShowSavePrompt(false);
+            navigation.navigate('Auth');
+          }}
         />
 
         {/* Last Trick Modal */}
