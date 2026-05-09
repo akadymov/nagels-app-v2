@@ -23,6 +23,7 @@ import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail } from '../lib/supabase/authService';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import i18n from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
@@ -68,8 +69,10 @@ const pillStyles = StyleSheet.create({
 export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
+  const isAnonymous = !!user && (user as { is_anonymous?: boolean }).is_anonymous === true;
   const push = usePushSubscribe();
   const [showPwaModal, setShowPwaModal] = useState(false);
   const pwaInstalled = isStandalone();
@@ -150,6 +153,28 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* === SAVE PROGRESS (anonymous-only) === */}
+        {isAnonymous && (
+          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {t('auth.saveProgressTitle', 'Save your progress')}
+            </Text>
+            <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+              {t('auth.saveProgressDesc', 'Sign in to keep your stats, friends, and history across devices.')}
+            </Text>
+            <Pressable
+              onPress={() => {
+                onClose();
+                navigation.navigate('Auth');
+              }}
+              style={[styles.saveBtn, { backgroundColor: colors.accent, alignSelf: 'flex-start', paddingHorizontal: Spacing.lg }]}
+              testID="settings-save-progress"
+            >
+              <Text style={styles.saveBtnText}>{t('auth.saveProgress', 'Save progress')}</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* === PROFILE === */}
         {user && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
