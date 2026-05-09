@@ -281,6 +281,13 @@ export function onAuthStateChange(
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     const user = session?.user ?? null;
     const isGuest = !user || !!user.is_anonymous;
+    // Successful upgrade from anonymous → registered: reset auto-prompt
+    // dismissal flags so a future sign-out → guest cycle starts fresh.
+    if (user && !user.is_anonymous) {
+      void import('../auth/promptGate')
+        .then(({ clearAllDismissals }) => clearAllDismissals())
+        .catch(() => {});
+    }
     callback(user, isGuest, event);
   });
 
