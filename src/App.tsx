@@ -198,6 +198,34 @@ export default function App() {
     }
   }, [hydrate]);
 
+  // OAuth collision detector. Supabase reports linkIdentity failures as
+  // URL hash params on return; identity_already_exists means the chosen
+  // Google account is already attached to a different Nägels profile.
+  // Confirm a switch (wipes local guest state, then signs in fresh).
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('error')) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const errCode = params.get('error_code') || params.get('error');
+    if (errCode !== 'identity_already_exists') return;
+
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    void (async () => {
+      // English-only — i18next may not be initialised yet at boot.
+      const accept = window.confirm(
+        'This Google account is already linked to a different Nägels profile.\n\n' +
+        'Switch to the existing profile? Your guest data on this device will be replaced.',
+      );
+      if (!accept) return;
+      const { signOut, signInWithGoogle, clearLocalGuestState } = await import('./lib/supabase/authService');
+      await signOut();
+      await clearLocalGuestState();
+      await signInWithGoogle();
+    })();
+  }, []);
+
   // Service Worker → window bridge: when a push notification is clicked the
   // SW posts {kind:'push:navigate'} to a focused client. Delegate to
   // tryRestoreActiveRoom so RejoinGuard places the user back into their room.
