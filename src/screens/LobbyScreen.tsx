@@ -4,7 +4,7 @@
  * Matches Figma design system
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,9 @@ import { setPlayerName as setPlayerNameInStorage, getPlayerName as getPlayerName
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PwaInstallModal } from '../components/PwaInstallModal';
 import { isMobileWeb, isStandalone } from '../lib/pwaInstall';
+import { SaveProgressModal } from '../components/SaveProgressModal';
+import { shouldShowBeforeCreateRoom } from '../lib/auth/promptGate';
+import { useNavigation } from '@react-navigation/native';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -112,6 +115,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [showCreateSavePrompt, setShowCreateSavePrompt] = useState(false);
+  const pendingCreateRef = useRef(false);
+  const navigation = useNavigation<any>();
   const [isJoining, setIsJoining] = useState(false);
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
 
@@ -178,7 +184,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     }
   };
 
-  const handleCreateRoom = useCallback(async () => {
+  const performCreateRoom = useCallback(async () => {
     const currentPending = useSettingsStore.getState().pendingEmail;
     const currentUser = useAuthStore.getState().user;
     const unconfirmed = (currentUser && currentUser.email && !currentUser.email_confirmed_at) || !!currentPending;
@@ -192,8 +198,6 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       const displayName = (nameInput.trim() || playerName) ?? 'Guest';
       const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10);
       if (!result.ok) {
-        // Map server error codes to translated user-friendly text where
-        // the wire string is shorthand only. Default = passthrough.
         const code = result.error || 'Failed to create room';
         const friendly = code === 'too_many_rooms'
           ? t('multiplayer.tooManyRooms', 'You\'ve created too many rooms in the past hour. Try again later.')
@@ -223,6 +227,18 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       setIsCreating(false);
     }
   }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t]);
+
+  const handleCreateRoom = useCallback(async () => {
+    // Soft prompt — only the first create per anonymous device sees it.
+    // The modal's onResolved continues into performCreateRoom regardless
+    // of which dismissal action the user picked.
+    if (await shouldShowBeforeCreateRoom()) {
+      pendingCreateRef.current = true;
+      setShowCreateSavePrompt(true);
+      return;
+    }
+    await performCreateRoom();
+  }, [performCreateRoom]);
 
   const handleJoinRoom = useCallback(async () => {
     const showMsg = (title: string, body: string) => {
@@ -493,6 +509,22 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         </View>
       )}
       <PwaInstallModal visible={showPwaModal} onClose={dismissPwaModal} />
+      <SaveProgressModal
+        visible={showCreateSavePrompt}
+        trigger="beforeCreate"
+        onResolved={async () => {
+          setShowCreateSavePrompt(false);
+          if (pendingCreateRef.current) {
+            pendingCreateRef.current = false;
+            await performCreateRoom();
+          }
+        }}
+        onUseEmail={() => {
+          pendingCreateRef.current = false;
+          setShowCreateSavePrompt(false);
+          navigation.navigate('Auth');
+        }}
+      />
     </SafeAreaView>
   );
 };
