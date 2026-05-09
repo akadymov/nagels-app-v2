@@ -141,7 +141,15 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
   const handleLogout = async () => {
     try {
       await signOut();
+      // Drop the cached nickname so the next session starts as a fresh guest
+      // instead of inheriting the previous user's display name in Lobby.
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      await AsyncStorage.removeItem('nagels_player_name');
+      useAuthStore.getState().setDisplayName('Guest');
       onClose();
+      // Reset the navigation stack to Welcome — landing on Lobby right after
+      // logout looks like the previous user is still in.
+      navigation.reset({ index: 0, routes: [{ name: 'Welcome' }] });
     } catch {}
   };
 
