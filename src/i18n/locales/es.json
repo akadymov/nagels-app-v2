@@ -177,7 +177,21 @@
     "canPlay": "Tu cuenta está lista. Ahora puedes jugar sin límites.",
     "redirecting": "Redirigiendo al lobby...",
     "sessionRestored": "Sesión restaurada",
-    "rejoining": "Volviendo a tu partida..."
+    "rejoining": "Volviendo a tu partida...",
+    "continueWithGoogle": "Continuar con Google",
+    "useEmail": "Usar correo",
+    "or": "o",
+    "saveProgress": "Guardar progreso",
+    "saveProgressTitle": "Guarda tu progreso",
+    "saveProgressDesc": "Inicia sesión para conservar estadísticas, amigos e historial entre dispositivos.",
+    "savePromptAfterGameTitle": "🎉 ¡Partida terminada!",
+    "savePromptAfterGameBody": "¿Quieres guardar tu progreso? Inicia sesión para que tus estadísticas y tu historial te sigan entre dispositivos.",
+    "savePromptBeforeCreateTitle": "¿Guardar tu progreso?",
+    "savePromptBeforeCreateBody": "Inicia sesión para que tus amigos te reconozcan en cualquier dispositivo y tus estadísticas viajen contigo.",
+    "maybeLater": "Más tarde",
+    "collisionTitle": "¿Cambiar a la cuenta existente?",
+    "collisionBody": "Esta cuenta de Google ya está vinculada a otro perfil de Nägels. Los datos locales de invitado en este dispositivo serán reemplazados.",
+    "switchAccount": "Cambiar"
   },
   "multiplayer": {
     "quickMatch": "Partida Rápida",

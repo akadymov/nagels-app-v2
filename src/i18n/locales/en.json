@@ -177,7 +177,21 @@
     "canPlay": "Your account is ready. You can now play without limits.",
     "redirecting": "Redirecting to lobby...",
     "sessionRestored": "Session restored",
-    "rejoining": "Returning to your game..."
+    "rejoining": "Returning to your game...",
+    "continueWithGoogle": "Continue with Google",
+    "useEmail": "Use email",
+    "or": "or",
+    "saveProgress": "Save progress",
+    "saveProgressTitle": "Save your progress",
+    "saveProgressDesc": "Sign in to keep your stats, friends, and history across devices.",
+    "savePromptAfterGameTitle": "🎉 Game over!",
+    "savePromptAfterGameBody": "Want to save your progress? Sign in to keep your stats and history across devices.",
+    "savePromptBeforeCreateTitle": "Save your progress?",
+    "savePromptBeforeCreateBody": "Sign in so friends can recognize you across devices, and your stats follow you.",
+    "maybeLater": "Maybe later",
+    "collisionTitle": "Switch to existing account?",
+    "collisionBody": "This Google account is already linked to a different Nägels profile. Local guest data on this device will be replaced.",
+    "switchAccount": "Switch"
   },
   "multiplayer": {
     "quickMatch": "Quick Match",
