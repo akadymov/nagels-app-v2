@@ -8,6 +8,7 @@ import { Platform, View, Text, StyleSheet, ActivityIndicator } from 'react-nativ
 import { NavigationContainer, useNavigation, createNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { FeedbackButton } from '../components/FeedbackButton';
+import { SettingsModal } from '../components/SettingsModal';
 import {
   WelcomeScreen,
   PrimerScreen,
@@ -500,6 +501,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
             </Stack.Screen>
           </Stack.Navigator>
         <GlobalFeedbackOverlay />
+        <SettingsModal />
       </AuthProvider>
     </NavigationContainer>
   );
