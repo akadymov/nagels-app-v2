@@ -9,6 +9,7 @@ import { NavigationContainer, useNavigation, createNavigationContainerRef } from
 import { createStackNavigator } from '@react-navigation/stack';
 import { FeedbackButton } from '../components/FeedbackButton';
 import { SettingsModal } from '../components/SettingsModal';
+import { useSettingsUIStore } from '../store/settingsUIStore';
 import {
   WelcomeScreen,
   PrimerScreen,
@@ -429,7 +430,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   }}
                   onRoomCreated={() => (props.navigation as any).navigate('WaitingRoom')}
                   onRoomJoined={() => (props.navigation as any).navigate('WaitingRoom')}
-                  onSettings={() => (props.navigation as any).navigate('Settings')}
+                  onSettings={() => useSettingsUIStore.getState().open()}
                 />
               )}
             </Stack.Screen>
@@ -441,7 +442,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                     (props.navigation as any).navigate('GameTable', { isMultiplayer: true });
                   }}
                   onLeave={() => (props.navigation as any).goBack()}
-                  onSettings={() => (props.navigation as any).navigate('Settings')}
+                  onSettings={() => useSettingsUIStore.getState().open()}
                 />
               )}
             </Stack.Screen>
