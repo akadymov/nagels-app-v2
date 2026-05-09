@@ -16,7 +16,6 @@ import {
   LobbyScreen,
   GameTableScreen,
   WaitingRoomScreen,
-  SettingsScreen,
   AuthScreen,
   ProfileScreen,
   EmailConfirmedScreen,
@@ -455,15 +454,6 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   botCount={props.route?.params?.botCount}
                   playerName={props.route?.params?.playerName}
                   onExit={() => (props.navigation as any).goBack()}
-                />
-              )}
-            </Stack.Screen>
-
-            <Stack.Screen name="Settings">
-              {(props) => (
-                <SettingsScreen
-                  onBack={() => (props.navigation as any).goBack()}
-                  onProfile={() => (props.navigation as any).navigate('Profile')}
                 />
               )}
             </Stack.Screen>
