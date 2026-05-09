@@ -1,5 +1,40 @@
 ## Backlog
 
+### Active turn highlight — gradient fill + screen pulse
+
+  - Replace current border-only highlight with gradient fill inside the active player's profile container. Drop the gold border on active states — the gradient does the work alone. Different gradients per state: diagonal sheen (active opponent) vs radial spotlight (active me). Designed in Figma — page Screens · frame "Active Turn Highlight" (file `M1B00D6SCCwqagN7aDTTiX`, node `129:2`). Olya's idea on UX colour, palette WIP — Akula will pick a reference from existing card-game / board-game UIs and we'll match.
+  - Plus a "your turn" screen-edge inner-glow pulse, animated 0 → 0.85 → 0 in a 1.4s loop. Mounted only while `isMyTurn && phase === 'playing'`. Constant opacity 0.4 in Reduce-Motion.
+  - Implementation: 2 commits — profile card gradient swap (expo-linear-gradient + react-native-radial-gradient) + screen pulse overlay.
+
+### Google OAuth — Manual linking disabled
+
+  - `supabase.auth.linkIdentity({ provider: 'google' })` in `linkGoogleToAnonymous` returns the error "Manual linking is disabled" because the Supabase project has the manual-linking flag off by default. Fix: Supabase Dashboard → Authentication → URL Configuration → enable **"Manual linking"** (or set env `GOTRUE_SECURITY_MANUAL_LINKING_ENABLED=true`). Without this flag, anonymous → Google upgrade is impossible — the SaveProgressModal flow is broken for guests until enabled. Operator action only, no code change.
+
+### Email-confirmed redirect — extra screen on confirm
+
+  - From Дима via Akula (2026-05-08): after registering and confirming email, the user is bounced to `/auth/callback` showing the "Email confirmed!" page before being routed to the lobby. Looks like an unnecessary pit-stop. Investigate `EmailConfirmedScreen` flow vs `RejoinGuard` — for users who land on the app post-confirm with a recent `email_confirmed_at` (< 60s), short-circuit the screen and go straight to lobby, surface "Email confirmed" as a toast instead.
+
+### Per-game seat shuffle in private rooms
+
+  - Akula request (2026-05-08): when host taps "Play again" inside a multiplayer room, randomise `seat_index` for the next game so seating rotates between hands. Implementation lives in the `restart_game` RPC — shuffle, broadcast new snapshot, clients re-render. Toggle on the room (host can opt out). UX win for friend lobbies.
+
+### Spectator mode in rooms
+
+  - Akula request (2026-05-09): allow non-playing visitors to join a room as spectators — see the table state, optionally hand of one player (host opt-in), but cannot bid or play. Useful when one of the friends is sitting out a hand or watching the meta. Schema change: `room_players.role: 'player' | 'spectator'`. Realtime broadcast already filters by room — spectators just don't get redacted hand.
+
+### Cards centred on desktop
+
+  - From PopovIsNit (2026-05-08): on a large screen (PC) the player hand renders against the left edge instead of centred. Mobile-first layout doesn't constrain the CardHand container. Fix: max-width on the hand row plus `alignSelf: 'center'` when viewport > some breakpoint. Same for BettingPhase modal where bid chips also misalign.
+
+### Bet button reachable from the felt
+
+  - From PopovIsNit (2026-05-08): "add a button when bidding before the game and during gameplay (on the green felt)". Suspected ask: surface bet placement controls also on the table view — not only inside BettingPhase modal. Needs clarification from PopovIsNit on the precise wording/placement.
+
+### Screenshots in feedback form
+
+  - From PopovIsNit (2026-05-08): allow attaching screenshots to the in-app feedback. Server side: Supabase Storage bucket `feedback-attachments` with RLS that allows insert from any session, read only via service role (mirror the feedback table policy). Client side: image picker via `expo-image-picker`, upload to bucket, store URL in `feedback.extra.screenshots`.
+
+
 ### Push notifications — follow-ups
 
   - Desktop Chrome subscription doesn't complete via Settings toggle when `Notification.permission` is already `granted` from earlier attempts. PWA path works. Likely stale SW or stale `pushManager` subscription bound to a previous VAPID key. Reset path (chrome://settings/content/notifications → remove site → unregister SW → reload) confirmed manual workaround. Need a client-side detect-and-resubscribe step when state probe finds a granted permission but no fresh subscription, or surface the reset hint in-UI.
