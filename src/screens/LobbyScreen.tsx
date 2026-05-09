@@ -349,6 +349,19 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           />
         </View>
 
+        {/* Sign In / Create Account — visible to anonymous guests only */}
+        {isGuest && (
+          <Pressable
+            onPress={() => navigation.navigate('Auth')}
+            style={[styles.signInBtn, { borderColor: colors.accent }]}
+            testID="lobby-sign-in"
+          >
+            <Text style={[styles.signInBtnText, { color: colors.accent }]}>
+              {t('auth.signIn')} / {t('auth.signUp')}
+            </Text>
+          </Pressable>
+        )}
+
         {/* Email confirmation warning */}
         {hasUnconfirmedEmail && (
           <View style={[styles.confirmBanner, { backgroundColor: colors.warning + '20', borderColor: colors.warning }]}>
@@ -698,6 +711,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  signInBtn: {
+    height: 44,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
