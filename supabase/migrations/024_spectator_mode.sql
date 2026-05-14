@@ -34,6 +34,10 @@ DECLARE
   v_session_id UUID;
   v_count      INT;
 BEGIN
+  -- Serialize concurrent joins to enforce the 10-spectator cap deterministically.
+  -- Same convention as 019_restart_game.sql.
+  PERFORM pg_advisory_xact_lock(hashtext('spectators:' || p_room_id::text));
+
   SELECT id INTO v_session_id
     FROM public.room_sessions
    WHERE auth_user_id = auth.uid()
