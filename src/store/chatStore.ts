@@ -8,6 +8,9 @@ export interface ChatMessage {
   ts: number;       // ms since epoch
   avatar?: string | null;
   avatarColor?: string | null;
+  /** True when the sender was a spectator at the time the message was
+   *  broadcast. Optional for backwards-compat with older payloads. */
+  fromSpectator?: boolean;
 }
 
 interface ChatStore {
