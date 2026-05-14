@@ -193,6 +193,16 @@
     "collisionBody": "This Google account is already linked to a different Nägels profile. Local guest data on this device will be replaced.",
     "switchAccount": "Switch"
   },
+  "spectator": {
+    "watching": "Watching",
+    "youAreWatching": "You're watching · Tap to leave",
+    "shareLink": "Share spectator link",
+    "shareMessage": "Watch our Nägels game:",
+    "count": "{{count}} watching",
+    "tooMany": "This room already has the maximum of 10 spectators.",
+    "cannotJoinAsPlayerAndSpectator": "You're already a player in this room.",
+    "title": "Watching"
+  },
   "multiplayer": {
     "quickMatch": "Quick Match",
     "createRoom": "Create Private Room",

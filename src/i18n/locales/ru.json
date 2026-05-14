@@ -193,6 +193,16 @@
     "collisionBody": "Этот Google уже привязан к другому профилю Nägels. Локальные данные гостя на этом устройстве будут заменены.",
     "switchAccount": "Переключиться"
   },
+  "spectator": {
+    "watching": "Наблюдает",
+    "youAreWatching": "Вы наблюдаете · Тап чтобы выйти",
+    "shareLink": "Поделиться ссылкой для зрителя",
+    "shareMessage": "Посмотри нашу партию в Нагели:",
+    "count": "{{count}} наблюдают",
+    "tooMany": "В комнате уже максимум 10 зрителей.",
+    "cannotJoinAsPlayerAndSpectator": "Вы уже играете в этой комнате.",
+    "title": "Зрители"
+  },
   "multiplayer": {
     "quickMatch": "Быстрая игра",
     "createRoom": "Создать комнату",
