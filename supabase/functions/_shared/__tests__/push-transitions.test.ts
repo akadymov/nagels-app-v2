@@ -4,7 +4,7 @@ import type { RoomSnapshot, ActorContext } from '../types.ts';
 
 function emptySnap(): RoomSnapshot {
   return {
-    room: null, players: [], current_hand: null,
+    room: null, players: [], spectators: [], current_hand: null,
     hand_scores: [], current_trick: null, last_closed_trick: null,
     score_history: [], my_hand: [],
   };
