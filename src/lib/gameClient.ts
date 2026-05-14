@@ -87,6 +87,41 @@ export const gameClient = {
     return result;
   },
 
+  joinRoomAsSpectator: async (code: string) => {
+    const supabase = getSupabaseClient();
+    // Resolve room id by code
+    const { data: room, error: roomErr } = await supabase
+      .from('rooms')
+      .select('id')
+      .eq('code', code.toUpperCase())
+      .maybeSingle();
+    if (roomErr || !room) {
+      return { ok: false as const, error: 'room_not_found' as const };
+    }
+    const { error: rpcErr } = await supabase.rpc('join_room_as_spectator', {
+      p_room_id: room.id,
+    });
+    if (rpcErr) {
+      return { ok: false as const, error: rpcErr.message };
+    }
+    // Pull initial snapshot
+    const { data: snap, error: snapErr } = await supabase.rpc('get_room_state', {
+      p_room_id: room.id,
+    });
+    if (snapErr || !snap) {
+      return { ok: false as const, error: snapErr?.message ?? 'no_state' };
+    }
+    return { ok: true as const, room_id: room.id as string, state: snap };
+  },
+
+  leaveRoomAsSpectator: async (room_id: string) => {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.rpc('leave_room_as_spectator', {
+      p_room_id: room_id,
+    });
+    return { ok: !error, error: error?.message };
+  },
+
   setReady: (room_id: string, is_ready: boolean, target_session_id?: string) =>
     postAction(null, { kind: 'ready', room_id, is_ready, target_session_id }),
 
