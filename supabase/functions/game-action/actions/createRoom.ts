@@ -17,7 +17,7 @@ const ROOMS_PER_HOUR_WINDOW_MS = 60 * 60 * 1000;
 
 function emptySnapshot(): RoomSnapshot {
   return {
-    room: null, players: [], current_hand: null,
+    room: null, players: [], spectators: [], current_hand: null,
     hand_scores: [], current_trick: null, last_closed_trick: null,
     score_history: [], my_hand: [],
   };

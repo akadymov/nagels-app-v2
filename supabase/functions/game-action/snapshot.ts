@@ -10,7 +10,7 @@ export async function buildSnapshot(
   if (error) throw error;
 
   const snapshot = (data ?? {
-    room: null, players: [], current_hand: null,
+    room: null, players: [], spectators: [], current_hand: null,
     hand_scores: [], current_trick: null, last_closed_trick: null, score_history: [],
   }) as RoomSnapshot;
 

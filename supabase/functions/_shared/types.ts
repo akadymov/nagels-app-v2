@@ -23,6 +23,14 @@ export interface ActorContext {
   display_name: string;
 }
 
+export interface Spectator {
+  session_id: string;
+  display_name: string;
+  avatar?: string | null;
+  avatar_color?: string | null;
+  joined_at: string;
+}
+
 export interface RoomSnapshot {
   room: {
     id: string;
@@ -47,6 +55,7 @@ export interface RoomSnapshot {
     /** User-chosen avatar color hex (#RRGGBB). Null → seat-based default. */
     avatar_color?: string | null;
   }>;
+  spectators: Spectator[];
   current_hand: {
     id: string;
     room_id: string;
