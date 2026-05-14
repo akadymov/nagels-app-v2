@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, Radius } from '../constants';
 import { useChatStore } from '../store/chatStore';
+import { useRoomStore } from '../store/roomStore';
 import { sendChatMessage } from '../lib/realtimeBroadcast';
 import { avatarColorFor } from '../utils/avatarColor';
 
@@ -72,6 +73,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       ts: Date.now(),
       avatar: sender.avatar ?? null,
       avatarColor: sender.avatarColor ?? null,
+      // Snapshot the spectator flag at send time, not render time, so
+      // the message keeps its origin even if the user later takes a seat.
+      fromSpectator: useRoomStore.getState().isSpectator,
     });
   };
 
@@ -119,6 +123,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   >
                     {!isMe && (
                       <Text style={[styles.author, { color: colors.textMuted }]} numberOfLines={1}>
+                        {item.fromSpectator === true && (
+                          <Text style={styles.spectatorEye}>{'\u{1F441} '}</Text>
+                        )}
                         {item.displayName}
                       </Text>
                     )}
@@ -205,6 +212,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   author: { fontSize: 11, fontWeight: '700', marginBottom: 1 },
+  spectatorEye: { fontSize: 12, opacity: 0.7 },
   body: { fontSize: 14, lineHeight: 18 },
   empty: { textAlign: 'center', paddingVertical: Spacing.lg, fontSize: 13 },
   inputRow: {

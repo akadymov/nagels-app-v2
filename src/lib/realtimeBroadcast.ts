@@ -47,6 +47,7 @@ export function subscribeRoom(room_id: string) {
       ts: typeof m.ts === 'number' ? m.ts : Date.now(),
       avatar: m.avatar ?? null,
       avatarColor: m.avatarColor ?? null,
+      fromSpectator: m.fromSpectator === true,
     });
   });
 
