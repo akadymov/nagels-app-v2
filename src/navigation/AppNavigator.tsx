@@ -25,6 +25,7 @@ import { Colors, Spacing, TextStyles } from '../constants';
 import { onAuthStateChange } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
 import { useAuthStore } from '../store/authStore';
+import { useRoomStore } from '../store/roomStore';
 
 export type RootStackParamList = {
   Welcome: {
@@ -71,6 +72,11 @@ const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_in
 const _cameFromPasswordReset = _initialHash.includes('access_token') && _initialHash.includes('type=recovery');
 const _initialJoinMatch = _initialPath.match(/^\/join\/([A-Z0-9]{4,8})/i);
 const _initialJoinCode = _initialJoinMatch ? _initialJoinMatch[1].toUpperCase() : null;
+let _initialJoinAsSpectator = false;
+if (typeof window !== 'undefined' && window.location.search) {
+  const params = new URLSearchParams(window.location.search);
+  _initialJoinAsSpectator = params.get('as') === 'spectator';
+}
 
 /**
  * Deep link configuration.
@@ -301,8 +307,6 @@ const NavigatorGuard: React.FC = () => {
       // Strip the path so refresh doesn't loop.
       window.history.replaceState(null, '', '/');
       (async () => {
-        // Wait up to 3 s for an auth session — anonymous sign-in may still
-        // be in flight when the URL path is parsed.
         const { getSupabaseClient } = await import('../lib/supabase/client');
         const supabase = getSupabaseClient();
         let session = null as any;
@@ -315,11 +319,27 @@ const NavigatorGuard: React.FC = () => {
           (window as any).alert(`Couldn't sign in to join ${code}. Try refresh.`);
           return;
         }
+
+        const { gameClient } = await import('../lib/gameClient');
+        const { setActiveRoom } = await import('../lib/activeRoom');
+        const { subscribeRoom } = await import('../lib/realtimeBroadcast');
+
+        if (_initialJoinAsSpectator) {
+          const result = await gameClient.joinRoomAsSpectator(code);
+          if (result.ok) {
+            useRoomStore.getState().setIsSpectator(true);
+            useRoomStore.getState().applySnapshot(result.state as any, Date.now());
+            await setActiveRoom(result.room_id);
+            subscribeRoom(result.room_id);
+            navigation.navigate('GameTable');
+          } else {
+            (window as any).alert(`Couldn't watch ${code}: ${result.error ?? 'unknown'}`);
+          }
+          return;
+        }
+
+        const displayName = useAuthStore.getState().displayName || 'Guest';
         try {
-          const { gameClient } = await import('../lib/gameClient');
-          const { setActiveRoom } = await import('../lib/activeRoom');
-          const { subscribeRoom } = await import('../lib/realtimeBroadcast');
-          const displayName = useAuthStore.getState().displayName || 'Guest';
           const result = await gameClient.joinRoom(displayName, code);
           console.log('[NavigatorGuard] auto-join result', result);
           if (result.ok && result.state.room?.id) {
