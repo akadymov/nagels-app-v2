@@ -93,6 +93,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // ── Multiplayer state ──────────────────────────────────────
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
+  const isSpectator = useRoomStore((s) => s.isSpectator);
+  const spectators = useRoomStore((s) => s.snapshot?.spectators ?? []);
+  const [showSpectators, setShowSpectators] = useState(false);
 
   // Turn timeout watcher — any client posts request_timeout after 30s
   // of no progress; the Edge Function idempotently auto-advances.
@@ -162,8 +165,34 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const isHost = isMultiplayer && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
   const handleEndGame = useCallback(async () => {
     if (!room?.id) return;
+    if (useRoomStore.getState().isSpectator) {
+      try {
+        await gameClient.leaveRoomAsSpectator(room.id);
+      } catch (err) {
+        console.error('[GameTable] leaveRoomAsSpectator failed:', err);
+      }
+      unsubscribeRoom();
+      useRoomStore.getState().reset();
+      onExit?.();
+      return;
+    }
     await leaveWithConfirm(room.id, t, { isHost: true });
-  }, [room?.id, t]);
+  }, [room?.id, t, onExit]);
+
+  // Spectator leave — no confirm prompt, just detach and exit.
+  const handleSpectatorLeave = useCallback(async () => {
+    const roomId = room?.id;
+    if (roomId) {
+      try {
+        await gameClient.leaveRoomAsSpectator(roomId);
+      } catch (err) {
+        console.error('[GameTable] leaveRoomAsSpectator failed:', err);
+      }
+    }
+    unsubscribeRoom();
+    useRoomStore.getState().reset();
+    onExit?.();
+  }, [room?.id, onExit]);
 
   // ── Single-player init (unchanged behavior) ────────────────
   useEffect(() => {
@@ -537,6 +566,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Card press handler: two-tap confirmation
   const handleCardPress = useCallback(
     (cardId: string) => {
+      if (isSpectator) return;
       const myPlayer = vm.myPlayer;
       if (!myPlayer || vm.phase !== 'playing') return;
       if (vm.currentPlayer?.id !== myPlayer.id) return;
@@ -574,7 +604,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         setSelectedCard(cardId);
       }
     },
-    [vm, selectedCard, isMultiplayer, room?.id, hand?.id, sp]
+    [vm, selectedCard, isMultiplayer, room?.id, hand?.id, sp, isSpectator]
   );
 
   // Continue from scoreboard
@@ -975,6 +1005,18 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               )}
             </Pressable>
+            {spectators.length > 0 && (
+              <Pressable
+                testID="spectator-count"
+                onPress={() => setShowSpectators(true)}
+                accessibilityLabel={t('spectator.count', { count: spectators.length })}
+                style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              >
+                <Text style={[styles.spectatorIndicator, { color: colors.textSecondary }]}>
+                  👁 {spectators.length}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
 
@@ -1164,20 +1206,33 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
         </Modal>
 
-        {/* Your Hand */}
-        {vm.myPlayer && (
-          <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.42 }]}>
-            <View testID="my-hand">
-              <CardHand
-                cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
-                selectedCards={selectedCard ? [selectedCard] : []}
-                playableCards={playableCards.map((c: any) => c.id)}
-                onCardPress={handleCardPress}
-                size="small"
-                horizontal={false}
-              />
+        {/* Your Hand — replaced with spectator strip when watching */}
+        {isSpectator ? (
+          <Pressable
+            testID="spectator-strip"
+            onPress={handleSpectatorLeave}
+            style={[styles.spectatorStrip, { backgroundColor: colors.glassLight, borderTopColor: colors.accent }]}
+            accessibilityLabel={t('spectator.youAreWatching')}
+          >
+            <Text style={[styles.spectatorStripText, { color: colors.textPrimary }]}>
+              👁 {t('spectator.youAreWatching')}
+            </Text>
+          </Pressable>
+        ) : (
+          vm.myPlayer && (
+            <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.42 }]}>
+              <View testID="my-hand">
+                <CardHand
+                  cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
+                  selectedCards={selectedCard ? [selectedCard] : []}
+                  playableCards={playableCards.map((c: any) => c.id)}
+                  onCardPress={handleCardPress}
+                  size="small"
+                  horizontal={false}
+                />
+              </View>
             </View>
-          </View>
+          )
         )}
 
         {/* Chat panel — multiplayer only; SP has no peers to chat with. */}
@@ -1198,16 +1253,18 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           );
         })()}
 
-        {/* Betting Phase Modal */}
-        <BettingPhase
-          visible={vm.phase === 'betting'}
-          isMultiplayer={isMultiplayer}
-          onClose={onExit}
-          onShowScore={() => {
-            setIsViewingScores(true);
-            setShowScoreboard(true);
-          }}
-        />
+        {/* Betting Phase Modal — hidden for spectators */}
+        {!isSpectator && (
+          <BettingPhase
+            visible={vm.phase === 'betting'}
+            isMultiplayer={isMultiplayer}
+            onClose={onExit}
+            onShowScore={() => {
+              setIsViewingScores(true);
+              setShowScoreboard(true);
+            }}
+          />
+        )}
 
         {/* Scoreboard Modal — also handles the game-over celebration
             via its built-in winner banner (see ScoreboardModal). */}
@@ -1327,6 +1384,26 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         </Modal>
 
       </ScrollView>
+
+      {/* Spectator list sheet — sits above ScrollView so the backdrop
+          covers the full screen. */}
+      {showSpectators && (
+        <Pressable
+          style={styles.spectatorSheetBackdrop}
+          onPress={() => setShowSpectators(false)}
+        >
+          <View style={[styles.spectatorSheet, { backgroundColor: colors.surface ?? colors.background }]}>
+            <Text style={[styles.spectatorSheetTitle, { color: colors.textPrimary }]}>
+              {t('spectator.title')}
+            </Text>
+            {spectators.map((s) => (
+              <Text key={s.session_id} style={[styles.spectatorRow, { color: colors.textPrimary }]}>
+                {s.display_name}
+              </Text>
+            ))}
+          </View>
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 };
@@ -1748,6 +1825,43 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     fontWeight: '600' as const,
     color: '#ffffff',
+  },
+  spectatorStrip: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  spectatorStripText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  spectatorIndicator: {
+    fontSize: 13,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+  },
+  spectatorSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  spectatorSheet: {
+    minWidth: 220,
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  spectatorSheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  spectatorRow: {
+    fontSize: 14,
+    paddingVertical: 4,
   },
 });
 
