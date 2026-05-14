@@ -58,6 +58,8 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const connState = useRoomStore((s) => s.connState);
+  const isSpectator = useRoomStore((s) => s.isSpectator);
+  const spectators = useRoomStore((s) => s.snapshot?.spectators ?? []);
 
   const room = snapshot?.room ?? null;
   const players = snapshot?.players ?? [];
@@ -188,7 +190,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     const roomId = room?.id;
     if (roomId) {
       try {
-        await gameClient.leaveRoom(roomId);
+        if (useRoomStore.getState().isSpectator) {
+          await gameClient.leaveRoomAsSpectator(roomId);
+        } else {
+          await gameClient.leaveRoom(roomId);
+        }
       } catch (err) {
         console.error('[WaitingRoom] leaveRoom failed:', err);
       }
@@ -206,6 +212,21 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       await Share.share(
         { message, title: 'Nägels Online' },
         { dialogTitle: t('multiplayer.shareRoom') }
+      );
+    } catch {
+      await Clipboard.setStringAsync(link);
+      Alert.alert(t('multiplayer.codeCopied'), link);
+    }
+  }, [room, t]);
+
+  const handleShareSpectator = useCallback(async () => {
+    if (!room) return;
+    const link = `${buildInviteLink(room.code)}?as=spectator`;
+    const message = `${t('spectator.shareMessage')}\n${link}`;
+    try {
+      await Share.share(
+        { message, title: 'Nägels Online' },
+        { dialogTitle: t('spectator.shareLink') }
       );
     } catch {
       await Clipboard.setStringAsync(link);
@@ -289,6 +310,18 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                 📤 {t('multiplayer.shareCode')}
               </Text>
             </Pressable>
+            {!isSpectator && (
+              <Pressable
+                testID="btn-share-spectator"
+                onPress={handleShareSpectator}
+                style={styles.shareButton}
+                hitSlop={8}
+              >
+                <Text style={[styles.shareButtonText, { color: colors.textPrimary }]}>
+                  👁 {t('spectator.shareLink')}
+                </Text>
+              </Pressable>
+            )}
           </GlassCard>
         )}
 
@@ -298,6 +331,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         {room && (
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('multiplayer.playersInRoom', { count: playerCount, max: room.player_count })}
+            {spectators.length > 0 && (
+              <Text style={[styles.spectatorCount, { color: colors.textSecondary }]}>
+                {`  ·  👁 ${spectators.length}`}
+              </Text>
+            )}
           </Text>
         )}
 
@@ -405,7 +443,13 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         )}
 
         {/* Action Buttons */}
-        {!isHost ? (
+        {isSpectator ? (
+          <View testID="spectator-badge" style={styles.spectatorBadge}>
+            <Text style={[styles.spectatorBadgeText, { color: colors.textPrimary }]}>
+              👁 {t('spectator.watching')}
+            </Text>
+          </View>
+        ) : !isHost ? (
           // Non-host: ready confirmation UI
           <>
             {amIReady ? (
@@ -713,6 +757,19 @@ const styles = StyleSheet.create({
   leftBannerDismiss: {
     ...TextStyles.h3,
     marginLeft: Spacing.md,
+  },
+  spectatorBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignSelf: 'center',
+  },
+  spectatorBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  spectatorCount: {
+    fontSize: 13,
   },
 });
 
