@@ -6,9 +6,6 @@
 ### Per-game seat shuffle in private rooms
 
 
-### Spectator mode in rooms
-
-
 ### Cards centred on desktop
 
 
@@ -65,6 +62,9 @@
 
 
 ## Done
+
+### Spectator mode — invite-link based read-only watcher with chat
+
 
 ### Project principles + repo hygiene
 
