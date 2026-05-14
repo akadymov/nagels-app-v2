@@ -193,6 +193,16 @@
     "collisionBody": "Esta cuenta de Google ya está vinculada a otro perfil de Nägels. Los datos locales de invitado en este dispositivo serán reemplazados.",
     "switchAccount": "Cambiar"
   },
+  "spectator": {
+    "watching": "Observando",
+    "youAreWatching": "Estás observando · Toca para salir",
+    "shareLink": "Compartir enlace de espectador",
+    "shareMessage": "Mira nuestra partida de Nägels:",
+    "count": "{{count}} observando",
+    "tooMany": "La sala ya tiene el máximo de 10 espectadores.",
+    "cannotJoinAsPlayerAndSpectator": "Ya eres jugador en esta sala.",
+    "title": "Espectadores"
+  },
   "multiplayer": {
     "quickMatch": "Partida Rápida",
     "createRoom": "Crear Sala Privada",
