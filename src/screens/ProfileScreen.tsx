@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
+import { GoogleButton } from '../components/GoogleButton';
 
 export interface ProfileScreenProps {
   onBack: () => void;
@@ -189,18 +190,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
           </View>
         </View>
 
-        {/* Link Google */}
-        <Pressable
+        {/* Link Google — official brand-styled button */}
+        <GoogleButton
           testID="btn-link-google"
-          style={[styles.linkBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
           onPress={handleToggleGoogle}
-        >
-          <Text style={[styles.linkBtnText, { color: colors.textPrimary }]}>
-            {isGoogleLinked
-              ? t('auth.unlinkGoogle', 'Unlink Google Account')
-              : t('auth.linkGoogle', 'Link Google Account')}
-          </Text>
-        </Pressable>
+          label={isGoogleLinked
+            ? t('auth.unlinkGoogle', 'Unlink Google Account')
+            : t('auth.linkGoogle', 'Link Google Account')}
+        />
 
         {/* Logout */}
         <Pressable
@@ -356,18 +353,6 @@ const styles = StyleSheet.create({
   },
   avatarOptionEmoji: {
     fontSize: 24,
-  },
-  linkBtn: {
-    height: 48,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.md,
-  },
-  linkBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
   },
   logoutBtn: {
     height: 48,

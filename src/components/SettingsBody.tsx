@@ -22,6 +22,7 @@ import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
+import { GoogleButton } from './GoogleButton';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -275,17 +276,14 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
                     </Text>
                   </Pressable>
                 )}
-                <Pressable
+                <GoogleButton
                   testID="btn-link-google"
-                  style={[styles.secondaryBtn, { borderColor: colors.accent, marginTop: Spacing.sm }]}
                   onPress={handleToggleGoogle}
-                >
-                  <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
-                    {hasGoogleIdentity(user)
-                      ? t('auth.unlinkGoogle', 'Unlink Google Account')
-                      : t('auth.linkGoogle', 'Link Google Account')}
-                  </Text>
-                </Pressable>
+                  label={hasGoogleIdentity(user)
+                    ? t('auth.unlinkGoogle', 'Unlink Google Account')
+                    : t('auth.linkGoogle', 'Link Google Account')}
+                  style={{ marginTop: Spacing.sm }}
+                />
               </>
             )}
           </View>
