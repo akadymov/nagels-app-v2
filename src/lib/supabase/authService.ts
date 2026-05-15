@@ -302,6 +302,30 @@ export function onAuthStateChange(
       void import('../auth/promptGate')
         .then(({ clearAllDismissals }) => clearAllDismissals())
         .catch(() => {});
+
+      // Backfill display_name from the OAuth identity (Google: full_name /
+      // name / given_name) when the user has no display_name yet — e.g.
+      // anon → Google upgrade, or a fresh Google sign-up. Then sync the
+      // newly named user into public.room_sessions so the server-side
+      // copy (visible to other players) matches.
+      const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const current = (meta.display_name as string | undefined)?.trim();
+      if (!current || current === 'Guest') {
+        const fromOAuth =
+          (meta.full_name as string | undefined) ??
+          (meta.name as string | undefined) ??
+          (meta.given_name as string | undefined);
+        if (fromOAuth && fromOAuth.trim()) {
+          void (async () => {
+            try {
+              await supabase.auth.updateUser({ data: { display_name: fromOAuth.trim() } });
+              await supabase.rpc('sync_my_display_name');
+            } catch (err) {
+              console.warn('[AuthService] display_name backfill failed:', err);
+            }
+          })();
+        }
+      }
     }
     callback(user, isGuest, event);
   });
