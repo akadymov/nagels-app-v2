@@ -52,8 +52,15 @@ export const OAuthCollisionModal: React.FC = () => {
     try {
       const { signOut, signInWithGoogle, clearLocalGuestState } =
         await import('../lib/supabase/authService');
-      await signOut();
+      // Local-scope signOut wipes the cached session without a server
+      // revoke round-trip — releases the auth lock immediately so the
+      // upcoming signInWithGoogle doesn't hit "Lock broken by another
+      // request with the 'steal' option".
+      await signOut('local');
       await clearLocalGuestState();
+      // Yield one tick so any in-flight onAuthStateChange listeners
+      // (display-name backfill, etc.) finish and free their locks.
+      await new Promise((r) => setTimeout(r, 50));
       console.log('[OAuth] local state cleared, redirecting to Google…');
       await signInWithGoogle();
       // signInWithOAuth navigates the page; if we're still here after
