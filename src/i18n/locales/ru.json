@@ -134,6 +134,8 @@
     "missedBet": "Промахнулись"
   },
   "auth": {
+    "linkGoogle": "Привязать Google-аккаунт",
+    "unlinkGoogle": "Отвязать Google-аккаунт",
     "signIn": "Войти",
     "signUp": "Создать аккаунт",
     "signOut": "Выйти",

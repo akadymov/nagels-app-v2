@@ -282,8 +282,8 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
                 >
                   <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
                     {hasGoogleIdentity(user)
-                      ? t('auth.unlinkGoogle', 'Unlink Google')
-                      : t('auth.linkGoogle', 'Sign in with Google')}
+                      ? t('auth.unlinkGoogle', 'Unlink Google Account')
+                      : t('auth.linkGoogle', 'Link Google Account')}
                   </Text>
                 </Pressable>
               </>
