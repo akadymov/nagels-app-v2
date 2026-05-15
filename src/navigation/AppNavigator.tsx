@@ -327,13 +327,26 @@ const NavigatorGuard: React.FC = () => {
         if (_initialJoinAsSpectator) {
           const result = await gameClient.joinRoomAsSpectator(code);
           if (result.ok) {
-            useRoomStore.getState().setIsSpectator(true);
-            useRoomStore.getState().applySnapshot(result.state as any, Date.now());
+            const store = useRoomStore.getState();
+            store.setIsSpectator(true);
+            store.setMyPlayerId(result.session_id);
+            const snap = result.state as any;
+            store.applySnapshot(snap, Number(snap?.room?.version ?? 0));
             await setActiveRoom(result.room_id);
             subscribeRoom(result.room_id);
-            navigation.navigate('GameTable');
+            navigation.navigate('GameTable', { isMultiplayer: true });
           } else {
-            (window as any).alert(`Couldn't watch ${code}: ${result.error ?? 'unknown'}`);
+            const i18n = require('../i18n/config').default;
+            const raw = String(result.error ?? '');
+            const errMap: Record<string, string> = {
+              too_many_spectators:        'spectator.tooMany',
+              cannot_spectate_own_seat:   'spectator.cannotJoinAsPlayerAndSpectator',
+              room_not_found:             'spectator.roomNotFound',
+              room_finished:              'spectator.roomFinished',
+            };
+            const key = Object.keys(errMap).find((k) => raw.includes(k));
+            const msg = key ? i18n.t(errMap[key]) : i18n.t('spectator.cannotJoin', { code });
+            (window as any).alert(msg);
           }
           return;
         }

@@ -30,6 +30,10 @@ async function attach(page: Page, label: string) {
   await a.getByTestId('player-count-4').click();
   await a.getByTestId('tab-create').click();
   await a.getByTestId('btn-create-room').click();
+  // First create on a fresh anon device shows the SaveProgressModal — dismiss it to continue.
+  try {
+    await a.getByTestId('save-progress-dismiss').click({ timeout: 4000 });
+  } catch { /* modal not shown — flag was already dismissed for this device */ }
   const codeEl = a.getByTestId('room-code');
   await codeEl.waitFor({ state: 'visible', timeout: 15000 });
   const code = ((await codeEl.textContent()) ?? '').trim();

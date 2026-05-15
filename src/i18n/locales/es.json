@@ -201,6 +201,9 @@
     "count": "{{count}} observando",
     "tooMany": "La sala ya tiene el máximo de 10 espectadores.",
     "cannotJoinAsPlayerAndSpectator": "Ya eres jugador en esta sala.",
+    "roomNotFound": "Sala no encontrada.",
+    "roomFinished": "Esta partida ya ha terminado.",
+    "cannotJoin": "No se pudo entrar a {{code}}.",
     "title": "Espectadores"
   },
   "multiplayer": {

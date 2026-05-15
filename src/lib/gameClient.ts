@@ -89,29 +89,22 @@ export const gameClient = {
 
   joinRoomAsSpectator: async (code: string) => {
     const supabase = getSupabaseClient();
-    // Resolve room id by code
-    const { data: room, error: roomErr } = await supabase
-      .from('rooms')
-      .select('id')
-      .eq('code', code.toUpperCase())
-      .maybeSingle();
-    if (roomErr || !room) {
-      return { ok: false as const, error: 'room_not_found' as const };
-    }
-    const { error: rpcErr } = await supabase.rpc('join_room_as_spectator', {
-      p_room_id: room.id,
+    const { data: joinRes, error: rpcErr } = await supabase.rpc('join_room_as_spectator', {
+      p_room_code: code,
     });
-    if (rpcErr) {
-      return { ok: false as const, error: rpcErr.message };
+    if (rpcErr || !joinRes) {
+      return { ok: false as const, error: rpcErr?.message ?? 'unknown' };
     }
-    // Pull initial snapshot
+    const { room_id: roomId, session_id: sessionId } = joinRes as {
+      room_id: string; session_id: string;
+    };
     const { data: snap, error: snapErr } = await supabase.rpc('get_room_state', {
-      p_room_id: room.id,
+      p_room_id: roomId,
     });
     if (snapErr || !snap) {
       return { ok: false as const, error: snapErr?.message ?? 'no_state' };
     }
-    return { ok: true as const, room_id: room.id as string, state: snap };
+    return { ok: true as const, room_id: roomId, session_id: sessionId, state: snap };
   },
 
   leaveRoomAsSpectator: async (room_id: string) => {

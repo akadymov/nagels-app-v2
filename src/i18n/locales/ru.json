@@ -201,6 +201,9 @@
     "count": "{{count}} наблюдают",
     "tooMany": "В комнате уже максимум 10 зрителей.",
     "cannotJoinAsPlayerAndSpectator": "Вы уже играете в этой комнате.",
+    "roomNotFound": "Комната не найдена.",
+    "roomFinished": "Игра уже завершена.",
+    "cannotJoin": "Не удалось подключиться к {{code}}.",
     "title": "Зрители"
   },
   "multiplayer": {
