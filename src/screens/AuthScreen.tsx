@@ -24,6 +24,7 @@ import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { signInWithEmail, signUpWithEmail, linkEmailToAnonymous, resetPasswordForEmail, connectGoogle } from '../lib/supabase/authService';
 import { GameLogo } from '../components/GameLogo';
+import { GoogleButton } from '../components/GoogleButton';
 
 type AuthTab = 'signIn' | 'signUp';
 type AuthMode = 'form' | 'forgotPassword' | 'resetSent';
@@ -173,14 +174,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
 
   const renderForm = () => (
     <View style={styles.formSection}>
-      {/* Google sign-in */}
-      <Pressable
+      {/* Google sign-in — Google brand-styled button */}
+      <GoogleButton
         onPress={handleGoogle}
-        style={[styles.googleBtn, { backgroundColor: '#ffffff', borderColor: colors.glassLight }]}
+        label={t('auth.continueWithGoogle')}
         testID="auth-google"
-      >
-        <Text style={styles.googleBtnText}>{`G  ${t('auth.continueWithGoogle')}`}</Text>
-      </Pressable>
+      />
       <View style={styles.divider}>
         <View style={[styles.dividerLine, { backgroundColor: colors.glassLight }]} />
         <Text style={[styles.dividerText, { color: colors.textMuted }]}>{t('auth.or', 'or')}</Text>
@@ -422,15 +421,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: 'underline',
   },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-  },
-  googleBtnText: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
