@@ -21,6 +21,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail } from '../lib/supabase/authService';
+import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -122,6 +123,16 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
       setShowPasswordReset(false);
     } catch (err: any) {
       setAlertMessage(String(err.message));
+      setShowConfirmAlert(true);
+    }
+  };
+
+  const handleToggleGoogle = async () => {
+    try {
+      if (hasGoogleIdentity(user)) await unlinkGoogle();
+      else await linkGoogle();
+    } catch (err: any) {
+      setAlertMessage(String(err?.message ?? err));
       setShowConfirmAlert(true);
     }
   };
@@ -264,6 +275,17 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
                     </Text>
                   </Pressable>
                 )}
+                <Pressable
+                  testID="btn-link-google"
+                  style={[styles.secondaryBtn, { borderColor: colors.accent, marginTop: Spacing.sm }]}
+                  onPress={handleToggleGoogle}
+                >
+                  <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
+                    {hasGoogleIdentity(user)
+                      ? t('auth.unlinkGoogle', 'Unlink Google')
+                      : t('auth.linkGoogle', 'Sign in with Google')}
+                  </Text>
+                </Pressable>
               </>
             )}
           </View>
