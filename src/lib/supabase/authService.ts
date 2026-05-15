@@ -202,6 +202,21 @@ export async function updateUserMetadata(data: Record<string, any>): Promise<Use
 // ============================================================
 
 /**
+ * Set or change the password on the currently authenticated user.
+ * Works for Google-only accounts to "add" a password without going
+ * through the email reset loop. After success, the user can sign in
+ * with either email+password or Google.
+ */
+export async function setUserPassword(newPassword: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Multiplayer not configured');
+  if (newPassword.length < 6) throw new Error('auth.passwordTooShort');
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(friendlyAuthError(error.message));
+}
+
+/**
  * Send a password reset email.
  */
 export async function resetPasswordForEmail(email: string): Promise<void> {

@@ -136,6 +136,10 @@
   "auth": {
     "linkGoogle": "Vincular cuenta de Google",
     "unlinkGoogle": "Desvincular cuenta de Google",
+    "setPassword": "Crear contraseña",
+    "newPassword": "Nueva contraseña",
+    "passwordSet": "Contraseña creada. Ahora puedes iniciar sesión con email y contraseña.",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
     "signIn": "Iniciar sesión",
     "signUp": "Crear cuenta",
     "signOut": "Cerrar sesión",

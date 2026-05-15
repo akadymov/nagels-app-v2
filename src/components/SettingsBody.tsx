@@ -20,7 +20,7 @@ import { Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
-import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail } from '../lib/supabase/authService';
+import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail, setUserPassword } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from './GoogleButton';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
@@ -83,8 +83,12 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(user?.user_metadata?.avatar || null);
   const [avatarColor] = useState(() => user?.user_metadata?.avatar_color || AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+
+  const hasEmailIdentity = (user?.identities ?? []).some((i: any) => i.provider === 'email');
 
   const currentLang = i18n.language;
   const isLoggedIn = user && !isGuest && user.email;
@@ -134,6 +138,23 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
       else await linkGoogle();
     } catch (err: any) {
       setAlertMessage(String(err?.message ?? err));
+      setShowConfirmAlert(true);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    try {
+      await setUserPassword(newPassword);
+      setNewPassword('');
+      setShowSetPassword(false);
+      setAlertMessage(String(t('auth.passwordSet', 'Password set. You can now sign in with email + password.')));
+      setShowConfirmAlert(true);
+    } catch (err: any) {
+      const code = String(err?.message ?? err);
+      const msg = code === 'auth.passwordTooShort'
+        ? t('auth.passwordTooShort', 'Password must be at least 6 characters')
+        : code;
+      setAlertMessage(String(msg));
       setShowConfirmAlert(true);
     }
   };
@@ -264,17 +285,50 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
 
             {isLoggedIn && (
               <>
-                <Pressable onPress={() => setShowPasswordReset(!showPasswordReset)}>
-                  <Text style={[styles.linkText, { color: colors.accent }]}>
-                    {t('auth.changePassword', 'Change Password')}
-                  </Text>
-                </Pressable>
-                {showPasswordReset && (
-                  <Pressable style={[styles.secondaryBtn, { borderColor: colors.accent }]} onPress={handleResetPassword}>
-                    <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
-                      {t('auth.sendResetLink', 'Send Reset Link')}
-                    </Text>
-                  </Pressable>
+                {hasEmailIdentity ? (
+                  <>
+                    <Pressable onPress={() => setShowPasswordReset(!showPasswordReset)}>
+                      <Text style={[styles.linkText, { color: colors.accent }]}>
+                        {t('auth.changePassword', 'Change Password')}
+                      </Text>
+                    </Pressable>
+                    {showPasswordReset && (
+                      <Pressable style={[styles.secondaryBtn, { borderColor: colors.accent }]} onPress={handleResetPassword}>
+                        <Text style={[styles.secondaryBtnText, { color: colors.accent }]}>
+                          {t('auth.sendResetLink', 'Send Reset Link')}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Pressable onPress={() => setShowSetPassword(!showSetPassword)} testID="settings-set-password-toggle">
+                      <Text style={[styles.linkText, { color: colors.accent }]}>
+                        {t('auth.setPassword', 'Set Password')}
+                      </Text>
+                    </Pressable>
+                    {showSetPassword && (
+                      <View style={styles.nicknameRow}>
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
+                          value={newPassword}
+                          onChangeText={setNewPassword}
+                          secureTextEntry
+                          autoCapitalize="none"
+                          placeholder={String(t('auth.newPassword', 'New password'))}
+                          placeholderTextColor={colors.textMuted}
+                          testID="settings-set-password-input"
+                        />
+                        <Pressable
+                          style={[styles.saveBtn, { backgroundColor: colors.accent }]}
+                          onPress={handleSetPassword}
+                          testID="settings-set-password-save"
+                        >
+                          <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </>
                 )}
                 <GoogleButton
                   testID="btn-link-google"

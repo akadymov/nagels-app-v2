@@ -136,6 +136,10 @@
   "auth": {
     "linkGoogle": "Привязать Google-аккаунт",
     "unlinkGoogle": "Отвязать Google-аккаунт",
+    "setPassword": "Создать пароль",
+    "newPassword": "Новый пароль",
+    "passwordSet": "Пароль создан. Теперь можно входить по email и паролю.",
+    "passwordTooShort": "Пароль должен быть не короче 6 символов",
     "signIn": "Войти",
     "signUp": "Создать аккаунт",
     "signOut": "Выйти",
