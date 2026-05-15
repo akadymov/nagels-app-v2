@@ -136,6 +136,9 @@
   "auth": {
     "linkGoogle": "Vincular cuenta de Google",
     "unlinkGoogle": "Desvincular cuenta de Google",
+    "collisionTitle": "¿Cambiar de perfil?",
+    "collisionBody": "Esta cuenta de Google ya está vinculada a otro perfil de Nägels. Cambiar reemplazará los datos de invitado de este dispositivo con el perfil existente.",
+    "collisionSwitch": "Cambiar al perfil existente",
     "setPassword": "Crear contraseña",
     "newPassword": "Nueva contraseña",
     "passwordSet": "Contraseña creada. Ahora puedes iniciar sesión con email y contraseña.",

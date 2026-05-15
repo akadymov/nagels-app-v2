@@ -10,6 +10,7 @@ import { AppNavigator } from './navigation';
 import i18n from './i18n/config';
 import { useTheme } from './hooks/useTheme';
 import { useSettingsStore } from './store/settingsStore';
+import { OAuthCollisionModal } from './components/OAuthCollisionModal';
 
 function AppContent() {
   const { colors } = useTheme();
@@ -198,59 +199,11 @@ export default function App() {
     }
   }, [hydrate]);
 
-  // OAuth collision detector. Supabase reports linkIdentity failures as
-  // URL hash params on return; identity_already_exists means the chosen
-  // Google account is already attached to a different Nägels profile.
-  // Confirm a switch (wipes local guest state, then signs in fresh).
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const hash = window.location.hash;
-    if (!hash || !hash.includes('error')) return;
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const errCode = params.get('error_code') || params.get('error');
-    if (errCode !== 'identity_already_exists') return;
-
-    const isStandalonePwa = window.matchMedia?.('(display-mode: standalone)').matches
-      || (window.navigator as any)?.standalone === true;
-    console.log('[OAuth] collision detected, standalone PWA?', isStandalonePwa);
-
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-
-    void (async () => {
-      // English-only — i18next may not be initialised yet at boot.
-      const accept = window.confirm(
-        'This Google account is already linked to a different Nägels profile.\n\n' +
-        'Switch to the existing profile? Your guest data on this device will be replaced.',
-      );
-      if (!accept) {
-        console.log('[OAuth] collision cancelled by user');
-        return;
-      }
-      console.log('[OAuth] collision: switching profile…');
-      try {
-        const { signOut, signInWithGoogle, clearLocalGuestState } = await import('./lib/supabase/authService');
-        await signOut();
-        await clearLocalGuestState();
-        console.log('[OAuth] collision: local state cleared, redirecting to Google…');
-        await signInWithGoogle();
-        // signInWithOAuth navigates the page away on success. If we're
-        // still here after a beat, the redirect was blocked — surface a
-        // clear message so the user can retry from the browser instead
-        // of being stuck on a silently-stalled PWA screen.
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            console.warn('[OAuth] collision: redirect did not navigate within 5s');
-            window.alert(
-              'Switch stalled. Please open the site in your browser (not the installed app) and try again.',
-            );
-          }
-        }, 5000);
-      } catch (err) {
-        console.error('[OAuth] collision switch failed:', err);
-        window.alert('Switch failed: ' + (err instanceof Error ? err.message : String(err)));
-      }
-    })();
-  }, []);
+  // OAuth collision UI now lives in <OAuthCollisionModal /> below — it
+  // renders an in-app modal where the Switch button itself preserves the
+  // user-gesture needed for the cross-origin redirect to Google. Chrome
+  // PWA standalone blocks redirects issued after an async window.confirm,
+  // which is what the previous inline handler was doing.
 
   // Service Worker → window bridge: when a push notification is clicked the
   // SW posts {kind:'push:navigate'} to a focused client. Delegate to
@@ -276,6 +229,7 @@ export default function App() {
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
         <AppContent />
+        <OAuthCollisionModal />
       </I18nextProvider>
     </SafeAreaProvider>
   );
