@@ -217,6 +217,10 @@
     "cannotJoin": "No se pudo entrar a {{code}}.",
     "title": "Espectadores"
   },
+  "gameMode": {
+    "skipOnes": "Sin rondas de 1 carta",
+    "skipOnesHint": "El centro de la escalera se queda en 2 cartas"
+  },
   "multiplayer": {
     "quickMatch": "Partida Rápida",
     "createRoom": "Crear Sala Privada",

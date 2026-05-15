@@ -217,6 +217,10 @@
     "cannotJoin": "Couldn't watch {{code}}.",
     "title": "Watching"
   },
+  "gameMode": {
+    "skipOnes": "Skip 1-card rounds",
+    "skipOnesHint": "Middle of the ladder stays at 2 cards"
+  },
   "multiplayer": {
     "quickMatch": "Quick Match",
     "createRoom": "Create Private Room",

@@ -38,6 +38,11 @@ export interface RoomSnapshot {
     host_session_id: string;
     player_count: number;
     max_cards: number;
+    /** Host-chosen floor for cards-per-hand. 1 = standard ladder
+     *  (includes the two 1-card hands). 2 = "Skip 1-card rounds" —
+     *  the centre of the ladder stays at 2 cards. Optional for
+     *  backwards-compat with older snapshots that pre-date 029. */
+    min_cards_per_hand?: number;
     phase: 'waiting' | 'playing' | 'finished';
     current_hand_id: string | null;
     version: number;

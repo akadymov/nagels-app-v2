@@ -77,17 +77,19 @@ export function getMaxCards(playerCount: number): number {
   return Math.min(10, Math.floor(52 / playerCount));
 }
 
-export function getHandCards(handNumber: number, maxCards: number): number {
+export function getHandCards(handNumber: number, maxCards: number, minCards = 1): number {
   // handNumber is 1-indexed
   // Pattern: max, max-1, ..., 2, 1, 1, 2, ..., max-1, max  (double "1" at the centre)
   // Decreasing phase: hands 1..maxCards  →  max, max-1, ..., 1
   // Increasing phase: hands maxCards+1..maxCards*2  →  1, 2, ..., max
+  //
+  // minCards lets the host pin a floor — e.g. minCards=2 turns the
+  // double-1 hands into double-2 hands ("Skip 1-card rounds" mode).
 
-  if (handNumber <= maxCards) {
-    return maxCards - handNumber + 1;
-  } else {
-    return handNumber - maxCards;
-  }
+  const base = handNumber <= maxCards
+    ? maxCards - handNumber + 1
+    : handNumber - maxCards;
+  return Math.max(base, minCards);
 }
 
 export function getTotalHands(maxCards: number): number {

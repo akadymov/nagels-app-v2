@@ -121,6 +121,15 @@ export const gameClient = {
   startGame: (room_id: string) =>
     postAction(null, { kind: 'start_game', room_id }),
 
+  setMinCardsPerHand: async (room_id: string, min: number) => {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.rpc('set_min_cards_per_hand', {
+      p_room_id: room_id,
+      p_min: min,
+    });
+    return { ok: !error, error: error?.message };
+  },
+
   placeBet: (room_id: string, hand_id: string, bet: number) =>
     postAction(null, { kind: 'place_bet', room_id, hand_id, bet }),
 
