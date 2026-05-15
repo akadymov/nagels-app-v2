@@ -163,11 +163,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     </View>
   );
 
+  const [googleLoading, setGoogleLoading] = useState(false);
   const handleGoogle = async () => {
     setErrorMsg('');
+    setGoogleLoading(true);
     try {
       await connectGoogle();
+      // signInWithOAuth navigates the page away — if we're still here a few
+      // seconds later, drop the spinner so the user can retry.
+      setTimeout(() => setGoogleLoading(false), 6000);
     } catch (err) {
+      setGoogleLoading(false);
       setErrorMsg(String(t((err as Error).message, (err as Error).message)));
     }
   };
@@ -177,6 +183,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
       {/* Google sign-in — Google brand-styled button */}
       <GoogleButton
         onPress={handleGoogle}
+        loading={googleLoading}
         label={t('auth.continueWithGoogle')}
         testID="auth-google"
       />

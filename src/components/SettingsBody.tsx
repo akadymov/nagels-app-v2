@@ -132,11 +132,21 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
     }
   };
 
+  const [googleLoading, setGoogleLoading] = useState(false);
   const handleToggleGoogle = async () => {
+    setGoogleLoading(true);
     try {
-      if (hasGoogleIdentity(user)) await unlinkGoogle();
-      else await linkGoogle();
+      if (hasGoogleIdentity(user)) {
+        await unlinkGoogle();
+        setGoogleLoading(false);
+      } else {
+        await linkGoogle();
+        // linkIdentity navigates to Google — if we're still here, drop the
+        // spinner after a few seconds so the user can retry.
+        setTimeout(() => setGoogleLoading(false), 6000);
+      }
     } catch (err: any) {
+      setGoogleLoading(false);
       setAlertMessage(String(err?.message ?? err));
       setShowConfirmAlert(true);
     }
@@ -333,6 +343,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
                 <GoogleButton
                   testID="btn-link-google"
                   onPress={handleToggleGoogle}
+                  loading={googleLoading}
                   label={hasGoogleIdentity(user)
                     ? t('auth.unlinkGoogle', 'Unlink Google Account')
                     : t('auth.linkGoogle', 'Link Google Account')}
