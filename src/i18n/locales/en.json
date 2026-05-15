@@ -137,6 +137,8 @@
     "signIn": "Sign In",
     "signUp": "Create Account",
     "signOut": "Sign Out",
+    "linkGoogle": "Link Google Account",
+    "unlinkGoogle": "Unlink Google Account",
     "email": "Email",
     "password": "Password",
     "displayName": "Display Name",

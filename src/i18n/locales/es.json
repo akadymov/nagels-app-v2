@@ -134,6 +134,8 @@
     "missedBet": "Fallaste"
   },
   "auth": {
+    "linkGoogle": "Vincular cuenta de Google",
+    "unlinkGoogle": "Desvincular cuenta de Google",
     "signIn": "Iniciar sesión",
     "signUp": "Crear cuenta",
     "signOut": "Cerrar sesión",
