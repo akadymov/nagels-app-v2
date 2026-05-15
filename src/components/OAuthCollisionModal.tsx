@@ -1,29 +1,27 @@
 /**
- * OAuth collision modal.
+ * OAuth collision auto-switcher.
  *
  * When linkIdentity to Google returns identity_already_exists (the Google
  * account is attached to a different Nägels profile), the URL hash contains
- * error_code=identity_already_exists. This component detects that on mount,
- * shows a modal, and — on confirm — switches to the existing profile.
+ * error_code=identity_already_exists. Auto-switch to the existing profile
+ * silently — no prompt — since both alternatives lead the user to the same
+ * place. Shows a brief "Switching…" overlay so the screen isn't blank
+ * during the redirect.
  *
- * Why a custom modal instead of window.confirm: in standalone PWA mode,
- * Chrome's redirect-blocker rejects cross-origin navigation that isn't
- * tied to a fresh user gesture. window.confirm + await + window.location
- * .assign loses the gesture; an actual Pressable's onPress preserves it
- * and the redirect to Google goes through.
+ * Caveat: Chrome PWA standalone may block cross-origin navigation triggered
+ * outside a user-gesture window. We still try, but if the redirect doesn't
+ * fire within 5 s we surface an actionable alert.
  */
 
 import React, { useEffect, useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, Radius } from '../constants';
-import { GoogleButton } from './GoogleButton';
 
 export const OAuthCollisionModal: React.FC = () => {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const [visible, setVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
@@ -34,118 +32,77 @@ export const OAuthCollisionModal: React.FC = () => {
     const errCode = params.get('error_code') || params.get('error');
     if (errCode !== 'identity_already_exists') return;
 
-    // Strip the hash so a refresh doesn't replay this prompt.
+    // Strip the hash so a refresh doesn't replay this branch.
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
     const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches
       || (window.navigator as any)?.standalone === true;
-    console.log('[OAuth] collision detected; standalone PWA?', isStandalone);
-    setVisible(true);
+    console.log('[OAuth] collision → auto-switching to existing profile; standalone PWA?', isStandalone);
+    setSwitching(true);
+
+    void (async () => {
+      try {
+        const { signOut, signInWithGoogle, clearLocalGuestState } =
+          await import('../lib/supabase/authService');
+        // Local-scope signOut → no server revoke → auth lock free immediately.
+        await signOut('local');
+        await clearLocalGuestState();
+        // Yield a tick so any in-flight onAuthStateChange listeners (display-name
+        // backfill etc.) finish on their own auth-lock turn.
+        await new Promise((r) => setTimeout(r, 50));
+        console.log('[OAuth] local state cleared, redirecting to Google…');
+        await signInWithGoogle();
+        // signInWithOAuth navigates the page away. If we're still here after
+        // 5 s the redirect was blocked (Chrome PWA standalone is the most
+        // likely culprit) — surface an actionable alert.
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            setSwitching(false);
+            console.warn('[OAuth] redirect did not navigate within 5s');
+            window.alert(
+              'Switch stalled. Try opening the site in your browser (not the installed app).',
+            );
+          }
+        }, 5000);
+      } catch (err) {
+        setSwitching(false);
+        console.error('[OAuth] switch failed:', err);
+        window.alert('Switch failed: ' + (err instanceof Error ? err.message : String(err)));
+      }
+    })();
   }, []);
 
-  const handleSwitch = async () => {
-    // CRITICAL: this onPress is the user gesture that authorises the
-    // upcoming cross-origin redirect inside signInWithGoogle. Do not
-    // wrap in setTimeout / window.confirm — that loses the gesture
-    // and Chrome PWA standalone will silently block the navigation.
-    setSwitching(true);
-    try {
-      const { signOut, signInWithGoogle, clearLocalGuestState } =
-        await import('../lib/supabase/authService');
-      // Local-scope signOut wipes the cached session without a server
-      // revoke round-trip — releases the auth lock immediately so the
-      // upcoming signInWithGoogle doesn't hit "Lock broken by another
-      // request with the 'steal' option".
-      await signOut('local');
-      await clearLocalGuestState();
-      // Yield one tick so any in-flight onAuthStateChange listeners
-      // (display-name backfill, etc.) finish and free their locks.
-      await new Promise((r) => setTimeout(r, 50));
-      console.log('[OAuth] local state cleared, redirecting to Google…');
-      await signInWithGoogle();
-      // signInWithOAuth navigates the page; if we're still here after
-      // a moment the redirect was blocked.
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          setSwitching(false);
-          console.warn('[OAuth] redirect did not navigate within 5s');
-          window.alert(
-            'Switch stalled. Try opening the site in your browser (not the installed app).',
-          );
-        }
-      }, 5000);
-    } catch (err) {
-      setSwitching(false);
-      console.error('[OAuth] switch failed:', err);
-      window.alert('Switch failed: ' + (err instanceof Error ? err.message : String(err)));
-    }
-  };
-
-  if (!visible) return null;
+  if (!switching) return null;
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={() => setVisible(false)}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
-            {t('auth.collisionTitle', 'Switch profile?')}
-          </Text>
-          <Text style={[styles.body, { color: colors.textSecondary }]}>
-            {t(
-              'auth.collisionBody',
-              'This Google account is already linked to a different Nägels profile. Switching will replace this device\'s guest data with the existing profile.',
-            )}
-          </Text>
-          <View style={styles.actions}>
-            <Pressable
-              style={[styles.secondaryBtn, { borderColor: colors.glassLight }]}
-              onPress={() => setVisible(false)}
-              testID="collision-cancel"
-            >
-              <Text style={[styles.secondaryBtnText, { color: colors.textMuted }]}>
-                {t('common.cancel', 'Cancel')}
-              </Text>
-            </Pressable>
-            <GoogleButton
-              onPress={handleSwitch}
-              loading={switching}
-              label={t('auth.collisionSwitch', 'Switch to existing profile')}
-              testID="collision-switch"
-              style={{ flex: 1 }}
-            />
-          </View>
-        </View>
+    <View style={[styles.overlay, { backgroundColor: colors.background + 'EE' }]} pointerEvents="auto">
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.title, { color: colors.textPrimary }]}>
+          {t('auth.switchingProfile', 'Switching profile…')}
+        </Text>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+  overlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.lg,
+    zIndex: 9999,
   },
-  sheet: {
+  card: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
     borderRadius: Radius.lg,
     borderWidth: 1,
-    padding: Spacing.lg,
+    alignItems: 'center',
     gap: Spacing.md,
   },
-  title: { fontSize: 18, fontWeight: '700' },
-  body: { fontSize: 14, lineHeight: 20 },
-  actions: { flexDirection: 'column', gap: Spacing.sm, marginTop: Spacing.sm },
-  secondaryBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    borderWidth: 1,
-    alignItems: 'center',
-    minHeight: 40,
-    justifyContent: 'center',
-  },
-  secondaryBtnText: { fontSize: 14, fontWeight: '500' },
+  title: { fontSize: 15, fontWeight: '600' },
 });
 
 export default OAuthCollisionModal;
