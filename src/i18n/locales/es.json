@@ -87,6 +87,7 @@
     "language": "Idioma",
     "placeBets": "Realiza tus apuestas",
     "confirmBet": "Confirmar apuesta",
+    "leaveBotGameConfirm": "¿Salir de esta partida? Tu progreso se perderá.",
     "bettingOrder": "Orden de apuestas",
     "chat": "Chat",
     "chatEmpty": "Di algo...",
