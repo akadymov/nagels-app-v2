@@ -270,16 +270,24 @@ export async function getLocalSession() {
 /**
  * Sign out the current user.
  * After sign-out, call getGuestSession() to create a fresh anonymous session.
+ *
+ * `scope`:
+ *   - 'global' (default): also revokes the session on the server (auth-lock
+ *     held longer; network round-trip).
+ *   - 'local' : only wipes local storage. Use when you're about to immediately
+ *     start a new auth flow on the same tick — the server-side revoke would
+ *     fight for the same lock and one of the operations gets killed with
+ *     "lock broken by another request with the 'steal' option".
  */
-export async function signOut(): Promise<void> {
+export async function signOut(scope: 'global' | 'local' = 'global'): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
   const supabase = getSupabaseClient();
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope });
   if (error) {
     console.error('[AuthService] Sign-out error:', error.message);
   } else {
-    console.log('[AuthService] Signed out');
+    console.log('[AuthService] Signed out (scope:', scope, ')');
   }
 }
 
