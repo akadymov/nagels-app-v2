@@ -303,7 +303,12 @@ export function onAuthStateChange(
   const supabase = getSupabaseClient();
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
     const user = session?.user ?? null;
-    const isGuest = !user || !!user.is_anonymous;
+    // is_anonymous can lag after linkIdentity completes (Supabase keeps the
+    // flag set on the local session object until the JWT is refreshed), so
+    // also treat the user as non-guest if they have ANY identity attached
+    // (Google / email / etc).
+    const hasIdentity = !!user && (user.identities?.length ?? 0) > 0;
+    const isGuest = !user || (!!user.is_anonymous && !hasIdentity);
     // Successful upgrade from anonymous → registered: reset auto-prompt
     // dismissal flags so a future sign-out → guest cycle starts fresh.
     if (user && !user.is_anonymous) {
@@ -319,10 +324,14 @@ export function onAuthStateChange(
       const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
       const current = (meta.display_name as string | undefined)?.trim();
       if (!current || current === 'Guest') {
+        // Prefer given_name so we end up with "Akhmed", not "Akhmed Kadymov".
+        // Fall back to first token of name/full_name when Google didn't
+        // provide a separate given_name (rare but possible).
+        const firstToken = (s: string | undefined) => s?.trim().split(/\s+/)[0];
         const fromOAuth =
-          (meta.full_name as string | undefined) ??
-          (meta.name as string | undefined) ??
-          (meta.given_name as string | undefined);
+          (meta.given_name as string | undefined)?.trim()
+          || firstToken(meta.name as string | undefined)
+          || firstToken(meta.full_name as string | undefined);
         if (fromOAuth && fromOAuth.trim()) {
           void (async () => {
             try {
