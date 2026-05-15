@@ -391,7 +391,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     const chipBg = isCommitted
       ? colors.success
       : isPending
-      ? Colors.activePlayerBorder   // yellow — same highlight as active player
+      ? colors.accent                 // fill stays accent; only border changes
       : isDimmed
       ? colors.bidChipDisabled
       : colors.accent;
@@ -399,13 +399,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     const chipBorder = isCommitted
       ? '#2AA555'
       : isPending
-      ? Colors.activePlayerBorder
+      ? Colors.activePlayerBorder     // yellow ring — same as active player / selected card
       : isDimmed
       ? 'transparent'
       : colors.accentSecondary;
-    const chipTextColor = isPending
-      ? '#1a1a1a'           // dark text on yellow for contrast
-      : isCommitted
+    const chipTextColor = isCommitted
       ? '#ffffff'
       : isDimmed
       ? colors.bidChipDisabledText
@@ -446,7 +444,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   if (!visible) return null;
 
   return (
-    <View
+    <Pressable
+      // Tap-outside dismisses a pending (highlighted-but-uncommitted) bet.
+      // Inner Pressables (chips, chat, settings, etc.) capture their own
+      // touches first via RN's responder system, so this fires only on
+      // truly empty space.
+      onPress={() => { if (pendingBet !== null) setPendingBet(null); }}
       style={[
         styles.overlay,
         { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' },
@@ -762,7 +765,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         )}
       </ScrollView>
 
-    </View>
+    </Pressable>
   );
 };
 
