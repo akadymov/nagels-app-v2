@@ -65,6 +65,12 @@ const BOT_NAMES_BY_LANG: Record<string, string[]> = {
   es: ['Farol', 'Cero', 'Triunfo', 'Temerario', 'Artero'],
 };
 
+// Module-level stable empty array — used as the fallback for Zustand
+// selectors that may return undefined. Inlining `?? []` creates a new
+// reference on every call (broken referential equality), which forces
+// extra renders under Zustand v5.
+const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
+
 // Convert "spades-9" → { id, suit, rank } for components that expect Card-like objects.
 function parseCard(s: string): { id: string; suit: any; rank: any } {
   const [suit, rankStr] = s.split('-');
@@ -94,7 +100,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const isSpectator = useRoomStore((s) => s.isSpectator);
-  const spectators = useRoomStore((s) => s.snapshot?.spectators ?? []);
+  // Read spectators off the already-subscribed snapshot. A separate
+  // selector with `?? []` would return a fresh array each call — under
+  // Zustand v5 that triggers extra renders / can compound into "Max
+  // update depth" loops when combined with other reactive paths.
+  const spectators = snapshot?.spectators ?? EMPTY_ARRAY;
   const [showSpectators, setShowSpectators] = useState(false);
 
   // Turn timeout watcher — any client posts request_timeout after 30s
