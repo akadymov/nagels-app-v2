@@ -199,6 +199,8 @@
     "shareLink": "Share spectator link",
     "shareMessage": "Watch our Nägels game:",
     "count": "{{count}} watching",
+    "count_one": "{{count}} watching",
+    "count_other": "{{count}} watching",
     "tooMany": "This room already has the maximum of 10 spectators.",
     "cannotJoinAsPlayerAndSpectator": "You're already a player in this room.",
     "roomNotFound": "Room not found.",

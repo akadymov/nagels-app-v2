@@ -1211,10 +1211,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           <Pressable
             testID="spectator-strip"
             onPress={handleSpectatorLeave}
-            style={[styles.spectatorStrip, { backgroundColor: colors.glassLight, borderTopColor: colors.accent }]}
+            style={[styles.spectatorStrip, { backgroundColor: colors.accent + '22', borderTopColor: colors.accent }]}
             accessibilityLabel={t('spectator.youAreWatching')}
           >
-            <Text style={[styles.spectatorStripText, { color: colors.textPrimary }]}>
+            <Text style={[styles.spectatorStripText, { color: colors.accent }]}>
               👁 {t('spectator.youAreWatching')}
             </Text>
           </Pressable>
