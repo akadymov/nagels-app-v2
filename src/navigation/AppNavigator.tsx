@@ -68,7 +68,14 @@ const _initialHash = (Platform.OS === 'web' && typeof window !== 'undefined')
 const _initialPath = (Platform.OS === 'web' && typeof window !== 'undefined')
   ? window.location.pathname
   : '';
-const _cameFromEmailConfirmation = _initialHash.includes('access_token') && !_initialHash.includes('error') && !_initialHash.includes('type=recovery');
+// Only treat the redirect as an email-confirmation callback when Supabase
+// includes type=signup (or type=email_change) in the hash — Google / OAuth
+// callbacks land on the same redirect URL with access_token but no `type`,
+// and used to be misrouted to the EmailConfirmed screen.
+const _cameFromEmailConfirmation =
+  _initialHash.includes('access_token') &&
+  !_initialHash.includes('error') &&
+  (_initialHash.includes('type=signup') || _initialHash.includes('type=email_change'));
 const _cameFromPasswordReset = _initialHash.includes('access_token') && _initialHash.includes('type=recovery');
 const _initialJoinMatch = _initialPath.match(/^\/join\/([A-Z0-9]{4,8})/i);
 const _initialJoinCode = _initialJoinMatch ? _initialJoinMatch[1].toUpperCase() : null;
@@ -191,11 +198,16 @@ const RejoinGuard: React.FC = () => {
     }
 
     // Method 2: User has email_confirmed_at that is very recent (< 60 seconds)
+    // AND has no OAuth identity attached. Google sign-ups also set
+    // email_confirmed_at to "now", so without the OAuth check this fired
+    // for every fresh Google login and stole them away from the Lobby.
     if (user && user.email_confirmed_at) {
       const confirmedAt = new Date(user.email_confirmed_at).getTime();
       const now = Date.now();
-      const isRecent = (now - confirmedAt) < 60000; // within 1 minute
-      if (isRecent) {
+      const isRecent = (now - confirmedAt) < 60000;
+      const identities = user.identities ?? [];
+      const hasOAuthIdentity = identities.some((i: any) => i.provider !== 'email');
+      if (isRecent && !hasOAuthIdentity) {
         const { useSettingsStore } = require('../store/settingsStore');
         useSettingsStore.getState().resetGamesPlayed();
         navigation.navigate('EmailConfirmed');

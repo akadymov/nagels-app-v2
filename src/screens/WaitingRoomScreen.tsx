@@ -37,6 +37,9 @@ import { useChatStore } from '../store/chatStore';
 import { useSystemEventStore } from '../store/systemEventStore';
 import { ChatPanel } from '../components/ChatPanel';
 
+// Stable empty-array reference — see note in GameTableScreen.
+const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
+
 export interface WaitingRoomScreenProps {
   onGameStart: () => void;
   onLeave: () => void;
@@ -60,7 +63,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const connState = useRoomStore((s) => s.connState);
   const isSpectator = useRoomStore((s) => s.isSpectator);
-  const spectators = useRoomStore((s) => s.snapshot?.spectators ?? []);
+  const spectators = snapshot?.spectators ?? EMPTY_ARRAY;
 
   const room = snapshot?.room ?? null;
   const players = snapshot?.players ?? [];
