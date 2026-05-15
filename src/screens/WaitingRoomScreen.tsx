@@ -14,6 +14,7 @@ import {
   Pressable,
   ActivityIndicator,
   Share,
+  Switch,
   Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -153,6 +154,18 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       Alert.alert(title, body);
     }
   };
+
+  const handleToggleSkipOnes = useCallback(async (next: boolean) => {
+    if (!room?.id) return;
+    const r = await gameClient.setMinCardsPerHand(room.id, next ? 2 : 1);
+    if (!r.ok) {
+      console.warn('[WaitingRoom] setMinCardsPerHand failed', r.error);
+      showMessage('Error', `Couldn't update mode: ${r.error}`);
+      return;
+    }
+    // Refresh snapshot so the toggle reflects the new server state.
+    void gameClient.refreshSnapshot(room.id);
+  }, [room?.id]);
 
   const handleStartGame = useCallback(async () => {
     console.log('[WaitingRoom] start game pressed', { roomId: room?.id });
@@ -445,6 +458,15 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           </View>
         )}
 
+        {/* Read-only mode chip for non-hosts so everyone knows the rules. */}
+        {!isHost && (room?.min_cards_per_hand ?? 1) >= 2 && (
+          <View style={[styles.modeChip, { backgroundColor: colors.accent + '22', borderColor: colors.accent }]}>
+            <Text style={[styles.modeChipText, { color: colors.accent }]}>
+              {t('gameMode.skipOnes', 'Skip 1-card rounds')}
+            </Text>
+          </View>
+        )}
+
         {/* Action Buttons */}
         {isSpectator ? (
           <View testID="spectator-badge" style={styles.spectatorBadge}>
@@ -489,6 +511,23 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         ) : (
           // Host: Start Game
           <>
+            {/* Game-mode toggle: replace the two 1-card hands with 2-card
+                ones. Host-editable in waiting phase only. */}
+            <View style={[styles.modeRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]} testID="mode-skip-ones-row">
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>
+                  {t('gameMode.skipOnes', 'Skip 1-card rounds')}
+                </Text>
+                <Text style={[styles.modeHint, { color: colors.textMuted }]}>
+                  {t('gameMode.skipOnesHint', 'Middle of the ladder stays at 2 cards')}
+                </Text>
+              </View>
+              <Switch
+                value={(room?.min_cards_per_hand ?? 1) >= 2}
+                onValueChange={handleToggleSkipOnes}
+                testID="switch-skip-ones"
+              />
+            </View>
             <GlassButton
               title={t('multiplayer.startGame')}
               onPress={handleStartGame}
@@ -746,6 +785,26 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: Spacing.md,
   },
+  modeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    marginBottom: Spacing.md,
+  },
+  modeLabel: { fontSize: 15, fontWeight: '600' },
+  modeHint:  { fontSize: 12, marginTop: 2 },
+  modeChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    marginBottom: Spacing.sm,
+  },
+  modeChipText: { fontSize: 12, fontWeight: '600' },
   leaveButton: {
     padding: Spacing.md,
     alignItems: 'center',

@@ -19,7 +19,7 @@ export async function startGame(
 ): Promise<ActionResult> {
   const { data: room } = await svc
     .from('rooms')
-    .select('id, host_session_id, phase, player_count, max_cards, version')
+    .select('id, host_session_id, phase, player_count, max_cards, min_cards_per_hand, version')
     .eq('id', action.room_id)
     .maybeSingle();
   if (!room) return { ok: false, error: 'unknown_room', state: emptySnapshot(), version: 0 };
@@ -68,7 +68,8 @@ export async function startGame(
   }
 
   const handNumber = 1;
-  const cardsPerPlayer = getHandCards(handNumber, safeMaxCards);
+  const minCardsPerHand = (room as { min_cards_per_hand?: number }).min_cards_per_hand ?? 1;
+  const cardsPerPlayer = getHandCards(handNumber, safeMaxCards, minCardsPerHand);
   const trumpSuit = getTrumpForHand(handNumber);
   const startingSeat = 0;
   const seed = crypto.randomUUID();

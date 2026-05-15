@@ -26,7 +26,7 @@ export async function continueHand(
   }
 
   const { data: room } = await svc.from('rooms')
-    .select('id, max_cards, player_count, version').eq('id', action.room_id).single();
+    .select('id, max_cards, min_cards_per_hand, player_count, version').eq('id', action.room_id).single();
 
   await svc.from('hands').update({ phase: 'closed' }).eq('id', hand.id);
 
@@ -47,7 +47,8 @@ export async function continueHand(
   }
 
   const nextNum = hand.hand_number + 1;
-  const cardsPerPlayer = getHandCards(nextNum, room.max_cards);
+  const minCardsPerHand = (room as { min_cards_per_hand?: number }).min_cards_per_hand ?? 1;
+  const cardsPerPlayer = getHandCards(nextNum, room.max_cards, minCardsPerHand);
   const trumpSuit = getTrumpForHand(nextNum);
   const startingSeat = (nextNum - 1) % room.player_count;
   const seed = crypto.randomUUID();
