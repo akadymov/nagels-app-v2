@@ -332,7 +332,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('multiplayer.playersInRoom', { count: playerCount, max: room.player_count })}
             {spectators.length > 0 && (
-              <Text style={[styles.spectatorCount, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.spectatorCount, { color: colors.textSecondary }]}
+                testID="spectator-count"
+              >
                 {`  ·  👁 ${spectators.length}`}
               </Text>
             )}
@@ -520,12 +523,24 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       <ChatPanel
         visible={showChat}
         onClose={() => setShowChat(false)}
-        sender={myPlayer ? {
-          sessionId: myPlayer.session_id,
-          displayName: myPlayer.display_name,
-          avatar: (myPlayer as any).avatar ?? null,
-          avatarColor: (myPlayer as any).avatar_color ?? null,
-        } : null}
+        sender={(() => {
+          if (myPlayer) return {
+            sessionId: myPlayer.session_id,
+            displayName: myPlayer.display_name,
+            avatar: (myPlayer as any).avatar ?? null,
+            avatarColor: (myPlayer as any).avatar_color ?? null,
+          };
+          if (isSpectator && myPlayerId) {
+            const sp = spectators.find((s: any) => s.session_id === myPlayerId);
+            if (sp) return {
+              sessionId: sp.session_id,
+              displayName: sp.display_name,
+              avatar: (sp as any).avatar ?? null,
+              avatarColor: (sp as any).avatar_color ?? null,
+            };
+          }
+          return null;
+        })()}
       />
     </SafeAreaView>
   );

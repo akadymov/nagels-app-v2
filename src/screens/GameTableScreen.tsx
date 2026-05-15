@@ -1238,15 +1238,19 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         {/* Chat panel — multiplayer only; SP has no peers to chat with. */}
         {isMultiplayer && (() => {
           const me = mpPlayers.find((p) => p.session_id === myPlayerId) ?? null;
+          const sp = !me && isSpectator && myPlayerId
+            ? spectators.find((s: any) => s.session_id === myPlayerId) ?? null
+            : null;
+          const senderSrc: any = me ?? sp;
           return (
             <ChatPanel
               visible={showChat}
               onClose={() => setShowChat(false)}
-              sender={me ? {
-                sessionId: me.session_id,
-                displayName: me.display_name,
-                avatar: (me as any).avatar ?? null,
-                avatarColor: (me as any).avatar_color ?? null,
+              sender={senderSrc ? {
+                sessionId: senderSrc.session_id,
+                displayName: senderSrc.display_name,
+                avatar: senderSrc.avatar ?? null,
+                avatarColor: senderSrc.avatar_color ?? null,
               } : null}
               testIdPrefix="chat"
             />
