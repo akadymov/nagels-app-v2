@@ -199,6 +199,8 @@
     "shareLink": "Compartir enlace de espectador",
     "shareMessage": "Mira nuestra partida de Nägels:",
     "count": "{{count}} observando",
+    "count_one": "{{count}} observando",
+    "count_other": "{{count}} observando",
     "tooMany": "La sala ya tiene el máximo de 10 espectadores.",
     "cannotJoinAsPlayerAndSpectator": "Ya eres jugador en esta sala.",
     "roomNotFound": "Sala no encontrada.",
