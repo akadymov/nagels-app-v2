@@ -529,7 +529,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon name="settings" color={colors.iconButtonText} size={20} />
+              <Icon name="settings" color={colors.accent} size={20} />
             </Pressable>
             {isMultiplayer && (
               <Pressable
@@ -549,7 +549,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               >
                 <Icon
                   name={isRefreshing ? 'hourglass' : 'refresh'}
-                  color={colors.iconButtonText}
+                  color={colors.accent}
                   size={20}
                 />
               </Pressable>
@@ -570,7 +570,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 testID="betting-leave"
                 accessibilityLabel={t('multiplayer.leaveAnyway')}
               >
-                <Icon name="door" color={colors.iconButtonText} size={20} />
+                <Icon name="door" color={colors.accent} size={20} />
               </Pressable>
             )}
             <Pressable
@@ -581,7 +581,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               ]}
               hitSlop={8}
             >
-              <Icon name="trophy" color={colors.iconButtonText} size={20} />
+              <Icon name="trophy" color={colors.accent} size={20} />
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
@@ -598,7 +598,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               testID="betting-btn-chat"
               hitSlop={8}
             >
-              <Icon name="chat" color={colors.iconButtonText} size={20} />
+              <Icon name="chat" color={colors.accent} size={20} />
               {chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,

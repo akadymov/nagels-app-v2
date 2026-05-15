@@ -944,7 +944,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-settings"
             >
-              <Icon name="settings" color={colors.iconButtonText} size={20} />
+              <Icon name="settings" color={colors.accent} size={20} />
             </Pressable>
             {/* Exit button: visible to the SP player (bot game) and to the
                 multiplayer host. Non-host MP players use ready/leave from the
@@ -963,7 +963,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 testID="game-btn-end"
                 accessibilityLabel={t('multiplayer.endGameConfirmTitle')}
               >
-                <Icon name="door" color={colors.iconButtonText} size={20} />
+                <Icon name="door" color={colors.accent} size={20} />
               </Pressable>
             )}
             {isMultiplayer && (
@@ -982,7 +982,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               >
                 <Icon
                   name={isRefreshing ? 'hourglass' : 'refresh'}
-                  color={colors.iconButtonText}
+                  color={colors.accent}
                   size={20}
                 />
               </Pressable>
@@ -998,7 +998,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               ]}
               testID="game-btn-last-trick"
             >
-              <Icon name="corner-up-left" color={colors.iconButtonText} size={20} />
+              <Icon name="corner-up-left" color={colors.accent} size={20} />
             </Pressable>
             <Pressable
               onPress={() => {
@@ -1008,7 +1008,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-scores"
             >
-              <Icon name="trophy" color={colors.iconButtonText} size={20} />
+              <Icon name="trophy" color={colors.accent} size={20} />
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
@@ -1020,7 +1020,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               ]}
               testID="game-btn-chat"
             >
-              <Icon name="chat" color={colors.iconButtonText} size={20} />
+              <Icon name="chat" color={colors.accent} size={20} />
               {isMultiplayer && chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
