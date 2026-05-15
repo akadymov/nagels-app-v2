@@ -381,34 +381,50 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
     const isAllowed = allowedBets.includes(bet);
     const isCommitted = myBet === bet;
     const isPending = pendingBet === bet;
-    const isSelected = isCommitted || isPending;
-    const isDisabled = !isSelected && (!isMyTurn || !isAllowed);
+    const hasOtherPending = pendingBet !== null && !isPending;
+
+    const isInteractable = isMyTurn && isAllowed && !isCommitted;
+    // While a pending bet is selected, dim every OTHER chip (allowed or not)
+    // so the choice reads at a glance.
+    const isDimmed = (!isInteractable && !isCommitted) || hasOtherPending;
 
     const chipBg = isCommitted
       ? colors.success
       : isPending
-      ? colors.accent
-      : isDisabled
+      ? Colors.activePlayerBorder   // yellow — same highlight as active player
+      : isDimmed
       ? colors.bidChipDisabled
       : colors.accent;
 
     const chipBorder = isCommitted
       ? '#2AA555'
       : isPending
-      ? colors.success
-      : isDisabled
+      ? Colors.activePlayerBorder
+      : isDimmed
       ? 'transparent'
       : colors.accentSecondary;
-    const chipTextColor = isSelected ? '#ffffff' : isDisabled ? colors.bidChipDisabledText : '#ffffff';
+    const chipTextColor = isPending
+      ? '#1a1a1a'           // dark text on yellow for contrast
+      : isCommitted
+      ? '#ffffff'
+      : isDimmed
+      ? colors.bidChipDisabledText
+      : '#ffffff';
 
     return (
       <Pressable
         key={bet}
         onPress={() => {
           if (!isAllowed || !isMyTurn) return;
+          if (isPending) {
+            // Second tap on the highlighted chip = confirm.
+            setPendingBet(null);
+            handleBet(bet);
+            return;
+          }
           setPendingBet(bet);
         }}
-        disabled={isDisabled}
+        disabled={!isInteractable}
         testID={`bet-btn-${bet}`}
       >
         <View
@@ -417,7 +433,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             {
               backgroundColor: chipBg,
               borderColor: chipBorder,
-              opacity: isDisabled ? 0.5 : 1,
+              opacity: isDimmed ? 0.5 : 1,
             },
           ]}
         >
@@ -710,33 +726,6 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
             <View style={styles.betButtons}>{allBets.map(renderBetChip)}</View>
 
-            {pendingBet !== null && (
-              <View style={styles.confirmRow}>
-                <Pressable
-                  style={[styles.confirmCancelBtn, { borderColor: colors.glassLight }]}
-                  onPress={() => setPendingBet(null)}
-                  testID="bet-cancel"
-                >
-                  <Text style={[styles.confirmCancelText, { color: colors.textMuted }]}>
-                    {t('common.cancel', 'Cancel')}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.confirmBtn, { backgroundColor: colors.success }]}
-                  onPress={() => {
-                    const bet = pendingBet;
-                    setPendingBet(null);
-                    handleBet(bet);
-                  }}
-                  testID="bet-confirm"
-                >
-                  <Text style={styles.confirmBtnText}>
-                    {t('game.confirmBet', 'Confirm bet')}: {pendingBet}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-
             {allowedBets.length === 0 && (
               <Text style={[styles.noBetsText, { color: colors.error }]}>No valid bets available</Text>
             )}
@@ -917,31 +906,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.md,
   },
-  confirmRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-    justifyContent: 'center',
-  },
-  confirmCancelBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmCancelText: { fontSize: 15, fontWeight: '500' },
-  confirmBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: Radius.md,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
   betChip: {
     width: 64,
     height: 64,
