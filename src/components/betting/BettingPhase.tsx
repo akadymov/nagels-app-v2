@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { CardHand } from '../cards';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
+import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
@@ -528,7 +529,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               ]}
               hitSlop={8}
             >
-              <Text style={styles.iconBtnEmoji}>⚙️</Text>
+              <Icon name="settings" color={colors.iconButtonText} size={20} />
             </Pressable>
             {isMultiplayer && (
               <Pressable
@@ -546,7 +547,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 hitSlop={8}
                 testID="betting-btn-sync"
               >
-                <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+                <Icon
+                  name={isRefreshing ? 'hourglass' : 'refresh'}
+                  color={colors.iconButtonText}
+                  size={20}
+                />
               </Pressable>
             )}
             {isMultiplayer && (
@@ -565,7 +570,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 testID="betting-leave"
                 accessibilityLabel={t('multiplayer.leaveAnyway')}
               >
-                <Text style={styles.iconBtnEmoji}>🚪</Text>
+                <Icon name="door" color={colors.iconButtonText} size={20} />
               </Pressable>
             )}
             <Pressable
@@ -576,7 +581,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               ]}
               hitSlop={8}
             >
-              <Text style={styles.iconBtnEmoji}>🏆</Text>
+              <Icon name="trophy" color={colors.iconButtonText} size={20} />
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
@@ -593,7 +598,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               testID="betting-btn-chat"
               hitSlop={8}
             >
-              <Text style={styles.iconBtnEmoji}>💬</Text>
+              <Icon name="chat" color={colors.iconButtonText} size={20} />
               {chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,

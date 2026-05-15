@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '../components/glass';
 import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
+import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
 import { ChatPanel } from '../components/ChatPanel';
 import { useChatStore } from '../store/chatStore';
@@ -174,6 +175,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   const isHost = isMultiplayer && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
   const handleEndGame = useCallback(async () => {
+    // Single-player bot game: ask once, then drop the local game state and exit.
+    if (!isMultiplayer) {
+      const msg = String(t('game.leaveBotGameConfirm', 'Leave this game? Your progress will be lost.'));
+      const accept = typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm(msg)
+        : true;
+      if (!accept) return;
+      try { sp.reset(); } catch {}
+      onExit?.();
+      return;
+    }
     if (!room?.id) return;
     if (useRoomStore.getState().isSpectator) {
       try {
@@ -187,7 +199,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       return;
     }
     await leaveWithConfirm(room.id, t, { isHost: true });
-  }, [room?.id, t, onExit]);
+  }, [room?.id, t, onExit, isMultiplayer, sp]);
 
   // Spectator leave — no confirm prompt, just detach and exit.
   const handleSpectatorLeave = useCallback(async () => {
@@ -932,9 +944,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-settings"
             >
-              <Text style={styles.iconBtnEmoji}>⚙️</Text>
+              <Icon name="settings" color={colors.iconButtonText} size={20} />
             </Pressable>
-            {isHost && (
+            {/* Exit button: visible to the SP player (bot game) and to the
+                multiplayer host. Non-host MP players use ready/leave from the
+                waiting flow; mid-game leave is gated to host per spec. */}
+            {(!isMultiplayer || isHost) && (
               <Pressable
                 onPress={handleEndGame}
                 style={({ pressed }) => [
@@ -948,7 +963,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 testID="game-btn-end"
                 accessibilityLabel={t('multiplayer.endGameConfirmTitle')}
               >
-                <Text style={styles.iconBtnEmoji}>🚪</Text>
+                <Icon name="door" color={colors.iconButtonText} size={20} />
               </Pressable>
             )}
             {isMultiplayer && (
@@ -965,7 +980,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 ]}
                 testID="game-btn-sync"
               >
-                <Text style={styles.iconBtnEmoji}>{isRefreshing ? '⏳' : '🔄'}</Text>
+                <Icon
+                  name={isRefreshing ? 'hourglass' : 'refresh'}
+                  color={colors.iconButtonText}
+                  size={20}
+                />
               </Pressable>
             )}
             <Pressable
@@ -979,7 +998,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               ]}
               testID="game-btn-last-trick"
             >
-              <Text style={styles.iconBtnEmoji}>↩</Text>
+              <Icon name="corner-up-left" color={colors.iconButtonText} size={20} />
             </Pressable>
             <Pressable
               onPress={() => {
@@ -989,7 +1008,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
               testID="game-btn-scores"
             >
-              <Text style={styles.iconBtnEmoji}>🏆</Text>
+              <Icon name="trophy" color={colors.iconButtonText} size={20} />
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
@@ -1001,7 +1020,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               ]}
               testID="game-btn-chat"
             >
-              <Text style={styles.iconBtnEmoji}>💬</Text>
+              <Icon name="chat" color={colors.iconButtonText} size={20} />
               {isMultiplayer && chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
