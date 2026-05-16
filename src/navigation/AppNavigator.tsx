@@ -28,7 +28,10 @@ import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
+import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
 import type { LobbyScreenProps } from '../screens/LobbyScreen';
+import type { WelcomeScreenProps } from '../screens/WelcomeScreen';
+import type { AuthScreenProps } from '../screens/AuthScreen';
 
 export type RootStackParamList = {
   Welcome: {
@@ -277,10 +280,28 @@ const loadingStyles = StyleSheet.create({
 // MAIN NAVIGATOR
 // ============================================================
 
-// Route wrapper that picks desktop vs mobile Lobby at runtime.
+// Route wrappers that pick desktop vs mobile at runtime.
 function LobbyRoute(props: LobbyScreenProps) {
   const isDesktop = useIsDesktop();
   return isDesktop ? <DesktopLobbyScreen {...props} /> : <LobbyScreen {...props} />;
+}
+
+function WelcomeRoute(props: WelcomeScreenProps & { authProps: AuthScreenProps }) {
+  const isDesktop = useIsDesktop();
+  const { authProps, ...welcomeProps } = props;
+  if (isDesktop) {
+    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} />;
+  }
+  return <WelcomeScreen {...welcomeProps} />;
+}
+
+function AuthRoute(props: AuthScreenProps & { welcomeProps: WelcomeScreenProps }) {
+  const isDesktop = useIsDesktop();
+  const { welcomeProps, ...authProps } = props;
+  if (isDesktop) {
+    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} />;
+  }
+  return <AuthScreen {...authProps} />;
 }
 
 export interface AppNavigatorProps {
@@ -450,10 +471,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                 {isLoading ? (
                   <AuthLoadingScreen />
                 ) : (
-                  <WelcomeScreen
+                  <WelcomeRoute
                     onQuickStart={() => (props.navigation as any).navigate('Primer')}
                     onAlreadyPlay={() => (props.navigation as any).navigate('Lobby')}
                     onSignIn={() => (props.navigation as any).navigate('Auth')}
+                    authProps={{
+                      onBack: () => (props.navigation as any).goBack(),
+                      onSuccess: () => (props.navigation as any).navigate('Lobby'),
+                    }}
                   />
                 )}
               </>
@@ -514,9 +539,14 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
 
             <Stack.Screen name="Auth">
               {(props) => (
-                <AuthScreen
+                <AuthRoute
                   onBack={() => (props.navigation as any).goBack()}
                   onSuccess={() => (props.navigation as any).navigate('Lobby')}
+                  welcomeProps={{
+                    onQuickStart: () => (props.navigation as any).navigate('Primer'),
+                    onAlreadyPlay: () => (props.navigation as any).navigate('Lobby'),
+                    onSignIn: () => {},
+                  }}
                 />
               )}
             </Stack.Screen>
