@@ -70,8 +70,7 @@ module.exports = {
     video: 'retain-on-failure',
   },
   projects: [
-    // Phase 1 ships with just the e2e project. smoke / scenario
-    // projects are added in Phase 4 / Phase 5.
-    { name: 'e2e', testDir: './tests/e2e' },
+    { name: 'e2e',      testDir: './tests/e2e' },
+    { name: 'scenario', testDir: './tests/scenario' },
   ],
 };
