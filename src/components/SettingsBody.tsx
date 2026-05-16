@@ -29,7 +29,7 @@ import { useNavigation } from '@react-navigation/native';
 import i18n from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
-import { isStandalone } from '../lib/pwaInstall';
+import { isStandalone, isMobileWeb } from '../lib/pwaInstall';
 
 export interface SettingsBodyProps {
   onClose: () => void;
@@ -78,6 +78,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
   const push = usePushSubscribe();
   const [showPwaModal, setShowPwaModal] = useState(false);
   const pwaInstalled = isStandalone();
+  // Only surface "Install App" on mobile-web browsers — desktop browsers
+  // can't meaningfully install a PWA the same way and the prompt is
+  // confusing in that context.
+  const pwaPromptApplies = !pwaInstalled && isMobileWeb();
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(user?.user_metadata?.avatar || null);
@@ -464,7 +468,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
         </View>
 
         {/* === INSTALL APP === */}
-        {!pwaInstalled && (
+        {pwaPromptApplies && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               {t('pwa.settingsTitle')}
