@@ -106,12 +106,15 @@ export async function createRoom(
   // Fire-and-forget Telegram notification. notifyNewRoom never throws —
   // a bad token, missing chat id, or TG outage cannot block room creation.
   // Awaited only so the AbortController inside sendTelegram has time to
-  // run before the edge-function request context is torn down.
-  await notifyNewRoom({
-    hostName: actor.display_name,
-    roomCode: inserted.code,
-    appOrigin: Deno.env.get('PUBLIC_APP_ORIGIN') ?? 'https://nigels.online',
-  });
+  // run before the edge-function request context is torn down. Tests
+  // (and future silent-room features) pass silent: true to bypass.
+  if (shouldSendRoomNotification(action)) {
+    await notifyNewRoom({
+      hostName: actor.display_name,
+      roomCode: inserted.code,
+      appOrigin: Deno.env.get('PUBLIC_APP_ORIGIN') ?? 'https://nigels.online',
+    });
+  }
 
   return { ok: true, state: snapshot, version: inserted.version + 1 };
 }
