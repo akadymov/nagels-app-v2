@@ -39,12 +39,14 @@ module.exports = {
   // applies to every project. `testMatch` widens to .ts so future
   // phase specs need no further config.
   testMatch: '**/*.spec.{js,ts}',
-  // A full Hard-bot game in headless mode runs ~13-14 of 20 hands in
-  // 12 minutes on a 24 GB Apple Silicon laptop. 20 minutes leaves
-  // headroom for the full game to complete. Stalls are caught earlier
-  // by the 60s in-spec watchdog (see sp-game.spec.js), so this is the
-  // last-resort backstop rather than the primary fail signal.
-  timeout: 20 * 60 * 1000,
+  // Headed runs against the manual :8081 dev server finish in
+  // ~13-14 min. Headless runs against the LOCAL_SUPABASE=1 stack
+  // (extra Postgres/Auth/Realtime hops + bundler cold start) reach
+  // Hand 20/20 but can need ~22-25 min. 30 minutes covers both modes
+  // with headroom. Stalls are caught earlier by the 60s in-spec
+  // watchdog (see sp-game.spec.js), so this is the last-resort
+  // backstop rather than the primary fail signal.
+  timeout: 30 * 60 * 1000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   retries: 0,
