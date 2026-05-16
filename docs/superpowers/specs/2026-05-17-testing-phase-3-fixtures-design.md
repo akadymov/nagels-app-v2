@@ -1,80 +1,61 @@
 # Testing strategy — Phase 3 (Fixtures + POC scenario) Design
 
-> **Revision note (2026-05-17):** First draft assumed Multiplayer-with-bots via Supabase edge functions. Code investigation revealed that (a) SP mode is entirely client-side via Zustand (no Supabase rooms involved at all) and (b) MP rooms have **no** bot support — `startGame` requires N real human sessions. The design below is revised to seed SP state by hydrating the Zustand `gameStore` directly. The earlier MP-edge-function approach is deferred to Phase 5/6 when multi-context fixtures land — those scenarios will need an MP-bot mechanism (still TBD whether that's "spawn N human contexts" or "add server-side bots") that's premature to design now.
+> **Revision history (2026-05-17):**
+> - Draft 1 assumed MP-with-bots via Supabase edge functions. Code reading showed MP rooms have no bot support and SP is entirely client-side via Zustand.
+> - Draft 2 pivoted to direct Zustand seeding via a `__DEV__`-gated `window.__nagels` exposure. Akula pushed back on adding production-code-for-tests; the speed win (~5s vs ~3min) didn't justify the new prod surface.
+> - Final design (this doc): UI-driven seed using the same click-through pattern as `sp-game.spec.js`. Zero production-code changes. ~3 min per scenario, well inside the 5-8 min scenario-tier budget.
 
 ## Context
 
 Phases 1 (foundation) and 2 (local Supabase + isolated Expo on `:8082`) shipped on `main` 2026-05-16. The four-tier suite (`unit` / `smoke` / `scenario` / `end-to-end`) defined in `2026-05-16-testing-strategy-design.md` now has the orchestration plumbing (`globalSetup` / `globalTeardown` / `LOCAL_SUPABASE=1`) and one working spec (`tests/e2e/sp-game.spec.js`, ~22 min full Hard-bot SP game).
 
-Phase 3 introduces the **scenario tier** as a proof-of-concept: one fixture helper and one spec that together prove the seed-state → assertion pattern works end-to-end for SP. Phase 5 will expand to more SP scenarios and start MP scenarios (which need a different seeding mechanism); Phase 6 expands `players.ts` for multi-context. Phase 3 stays deliberately small.
+Phase 3 introduces the **scenario tier** as a proof-of-concept: one fixture helper and one spec that together prove the seed-state → assertion pattern works end-to-end for SP. Phase 5 will expand to more SP scenarios; Phase 6 will tackle multi-context MP scenarios (different seeding mechanism, out of scope here). Phase 3 stays deliberately small.
 
 ## Problem
 
-The `e2e` tier (a full Hard-bot game) is slow (~22 min) and brittle for asserting specific in-game UI states like "no-trump hand 5 is dealt and shows the right badges". A spec that needs to assert mid-game UI either (a) plays through hands to reach the state — slow — or (b) seeds the state directly. The scenario tier exists for (b).
+The `e2e` tier (a full Hard-bot game) is slow (~22 min) and brittle for asserting specific in-game UI states like "no-trump hand 5 is dealt and shows the right badges". A spec that needs to assert mid-game UI either (a) plays through hands to reach the state — slow — or (b) seeds the state directly. Direct seeding is faster but requires either an MP-with-bots mechanism (doesn't exist) or a test-only hook into the SP Zustand store (rejected as prod-code-for-tests). **UI-driven fast-forward** uses the same code paths the e2e test already uses, just trimmed to "reach hand N, then assert". No new production surface.
 
-We have no fixture code today. The `sp-game.spec.js` helpers (`tryBet`, `tryPlay`, `dismissTipIfAny`) are inlined and not reusable from other specs.
+Helpers `tryBet`, `tryPlay`, `dismissTipIfAny`, `dismissPwaModalIfAny`, `tap`, `exists`, `sleep` live inline in `tests/e2e/sp-game.spec.js`. They are about to have a second caller. Extracting them to `tests/fixtures/actions.ts` now is on the natural path for Phase 3 — originally scheduled for Phase 6, brought forward because Phase 3 needs them.
 
 ## Goals
 
-- One working `seedScenario(page, 'notrump-hand-5')` helper that reaches hand 5 (no-trump variant) by driving the SP game store programmatically.
-- One working spec (`notrump-deal.spec.ts`) that uses the helper, asserts the dealt state, and runs in under 10 seconds.
-- A repeatable pattern Phase 5 can extend to other SP scenarios without architectural changes.
+- One working `seedScenario(page, 'notrump-hand-5')` helper that UI-drives the SP game to hand 5 (no-trump) and returns when the betting UI for that hand is visible.
+- One working spec (`notrump-deal.spec.ts`) that uses the helper, asserts the dealt state, runs in ~3-4 min.
+- Reusable `tests/fixtures/actions.ts` — `tryBet` / `tryPlay` / `dismissTipIfAny` / `dismissPwaModalIfAny` / `tap` / `exists` / `sleep` extracted from `sp-game.spec.js`. The existing e2e spec is refactored to import from there — behavior byte-identical.
 - A `scenario` Playwright project that runs independently of `e2e`.
 
 ## Non-goals
 
-- MP scenarios — Phase 5/6 (needs a separate seeding mechanism that doesn't exist today).
-- Multi-context Playwright helpers (`players.ts`, `actions.ts` extraction) — Phase 6.
+- MP scenarios — Phase 6 (needs a multi-context seeding mechanism that doesn't exist today).
+- Multi-context Playwright helpers (`players.ts`) — Phase 6.
 - Smoke tier — Phase 4.
 - CI integration — Phase 8.
-- Adding test-only fields to the Zustand store (no `__hydrateState` action). The store's existing public actions (`initGame`, `placeBet`, `playCard`, etc.) are the only entry points seedScenario uses.
-- Adding bot support to MP edge functions — deferred to whenever MP scenarios actually need it.
+- **Any production-code change.** No test hooks on `window`, no `EXPO_PUBLIC_TEST_HOOKS`, no test-only store actions. The only production touches considered are adding 1-2 testIDs to existing components if the assertions need stability beyond text matching — and only if text-based assertions prove flaky during implementation.
+- Optimizing scenario runtime below ~3 min. If Phase 5 produces 5+ scenarios and total scenario-tier time becomes painful, that's the trigger to revisit (e.g., add the store exposure then). Premature now.
 
 ## Architecture
 
 ```
 tests/
 ├── fixtures/
+│   ├── actions.ts             — tryBet / tryPlay / dismiss* / tap / exists / sleep (extracted)
 │   └── seed.ts                — seedScenario(page, scenario)
 ├── scenario/
 │   └── notrump-deal.spec.ts   — POC spec
-├── e2e/                       — unchanged
+├── e2e/
+│   └── sp-game.spec.js        — refactored to import from ../fixtures/actions
 └── playwright/                — unchanged
 ```
 
-```
-src/
-└── debug/
-    └── exposeStores.ts        — window.__nagels (test-mode only)
-```
+No `src/` changes. No `supabase/` changes. No `playwright.config.js` changes except one added project entry.
 
-Phase 3 fixtures are smaller than the first draft because the SP path has no Supabase room, no service-role client, and no cross-test data leakage to clean up. State lives per browser context and dies when the context closes.
+### Action helpers — `tests/fixtures/actions.ts`
 
-### Test-mode store exposure — `src/debug/exposeStores.ts`
+Copy verbatim from `sp-game.spec.js` (lines 30-179): `sleep`, `tap`, `exists`, `dismissTipIfAny`, `dismissPwaModalIfAny`, `tryBet`, `tryPlay`. Each becomes a named export. Type annotations stay JSDoc-style for now (file is `.ts` but used by both `.ts` and `.js` callers; ts-jest / Playwright's TS support handles both).
 
-```ts
-// Gated by Expo's __DEV__ AND EXPO_PUBLIC_TEST_HOOKS=1. Production
-// bundles strip __DEV__ blocks at build time, so this file
-// contributes zero bytes to a release build.
-import { useGameStore } from '../store/gameStore';
+One adjustment: `tryBet` currently reads a module-scoped `PLAYERS` constant. Extract that as a function parameter: `tryBet(page, playerCount)`.
 
-declare global {
-  interface Window {
-    __nagels?: {
-      gameStore: typeof useGameStore;
-    };
-  }
-}
-
-export function exposeStoresForTests(): void {
-  if (typeof window === 'undefined') return;
-  if (!__DEV__) return;
-  if (process.env.EXPO_PUBLIC_TEST_HOOKS !== '1') return;
-  window.__nagels = { gameStore: useGameStore };
-}
-```
-
-Called once from `App.tsx` (or the navigation root) at mount. The triple gate (`window` exists + `__DEV__` + env flag) means it only attaches when (a) running on web, (b) in a dev/test build, and (c) the test stack explicitly opts in. `globalSetup` already sets `EXPO_PUBLIC_TEST_HOOKS=1` in the Expo child env when `LOCAL_SUPABASE=1` is set.
+Nothing else changes in behaviour.
 
 ### State seeding — `tests/fixtures/seed.ts`
 
@@ -83,24 +64,29 @@ import type { Page } from '@playwright/test';
 
 export type SeedScenario = 'notrump-hand-5';
 
+export interface SeededGame {
+  playerCount: number;        // 4 (POC default)
+  startedHand: number;        // 5
+}
+
 export async function seedScenario(
   page: Page,
   scenario: SeedScenario,
-): Promise<void>;
+): Promise<SeededGame>;
 ```
 
 Behaviour for `scenario: 'notrump-hand-5'`:
 
-1. Navigate `page` to the lobby. Skip onboarding if the modal is present.
-2. `page.evaluate` waits up to 5s for `window.__nagels?.gameStore` to be defined (would fail loudly if the exposeStores hook didn't fire — better than a silent broken seed).
-3. `page.evaluate` calls `window.__nagels.gameStore.getState().initGame(players, 'player-0')` with 1 human + 3 bots (display names `'You'`, `'Bot A'`, `'Bot B'`, `'Bot C'`).
-4. Navigate `page` to the GameTable screen (in-app router; impl plan uses the same navigation hook the lobby's Quick Match button uses).
-5. `page.evaluate` runs a tight loop that for each turn either calls `placeBotBet()` / `playBotCard()` (when it's a bot's turn) or `placeBet(humanId, 0)` / `playCard(humanId, firstLegalCard)` (when it's the human's turn). Between phases it triggers `startBetting()` / `startPlaying()` as needed. Repeats until `getState().handNumber === 5 && getState().phase === 'betting'`. ~1-2s wall-clock.
-6. seedScenario returns. The page is now sitting on the GameTable screen with hand 5 dealt, NT badge visible, betting UI active.
+1. `page.goto(baseURL)` and wait for the lobby `[data-testid="btn-skip-to-lobby"]` (mirroring `sp-game.spec.js`'s pre-flight).
+2. Dismiss PWA modal + onboarding tips if present.
+3. `tap('player-count-4')`, `tap('difficulty-hard')`, `tap('btn-quick-match')`. Game starts on hand 1.
+4. Game-loop:
+   - Each tick (every ~600ms): `dismissTipIfAny`, then try `tryBet(page, 4)`, then try `tryPlay(page)`. Either is a no-op when not its turn; one of them ticks the game forward.
+   - Check the visible hand counter text against `Hand N/20`. When `N === 5` AND a betting button is visible AND an NT/no-trump indicator is visible, the seed has reached the target.
+   - Hard timeout: 5 min (rounded up from observed 22min/20hands = ~1.1min/hand × 4 hands ≈ 4.4 min, with headroom). Throws on timeout with a snapshot of visible testIDs for debugging.
+5. Returns `{ playerCount: 4, startedHand: 5 }`.
 
-Hard 90s timeout on the loop — if hand 5 isn't reached, throw an error with the last `getState()` snapshot for debugging.
-
-The first-legal choice is deterministic but doesn't necessarily produce interesting prior-hand outcomes — fine for `notrump-hand-5` which only asserts what's dealt. Future scenarios that care about prior hand state will pass richer parameters to `seedScenario` (Phase 5 problem).
+The 60-second in-spec watchdog from `sp-game.spec.js` ports over verbatim — if no progress (no testID change in `STUCK_S = 60` seconds), seed fails fast.
 
 ### Scenario spec — `tests/scenario/notrump-deal.spec.ts`
 
@@ -111,20 +97,22 @@ import { seedScenario } from '../fixtures/seed';
 test('notrump hand 5 deals with NT badge and betting UI', async ({ page }) => {
   await seedScenario(page, 'notrump-hand-5');
 
-  await expect(page.getByTestId('hand-counter')).toContainText('5/20');
-  await expect(page.getByTestId('trump-badge')).toContainText(/NT|NO TRUMP/);
-  await expect(page.getByTestId('bet-controls')).toBeVisible();
-  await expect(page.getByTestId('player-tile')).toHaveCount(4);
+  // Hand counter shows hand 5 of 20.
+  await expect(page.getByText(/Hand 5\s*\/\s*20/)).toBeVisible();
+
+  // Trump indicator shows no-trump for hand 5.
+  await expect(page.getByText(/NT|NO TRUMP/)).toBeVisible();
+
+  // Betting UI is active — at least one bet button rendered.
+  await expect(page.locator('[data-testid^="bet-btn-"]')).not.toHaveCount(0);
 });
 ```
 
-Per-test cleanup is implicit: closing the browser context tears down the in-memory Zustand store. No DB writes happened.
-
-The four testIDs above (`hand-counter`, `trump-badge`, `bet-controls`, `player-tile`) are added by the implementation plan if not already present.
+Assertions are text-based to avoid adding production testIDs. The implementation plan checks during step "verify assertions" whether the assertions are stable; only if a text-based assertion is flaky does the plan add a focused testID (e.g., `<View testID="hand-counter">` around the existing "Hand N/M" text node).
 
 ### Playwright config changes
 
-`playwright.config.js` adds a second project entry:
+`playwright.config.js` — one project added:
 
 ```js
 projects: [
@@ -133,7 +121,7 @@ projects: [
 ],
 ```
 
-Per-test timeout, baseURL, viewport, etc. stay as today (scenario specs share the 30-min cap; the actual ~5-10s run finishes long before).
+Per-test timeout, baseURL, viewport, all use settings — unchanged.
 
 ### npm scripts
 
@@ -143,62 +131,44 @@ Add to `package.json`:
 "test:scenario:local": "LOCAL_SUPABASE=1 HEADLESS=1 DEMO_URL=http://localhost:8082 playwright test --project=scenario"
 ```
 
-`LOCAL_SUPABASE=1` is kept for symmetry with `test:sp:local` — it ensures globalSetup runs and `EXPO_PUBLIC_TEST_HOOKS=1` is set in the Expo child. The local Supabase stack starts even though scenario specs don't hit it; Phase 5's MP scenarios will need it. Accepting the ~30s boot for symmetry is cheaper than maintaining two divergent flows.
-
-(A later optimization could make the supabase boot conditional on which project is selected, but that's not a Phase 3 problem.)
-
-### globalSetup change
-
-`tests/playwright/global-setup.ts` adds one line to the child env:
-
-```ts
-env: {
-  ...process.env,
-  EXPO_PUBLIC_SUPABASE_URL: status.apiUrl,
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: status.anonKey,
-  EXPO_PUBLIC_APP_URL: `http://localhost:${EXPO_PORT}`,
-  EXPO_PUBLIC_TEST_HOOKS: '1',   // NEW — enables exposeStoresForTests
-  CI: '1',
-},
-```
+`LOCAL_SUPABASE=1` is required because the scenario spec runs against the isolated `:8082` Expo (which globalSetup starts). The local Supabase stack itself isn't touched by the SP path, but it's part of the same boot sequence — accepting that boot cost for now is cheaper than maintaining a divergent code path. (Optimization deferred per Non-goals.)
 
 ## Rollout
 
-Single phase, single commit chain on `main` (matches Phase 1 / Phase 2 cadence). The implementation plan has ~8 tasks:
+Single phase, single commit chain on `main`. Implementation plan has ~7 tasks:
 
-1. `src/debug/exposeStores.ts` + wire into `App.tsx` (or root).
-2. Add `EXPO_PUBLIC_TEST_HOOKS=1` to `global-setup.ts` env.
-3. Add missing testIDs to GameTableScreen (hand-counter, trump-badge, bet-controls, player-tile if not present).
-4. Add `scenario` project to `playwright.config.js`.
-5. `tests/fixtures/seed.ts` — `seedScenario('notrump-hand-5')` with TDD against a jest unit test for any pure helpers; integration validation comes via the spec in step 6.
-6. `tests/scenario/notrump-deal.spec.ts`.
-7. `package.json` `test:scenario:local` script + `tests/README.md` updates.
-8. End-to-end verification: `npm run test:scenario:local` passes; `npm run test:sp:local` still passes; `npx jest` still passes.
+1. Extract helpers from `sp-game.spec.js` into `tests/fixtures/actions.ts`. Re-point `sp-game.spec.js` imports. Run `npm run test:sp:local` to confirm e2e still passes (or skip and verify in step 7).
+2. Write `tests/fixtures/seed.ts` with `seedScenario('notrump-hand-5')`.
+3. Add `scenario` project to `playwright.config.js`.
+4. Write `tests/scenario/notrump-deal.spec.ts`.
+5. Add `test:scenario:local` script to `package.json`.
+6. Update `tests/README.md` (flip scenario row to ✅, document the helper).
+7. End-to-end verification: `npm run test:scenario:local` passes (~3-4 min); `npm run test:sp:local` still passes (~22 min); `npx jest --no-coverage` still passes.
 
 ## Risks & mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| Store shape changes break `seedScenario` silently | seedScenario only calls public actions (`initGame`, `placeBet`, etc.). Type imports from `../../src/store/gameStore` so a renamed action fails to compile, not at runtime. |
-| `window.__nagels` doesn't appear (build stripped the hook) | seedScenario waits up to 5s then throws "test hooks not exposed — check EXPO_PUBLIC_TEST_HOOKS=1 and __DEV__". |
-| Bot strategy is non-deterministic — `placeBotBet` might pick different bets across runs, leading to flaky prior-hand state | seedScenario uses `placeBet(botId, 0)` for bots too (not `placeBotBet`). First-legal-everything for all four seats. Bot AI is exercised by the e2e tier, not the scenario tier. |
-| `EXPO_PUBLIC_TEST_HOOKS` accidentally leaks into a production build | Triple gate (`window` + `__DEV__` + env flag). `__DEV__` is `false` in `expo export --platform web` production bundles by definition. |
-| GameTable screen requires navigation context that's hard to set up programmatically | seedScenario uses the same in-app navigation hook as Quick Match — exact mechanism settled in Step 4 of the plan after reading `LobbyScreen.handleQuickMatch`. |
+| Refactor of `sp-game.spec.js` breaks the e2e run | Helpers extracted are pure functions with no behavioural changes. Step 1 ends with `npm run test:sp:local` smoke before continuing. |
+| Text-based assertion `/Hand 5\s*\/\s*20/` fails because the actual rendered text differs | Step 4 includes a manual visual check during implementation (`HEADLESS=0` once). If the text is rendered split across React nodes that text-match can't span, add one testID. |
+| 4 hands take > 5min on a memory-pressured machine, seed times out | Hard cap is configurable via env. Default 300s. Phase 2 timeout study showed bots play ~1min/hand on the local stack — well under cap. |
+| `tryBet` jitter occasionally picks an illegal bet that the UI rejects without surfacing why | Inherited from `sp-game.spec.js` which passes today. If observed in scenario context, the in-spec watchdog catches it as a 60s stall. |
+| The "wait for hand 5" check fires on a brief flash of `Hand 5/20` before betting UI mounts | Seed checks all three conditions (counter AND bet button AND NT indicator) before declaring success. Adds <300ms to the happy path. |
 
 ## Open questions resolved during brainstorming + investigation
 
 - **Scope** → strict POC: one SP scenario, one spec.
-- **Mode** → SP (Zustand-seeded); MP deferred to Phase 5/6.
-- **Seed mechanism** → hydrate Zustand store via `page.evaluate` against a `__DEV__`-gated `window.__nagels` exposure; call existing public store actions in a tight loop, no test-only store API.
-- **Cleanup** → none needed; in-memory state dies with the browser context.
-- **Speed** → ~5-10s total (vs. ~22min for e2e).
+- **Mode** → SP only (no Supabase touch). MP deferred to Phase 6.
+- **Seed mechanism** → UI-driven via existing action helpers. No prod surface added.
+- **Cleanup** → none needed; SP state is in-memory and dies with the browser context.
+- **Speed** → ~3-4 min total. Acceptable within scenario-tier budget. Optimization deferred until proven necessary.
+- **Helper extraction timing** → brought forward from Phase 6 to Phase 3 because Phase 3 is the second caller.
 
 ## References
 
 - `docs/superpowers/specs/2026-05-16-testing-strategy-design.md` — overall design.
 - `docs/superpowers/plans/2026-05-16-testing-phase-1-foundation.md` — Phase 1 plan (shipped).
 - `docs/superpowers/plans/2026-05-16-testing-phase-2-local-supabase.md` — Phase 2 plan (shipped).
-- `src/store/gameStore.ts:182` — `useGameStore` (Zustand store being seeded).
-- `src/screens/GameTableScreen.tsx` — where testIDs land.
-- `src/screens/LobbyScreen.tsx:166` — `handleQuickMatch` (navigation path to GameTable).
-- `tests/playwright/global-setup.ts` — env injection point.
+- `tests/e2e/sp-game.spec.js:30-179` — helpers being extracted.
+- `tests/e2e/sp-game.spec.js:214-330` — game-loop pattern seedScenario mirrors.
+- `tests/playwright/global-setup.ts` — runs unchanged; seed doesn't need any new env vars.
