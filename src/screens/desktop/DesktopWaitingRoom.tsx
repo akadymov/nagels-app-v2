@@ -37,8 +37,10 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={styles.left}>
-        <WaitingRoomScreen {...props} hideChat />
+      <View style={styles.leftWrap}>
+        <View style={styles.left}>
+          <WaitingRoomScreen {...props} hideChat />
+        </View>
       </View>
       <View
         style={[
@@ -60,7 +62,12 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
-  left: { flex: 1, minWidth: 0 },
+  // Wrap that fills the space, then a centered inner column capped
+  // at ~720. The waiting room is a vertical list (code, players,
+  // toggle, start) — wider than that just adds whitespace on the
+  // sides without helping legibility.
+  leftWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
+  left: { flex: 1, width: '100%', maxWidth: 720 },
   chat: {
     width: 360,
     margin: Spacing.md,

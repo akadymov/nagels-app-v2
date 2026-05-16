@@ -17,8 +17,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
 import { Spacing, Radius } from '../constants';
-import { LanguageSwitcher } from './LanguageSwitcher';
 import { useAuthStore } from '../store/authStore';
+import { languages, type LanguageCode } from '../i18n';
 
 const SUITS: Array<{ glyph: string; color: string }> = [
   { glyph: '♠', color: '#FFFFFF' },
@@ -35,10 +35,17 @@ export interface DesktopWelcomePaneProps {
 export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
   onQuickStart, onAlreadyPlay,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const { user, isGuest } = useAuthStore();
   const isLoggedIn = !!user && !isGuest && !!user.email;
+  const currentLang = i18n.language as LanguageCode;
+  const changeLanguage = (code: LanguageCode) => {
+    void i18n.changeLanguage(code);
+    if (typeof window !== 'undefined') {
+      try { window.localStorage.setItem('@nagels_language', code); } catch {}
+    }
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.accent }]}>
@@ -86,9 +93,27 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           </Text>
         </Pressable>
 
-        {/* Language switcher pinned at the bottom */}
-        <View style={styles.langWrap}>
-          <LanguageSwitcher />
+        {/* Language switcher — subtle inline text links on the accent
+            panel; deliberately understated so it doesn't compete with
+            the brand and CTAs. */}
+        <View style={styles.langRow}>
+          {(Object.keys(languages) as LanguageCode[]).map((code, i) => {
+            const isActive = code === currentLang;
+            return (
+              <React.Fragment key={code}>
+                {i > 0 && <Text style={styles.langDot}>·</Text>}
+                <Pressable
+                  onPress={() => changeLanguage(code)}
+                  hitSlop={8}
+                  testID={`desktop-lang-${code}`}
+                >
+                  <Text style={[styles.langLink, isActive && styles.langLinkActive]}>
+                    {code.toUpperCase()}
+                  </Text>
+                </Pressable>
+              </React.Fragment>
+            );
+          })}
         </View>
       </View>
     </View>
@@ -154,7 +179,25 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.6)',
   },
   secondaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
-  langWrap: { marginTop: 28, alignSelf: 'flex-start' },
+  langRow: {
+    marginTop: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    alignSelf: 'flex-start',
+  },
+  langLink: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  langLinkActive: {
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
+    textDecorationStyle: 'solid',
+  },
+  langDot: { color: 'rgba(255, 255, 255, 0.4)', fontSize: 14 },
 });
 
 export default DesktopWelcomePane;
