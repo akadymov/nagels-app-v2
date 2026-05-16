@@ -6,7 +6,7 @@ export type ActionKind =
   | 'restart_game';
 
 export type Action =
-  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string }
+  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string; silent?: boolean }
   | { kind: 'join_room';   code: string; display_name: string }
   | { kind: 'leave_room';  room_id: string; target_session_id?: string }
   | { kind: 'ready';       room_id: string; is_ready: boolean; target_session_id?: string }
