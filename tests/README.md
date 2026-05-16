@@ -28,7 +28,7 @@ Plus:
   - Against an isolated `:8082` Expo + local supabase: `npm run test:sp:local`
 - ✅ `tests/scenario/notrump-deal.spec.ts` — POC for the scenario tier.
   UI-drives SP to hand 5 (no-trump) and asserts the dealt state.
-  - `npm run test:scenario:local` (~3-4 min)
+  - `npm run test:scenario:local` (~6 min spec + ~1 min supabase boot)
 - ✅ Reusable click helpers in `tests/fixtures/actions.ts`
   (`tryBet`, `tryPlay`, `dismissTipIfAny`, `dismissPwaModalIfAny`, `tap`, …).
 - ✅ Scenario seeding helper `tests/fixtures/seed.ts` (`seedScenario`).
