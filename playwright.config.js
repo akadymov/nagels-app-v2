@@ -15,7 +15,15 @@
  * are set by hand so we still emulate a mobile context.
  */
 
-const BASE = process.env.DEMO_URL || 'http://localhost:8081';
+// Three modes:
+//   - LOCAL_SUPABASE=1  → :8082 (isolated test stack, booted by globalSetup)
+//   - DEMO_URL=…        → arbitrary host (used by test:sp:prod)
+//   - default           → :8081 (manual dev server, legacy npm run test:sp)
+const BASE =
+  process.env.DEMO_URL ||
+  (process.env.LOCAL_SUPABASE === '1'
+    ? 'http://localhost:8082'
+    : 'http://localhost:8081');
 const HEADLESS = process.env.HEADLESS === '1';
 // Per-action slow-mo so a human watcher can follow what the test is
 // doing. 80 ms matches the multiplayer demo's default. Override with
@@ -24,6 +32,9 @@ const SLOW_MO = parseInt(process.env.SLOW_MO ?? '80', 10);
 
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 module.exports = {
+  // Phase 2: wired in but no-ops unless LOCAL_SUPABASE=1.
+  globalSetup: require.resolve('./tests/playwright/global-setup'),
+  globalTeardown: require.resolve('./tests/playwright/global-teardown'),
   // Per-project `testDir` lives below. The top-level `testMatch`
   // applies to every project. `testMatch` widens to .ts so future
   // phase specs need no further config.
