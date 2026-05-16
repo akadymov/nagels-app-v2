@@ -32,13 +32,16 @@ type AuthMode = 'form' | 'forgotPassword' | 'resetSent';
 export interface AuthScreenProps {
   onBack: () => void;
   onSuccess: () => void;
+  /** Desktop wrappers render both Welcome and Auth side by side —
+   *  the back arrow has nowhere to take the user. Hide it. */
+  hideBack?: boolean;
 }
 
 // Random avatar colors
 const AVATAR_COLORS = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA', '#CC6633', '#6666CC'];
 const randomColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess, hideBack = false }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { isGuest, user } = useAuthStore();
@@ -290,10 +293,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, onSuccess }) => 
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          {/* Back button */}
-          <Pressable onPress={onBack} hitSlop={12} style={styles.backBtn}>
-            <Text style={[styles.backText, { color: colors.accent }]}>←</Text>
-          </Pressable>
+          {/* Back button — hidden when caller is a desktop split layout. */}
+          {!hideBack && (
+            <Pressable onPress={onBack} hitSlop={12} style={styles.backBtn}>
+              <Text style={[styles.backText, { color: colors.accent }]}>←</Text>
+            </Pressable>
+          )}
 
           {/* Logo */}
           <View style={styles.logoWrap}>

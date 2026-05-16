@@ -32,7 +32,7 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth }) => {
       </View>
       <View style={[styles.authPane, { backgroundColor: colors.background, borderColor: colors.glassLight }]}>
         <View style={styles.authInner}>
-          <AuthScreen {...auth} />
+          <AuthScreen {...auth} hideBack />
         </View>
       </View>
     </View>
