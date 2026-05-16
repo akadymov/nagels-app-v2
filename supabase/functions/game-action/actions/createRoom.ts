@@ -23,6 +23,18 @@ function emptySnapshot(): RoomSnapshot {
   };
 }
 
+/**
+ * Decide whether room creation should fire the Telegram new-room
+ * notification. Off when the caller passes silent: true (tests, future
+ * silent-room features). Off-by-default for new callers; default
+ * behavior (no flag set) stays the same as before — notification on.
+ */
+export function shouldSendRoomNotification(
+  action: Extract<Action, { kind: 'create_room' }>,
+): boolean {
+  return action.silent !== true;
+}
+
 export async function createRoom(
   svc: SupabaseClient,
   actor: ActorContext,
