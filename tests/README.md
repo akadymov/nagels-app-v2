@@ -20,23 +20,28 @@ Plus:
 - `src/__tests__/`                          — frontend unit (Jest)
 - `supabase/functions/_shared/__tests__/`   — edge-function unit (Deno)
 
-## Status (Phase 2 — Local Supabase + isolated Expo)
+## Status (Phase 3 — Fixtures + POC scenario)
 
 - ✅ `tests/e2e/sp-game.spec.js` — single-player vs Hard bots, full game
   to scoreboard.
   - Against the manual `:8081` dev server: `npm run test:sp`
   - Against an isolated `:8082` Expo + local supabase: `npm run test:sp:local`
+- ✅ `tests/scenario/notrump-deal.spec.ts` — POC for the scenario tier.
+  UI-drives SP to hand 5 (no-trump) and asserts the dealt state.
+  - `npm run test:scenario:local` (~3-4 min)
+- ✅ Reusable click helpers in `tests/fixtures/actions.ts`
+  (`tryBet`, `tryPlay`, `dismissTipIfAny`, `dismissPwaModalIfAny`, `tap`, …).
+- ✅ Scenario seeding helper `tests/fixtures/seed.ts` (`seedScenario`).
 - ✅ Edge-function unit tests: `cd supabase/functions && deno test --allow-all`
-- ✅ Local backend orchestration via `tests/playwright/global-setup.ts` +
-  `global-teardown.ts`. Activated by `LOCAL_SUPABASE=1`.
-- ⏳ Smoke / scenario / multi-context layers — Phase 3+.
+- ⏳ Smoke / additional scenarios / multi-context — Phase 4+.
 
 ## Running
 
 ```bash
-npm run test:sp           # SP e2e against manual :8081 dev server (headed)
-npm run test:sp:local     # SP e2e against isolated :8082 + local supabase (headless)
-npm run test:sp:prod      # same but against $APP_URL (production)
+npm run test:sp              # SP e2e against manual :8081 dev server (headed)
+npm run test:sp:local        # SP e2e against isolated :8082 + local supabase (headless)
+npm run test:scenario:local  # Scenario tier (notrump-deal POC) against :8082 (headless)
+npm run test:sp:prod         # SP e2e against $APP_URL (production)
 ```
 
 Edge-function tests (run separately for now — orchestrator in Phase 7):
@@ -82,6 +87,28 @@ accidentally hit production.
 The old numbered migrations (001-029) that don't apply cleanly from
 an empty DB live in `supabase/migrations.legacy/` for historical
 reference. They're not picked up by `db reset`.
+
+## Scenario tier (`tests/scenario/`)
+
+POC scenario: `notrump-deal.spec.ts`. UI-drives SP to a specific
+in-game state via `seedScenario(page, scenario)` from
+`tests/fixtures/seed.ts`, then makes assertions.
+
+**Why UI-driven and not direct state injection?** The SP game state
+lives in a module-scoped Zustand store with no exposed test handle.
+Adding a `__DEV__`-gated `window` exposure was considered and
+rejected — the speed win (~5s vs ~3min) didn't justify a new
+production-code surface for tests. If Phase 5 produces enough
+scenarios that total runtime becomes painful, revisit.
+
+**Adding a new scenario:**
+1. Add a string to the `SeedScenario` union in `tests/fixtures/seed.ts`.
+2. Branch on it in `seedScenario` — what to click, when to stop.
+3. Write a new `tests/scenario/<name>.spec.ts` that calls it.
+4. The `scenario` project picks it up automatically.
+
+**Shared click helpers** live in `tests/fixtures/actions.ts`. Reuse
+them — don't re-extract from `sp-game.spec.js`.
 
 ## Conventions
 
