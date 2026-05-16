@@ -956,13 +956,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
-                desktopUI?.leftPanel === 'settings' && { borderColor: colors.accent, borderWidth: 2 },
+                desktopUI?.leftPanel === 'settings' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="game-btn-settings"
             >
               <Icon
                 name="settings"
-                color={desktopUI?.leftPanel === 'settings' ? colors.accent : colors.iconButtonText}
+                color={desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
             </Pressable>
@@ -1017,13 +1017,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: vm.tricks.length === 0 ? 0.3 : 1 },
-                desktopUI?.leftPanel === 'lastTrick' && { borderColor: colors.accent, borderWidth: 2 },
+                desktopUI?.leftPanel === 'lastTrick' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="game-btn-last-trick"
             >
               <Icon
                 name="corner-up-left"
-                color={desktopUI?.leftPanel === 'lastTrick' ? colors.accent : colors.iconButtonText}
+                color={desktopUI?.leftPanel === 'lastTrick' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
             </Pressable>
@@ -1039,13 +1039,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
-                desktopUI?.leftPanel === 'scoreboard' && { borderColor: colors.accent, borderWidth: 2 },
+                desktopUI?.leftPanel === 'scoreboard' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="game-btn-scores"
             >
               <Icon
                 name="trophy"
-                color={desktopUI?.leftPanel === 'scoreboard' ? colors.accent : colors.iconButtonText}
+                color={desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
             </Pressable>
@@ -1060,13 +1060,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 !isMultiplayer && { opacity: 0.3 },
-                desktopUI?.chatVisible && isMultiplayer && { borderColor: colors.accent, borderWidth: 2 },
+                desktopUI?.chatVisible && isMultiplayer && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="game-btn-chat"
             >
               <Icon
                 name="chat"
-                color={desktopUI?.chatVisible && isMultiplayer ? colors.accent : colors.iconButtonText}
+                color={desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
               {isMultiplayer && chatUnread > 0 && (
