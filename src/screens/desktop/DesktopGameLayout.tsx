@@ -1,25 +1,36 @@
 /**
- * Desktop Game Table layout — Scoreboard | Center game | Chat.
+ * Desktop Game Table layout — toggleable-left | center game | chat.
  *
- * The center column mounts the existing GameTableScreen with hideChat=true
- * so its modal-mode ChatPanel doesn't double up against the inline-mode
- * one in the right side pane.
+ * The left side pane is a tab strip that switches between three views:
+ *   - Scoreboard (default): live snapshot scoreboard with per-hand
+ *     totals.
+ *   - Last trick: compact recap of the most recently closed trick.
+ *   - Settings: the same SettingsBody used elsewhere on desktop.
  *
- * The left side pane reads the room snapshot directly and renders a
- * compact live scoreboard (player, bet/won, total). Mobile keeps the
- * existing ScoreboardModal flow unchanged.
+ * Mobile keeps the existing modal flow (trophy / corner-up-left / gear
+ * buttons open dedicated overlays). On desktop those modals remain
+ * available too, but the always-visible left pane is the primary surface
+ * since real estate is plentiful.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
-import { useChatStore } from '../../store/chatStore';
 import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
+import { SettingsBody } from '../../components/SettingsBody';
+import { Icon, type IconName } from '../../components/Icon';
 
 type Props = GameTableScreenProps;
+type LeftPanel = 'scoreboard' | 'lastTrick' | 'settings';
+
+const TABS: Array<{ key: LeftPanel; icon: IconName; label: string }> = [
+  { key: 'scoreboard', icon: 'trophy',          label: 'Scores' },
+  { key: 'lastTrick',  icon: 'corner-up-left',  label: 'Last trick' },
+  { key: 'settings',   icon: 'settings',        label: 'Settings' },
+];
 
 export const DesktopGameLayout: React.FC<Props> = (props) => {
   const { colors } = useTheme();
@@ -32,9 +43,9 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   const history = snapshot?.score_history ?? [];
   const room = snapshot?.room ?? null;
   const hand = snapshot?.current_hand ?? null;
+  const lastClosedTrick = snapshot?.last_closed_trick ?? null;
 
-  // Sender for inline chat — mirror GameTable's own resolution
-  // (player slot, or spectator entry, whichever applies).
+  // Sender for inline chat.
   const me = players.find((p) => p.session_id === myPlayerId) ?? null;
   const spectatorMe = !me && isSpectator && myPlayerId
     ? (snapshot?.spectators ?? []).find((s: any) => s.session_id === myPlayerId) ?? null
@@ -47,7 +58,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     avatarColor: senderSrc.avatar_color ?? null,
   } : null;
 
-  // Aggregate totals from history
+  // Aggregate totals from history.
   const totals: Record<string, number> = {};
   for (const h of history) {
     for (const row of h.scores ?? []) {
@@ -55,8 +66,105 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     }
   }
 
+  const [leftPanel, setLeftPanel] = useState<LeftPanel>('scoreboard');
+
   const isMultiplayer = props.isMultiplayer ?? false;
-  const showSidePanes = isMultiplayer; // SP has no chat/scoreboard side panel value yet
+  const showSidePanes = isMultiplayer;
+
+  const renderScoreboard = () => (
+    <>
+      <View style={styles.scoreHeader}>
+        <Text style={[styles.scoreTitle, { color: colors.textPrimary }]}>Scoreboard</Text>
+        {hand?.hand_number != null && room?.max_cards != null && (
+          <Text style={[styles.scoreMeta, { color: colors.textMuted }]}>
+            Hand {hand.hand_number} / {room.max_cards * 2}
+          </Text>
+        )}
+      </View>
+      {hand?.cards_per_player != null && (
+        <Text style={[styles.scoreSub, { color: colors.textMuted }]}>
+          {hand.cards_per_player} card{hand.cards_per_player === 1 ? '' : 's'} · {hand.trump_suit} trump
+        </Text>
+      )}
+      <ScrollView style={styles.scoreList} showsVerticalScrollIndicator={false}>
+        {players.map((p) => {
+          const score = handScores.find((s) => s.session_id === p.session_id);
+          const total = totals[p.session_id] ?? 0;
+          const isMe = p.session_id === myPlayerId;
+          return (
+            <View
+              key={p.session_id}
+              style={[
+                styles.scoreRow,
+                {
+                  backgroundColor: isMe ? colors.surfaceSecondary : 'transparent',
+                  borderColor: colors.glassLight,
+                },
+              ]}
+            >
+              <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
+                {p.display_name}{isMe ? ' (you)' : ''}
+              </Text>
+              <Text style={[styles.scoreCell, { color: colors.textMuted }]}>
+                Bet {score?.bet ?? '–'} · Won {score?.taken_tricks ?? 0}
+              </Text>
+              <Text style={[styles.scoreTotal, { color: colors.textPrimary }]}>{total}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </>
+  );
+
+  const renderLastTrick = () => {
+    const winner = lastClosedTrick?.winner_seat != null
+      ? players.find((p) => p.seat_index === lastClosedTrick.winner_seat) ?? null
+      : null;
+    return (
+      <View style={styles.lastTrickWrap}>
+        <Text style={[styles.scoreTitle, { color: colors.textPrimary, padding: Spacing.md }]}>
+          Last trick
+        </Text>
+        {!lastClosedTrick ? (
+          <Text style={[styles.scoreCell, { color: colors.textMuted, padding: Spacing.md }]}>
+            No tricks closed yet.
+          </Text>
+        ) : (
+          <>
+            <ScrollView contentContainerStyle={styles.lastTrickList}>
+              {(lastClosedTrick.cards ?? []).map((c, i) => {
+                const player = players.find((p) => p.seat_index === c.seat) ?? null;
+                const isWinner = lastClosedTrick.winner_seat === c.seat;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.lastTrickRow,
+                      {
+                        backgroundColor: isWinner ? colors.surfaceSecondary : 'transparent',
+                        borderColor: isWinner ? colors.highlight : colors.glassLight,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {player?.display_name ?? `Seat ${c.seat}`}
+                      {isWinner ? ' 👑' : ''}
+                    </Text>
+                    <Text style={[styles.cardGlyph, { color: colors.textPrimary }]}>{c.card}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+            {winner && (
+              <Text style={[styles.lastTrickFooter, { color: colors.success }]}>
+                {winner.display_name} won the trick
+              </Text>
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -68,50 +176,43 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          <View style={styles.scoreHeader}>
-            <Text style={[styles.scoreTitle, { color: colors.textPrimary }]}>Scoreboard</Text>
-            {hand?.hand_number != null && room?.max_cards != null && (
-              <Text style={[styles.scoreMeta, { color: colors.textMuted }]}>
-                Hand {hand.hand_number} / {room.max_cards * 2}
-              </Text>
-            )}
-          </View>
-          {hand?.cards_per_player != null && (
-            <Text style={[styles.scoreSub, { color: colors.textMuted }]}>
-              {hand.cards_per_player} card{hand.cards_per_player === 1 ? '' : 's'} · {hand.trump_suit} trump
-            </Text>
-          )}
-          <ScrollView style={styles.scoreList} showsVerticalScrollIndicator={false}>
-            {players.map((p) => {
-              const score = handScores.find((s) => s.session_id === p.session_id);
-              const total = totals[p.session_id] ?? 0;
-              const isMe = p.session_id === myPlayerId;
+          <View style={[styles.tabsRow, { borderBottomColor: colors.glassLight }]}>
+            {TABS.map((t) => {
+              const active = t.key === leftPanel;
               return (
-                <View
-                  key={p.session_id}
+                <Pressable
+                  key={t.key}
+                  onPress={() => setLeftPanel(t.key)}
                   style={[
-                    styles.scoreRow,
-                    {
-                      backgroundColor: isMe ? colors.surfaceSecondary : 'transparent',
-                      borderColor: colors.glassLight,
-                    },
+                    styles.tab,
+                    active && { backgroundColor: colors.accent + '14' },
+                    active && { borderBottomColor: colors.accent },
                   ]}
+                  testID={`desktop-left-tab-${t.key}`}
                 >
+                  <Icon
+                    name={t.icon}
+                    color={active ? colors.accent : colors.iconButtonText}
+                    size={18}
+                  />
                   <Text
-                    style={[styles.scoreName, { color: colors.textPrimary }]}
-                    numberOfLines={1}
+                    style={[
+                      styles.tabLabel,
+                      { color: active ? colors.accent : colors.textMuted },
+                    ]}
                   >
-                    {p.display_name}
-                    {isMe ? ' (you)' : ''}
+                    {t.label}
                   </Text>
-                  <Text style={[styles.scoreCell, { color: colors.textMuted }]}>
-                    Bet {score?.bet ?? '–'} · Won {score?.taken_tricks ?? 0}
-                  </Text>
-                  <Text style={[styles.scoreTotal, { color: colors.textPrimary }]}>{total}</Text>
-                </View>
+                </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
+
+          <View style={styles.leftBody}>
+            {leftPanel === 'scoreboard' && renderScoreboard()}
+            {leftPanel === 'lastTrick' && renderLastTrick()}
+            {leftPanel === 'settings' && <SettingsBody onClose={() => {}} />}
+          </View>
         </View>
       )}
 
@@ -144,10 +245,6 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
-  // Wrap that fills the available width between side panes, then a
-  // centered inner box capped at ~1200 so the table stays balanced on
-  // 21:9 ultrawides without dwarfing a 14" laptop. Below 1200 the
-  // inner box stretches to fill its parent (width: '100%').
   centerWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
   center: { flex: 1, width: '100%', maxWidth: 1200 },
   sidePane: {
@@ -159,6 +256,22 @@ const styles = StyleSheet.create({
   },
   leftPane: { marginRight: 0 },
   rightPane: { marginLeft: 0 },
+  tabsRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabLabel: { fontSize: 12, fontWeight: '600' },
+  leftBody: { flex: 1 },
   scoreHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -168,7 +281,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   scoreTitle: { fontSize: 18, fontWeight: '700' },
-  scoreMeta: { fontSize: 12, fontWeight: '500' },
+  scoreMeta: { fontSize: 12, fontWeight: '500', paddingRight: Spacing.md },
   scoreSub: { fontSize: 12, paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
   scoreList: { flex: 1, paddingHorizontal: Spacing.sm },
   scoreRow: {
@@ -184,11 +297,25 @@ const styles = StyleSheet.create({
   },
   scoreName: { flex: 1, fontSize: 13, fontWeight: '600' },
   scoreCell: { fontSize: 11, fontWeight: '500' },
-  scoreTotal: {
-    fontSize: 14,
+  scoreTotal: { fontSize: 14, fontWeight: '700', minWidth: 28, textAlign: 'right' },
+  lastTrickWrap: { flex: 1 },
+  lastTrickList: { padding: Spacing.sm, gap: 6 },
+  lastTrickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  cardGlyph: { fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+  lastTrickFooter: {
+    fontSize: 12,
     fontWeight: '700',
-    minWidth: 28,
-    textAlign: 'right',
+    textAlign: 'center',
+    paddingVertical: Spacing.sm,
   },
 });
 

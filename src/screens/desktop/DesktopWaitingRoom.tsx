@@ -1,10 +1,11 @@
 /**
- * Desktop Waiting Room — players list / room code / ready-start
- * on the left, inline chat panel on the right.
+ * Desktop Waiting Room — three-column layout:
+ *   Settings/Profile (left, ~360) | WaitingRoomScreen (center, ~720) | Chat (right, ~360)
  *
- * Same pattern as DesktopGameLayout: the existing WaitingRoomScreen
- * runs in the left column with hideChat=true so its modal-mode
- * ChatPanel doesn't double up against the side-pane inline one.
+ * The left pane surfaces the same SettingsBody used in DesktopLobbyScreen,
+ * so the user can manage their nickname / avatar / Google linking /
+ * theme / language while waiting for everyone to ready up. Hidden on
+ * mobile via the route-level branching in AppNavigator.
  */
 
 import React from 'react';
@@ -14,6 +15,7 @@ import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
 import { WaitingRoomScreen, type WaitingRoomScreenProps } from '../WaitingRoomScreen';
 import { ChatPanel } from '../../components/ChatPanel';
+import { SettingsBody } from '../../components/SettingsBody';
 
 type Props = WaitingRoomScreenProps;
 
@@ -37,14 +39,28 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={styles.leftWrap}>
-        <View style={styles.left}>
+      <View
+        style={[
+          styles.sidePane,
+          styles.left,
+          { backgroundColor: colors.surface, borderColor: colors.glassLight },
+        ]}
+      >
+        <View style={styles.settingsInner}>
+          <SettingsBody onClose={() => {}} />
+        </View>
+      </View>
+
+      <View style={styles.centerWrap}>
+        <View style={styles.center}>
           <WaitingRoomScreen {...props} hideChat />
         </View>
       </View>
+
       <View
         style={[
-          styles.chat,
+          styles.sidePane,
+          styles.right,
           { backgroundColor: colors.surface, borderColor: colors.glassLight },
         ]}
       >
@@ -62,20 +78,20 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
-  // Wrap that fills the space, then a centered inner column capped
-  // at ~720. The waiting room is a vertical list (code, players,
-  // toggle, start) — wider than that just adds whitespace on the
-  // sides without helping legibility.
-  leftWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
-  left: { flex: 1, width: '100%', maxWidth: 720 },
-  chat: {
+  sidePane: {
     width: 360,
     margin: Spacing.md,
-    marginLeft: 0,
     borderRadius: Radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
   },
+  left: { marginRight: 0 },
+  right: { marginLeft: 0 },
+  // Inner cap so SettingsBody banners don't span the full 360 either —
+  // matches the DesktopLobbyScreen feel.
+  settingsInner: { flex: 1, width: '100%', maxWidth: 360 },
+  centerWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
+  center: { flex: 1, width: '100%', maxWidth: 720 },
 });
 
 export default DesktopWaitingRoom;
