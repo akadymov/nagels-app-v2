@@ -1,16 +1,16 @@
 /**
- * Desktop Game Table layout — toggleable-left | center game | chat.
+ * Desktop Game Table layout — toggleable-left | center game | optional chat.
  *
- * The left side pane is a tab strip that switches between three views:
- *   - Scoreboard (default): live snapshot scoreboard with per-hand
- *     totals.
- *   - Last trick: compact recap of the most recently closed trick.
- *   - Settings: the same SettingsBody used elsewhere on desktop.
+ * Left pane (always visible on desktop, both single-player vs bots
+ * and multiplayer rooms) — tabbed:
+ *   - Scoreboard (default)
+ *   - Last trick
+ *   - Settings (SettingsBody)
  *
- * Mobile keeps the existing modal flow (trophy / corner-up-left / gear
- * buttons open dedicated overlays). On desktop those modals remain
- * available too, but the always-visible left pane is the primary surface
- * since real estate is plentiful.
+ * Right pane (chat) — multiplayer only; SP bot games skip it because
+ * there's no-one to chat with.
+ *
+ * Mobile keeps the existing modal flow regardless.
  */
 
 import React, { useState } from 'react';
@@ -18,6 +18,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
+import { useGameStore, type GameStore } from '../../store/gameStore';
 import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
@@ -32,23 +33,56 @@ const TABS: Array<{ key: LeftPanel; icon: IconName; label: string }> = [
   { key: 'settings',   icon: 'settings',        label: 'Settings' },
 ];
 
+// Unified data model for the left pane — fed by either the multiplayer
+// snapshot or the single-player gameStore so the renderers stay simple.
+interface LeftRow {
+  id: string;
+  name: string;
+  bet: number | null;
+  won: number;
+  total: number;
+  isMe: boolean;
+}
+interface LeftHandInfo {
+  handNumber: number;
+  totalHands: number;
+  cardsPerPlayer: number;
+  trump: string;
+}
+interface LeftLastTrickCard {
+  playerName: string;
+  cardLabel: string;
+  isWinner: boolean;
+}
+interface LeftLastTrick {
+  cards: LeftLastTrickCard[];
+  winnerName: string | null;
+}
+
 export const DesktopGameLayout: React.FC<Props> = (props) => {
   const { colors } = useTheme();
+  const isMultiplayer = props.isMultiplayer ?? false;
+
+  // ── Multiplayer data sources ──
   const snapshot = useRoomStore((s) => s.snapshot);
-  const myPlayerId = useRoomStore((s) => s.myPlayerId);
+  const mpMyPlayerId = useRoomStore((s) => s.myPlayerId);
   const isSpectator = useRoomStore((s) => s.isSpectator);
 
-  const players = snapshot?.players ?? [];
-  const handScores = snapshot?.hand_scores ?? [];
-  const history = snapshot?.score_history ?? [];
-  const room = snapshot?.room ?? null;
-  const hand = snapshot?.current_hand ?? null;
-  const lastClosedTrick = snapshot?.last_closed_trick ?? null;
+  // ── Single-player data sources ──
+  const sp = useGameStore();
 
-  // Sender for inline chat.
-  const me = players.find((p) => p.session_id === myPlayerId) ?? null;
-  const spectatorMe = !me && isSpectator && myPlayerId
-    ? (snapshot?.spectators ?? []).find((s: any) => s.session_id === myPlayerId) ?? null
+  // Build the unified view-model for the left pane.
+  const { rows, handInfo, lastTrick } = buildLeftPaneData({
+    isMultiplayer,
+    snapshot,
+    mpMyPlayerId,
+    sp,
+  });
+
+  // Sender for inline chat — MP only.
+  const me = (snapshot?.players ?? []).find((p) => p.session_id === mpMyPlayerId) ?? null;
+  const spectatorMe = !me && isSpectator && mpMyPlayerId
+    ? (snapshot?.spectators ?? []).find((s: any) => s.session_id === mpMyPlayerId) ?? null
     : null;
   const senderSrc: any = me ?? spectatorMe;
   const sender = senderSrc ? {
@@ -58,171 +92,143 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     avatarColor: senderSrc.avatar_color ?? null,
   } : null;
 
-  // Aggregate totals from history.
-  const totals: Record<string, number> = {};
-  for (const h of history) {
-    for (const row of h.scores ?? []) {
-      totals[row.session_id] = (totals[row.session_id] ?? 0) + (row.hand_score ?? 0);
-    }
-  }
-
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('scoreboard');
-
-  const isMultiplayer = props.isMultiplayer ?? false;
-  const showSidePanes = isMultiplayer;
 
   const renderScoreboard = () => (
     <>
       <View style={styles.scoreHeader}>
         <Text style={[styles.scoreTitle, { color: colors.textPrimary }]}>Scoreboard</Text>
-        {hand?.hand_number != null && room?.max_cards != null && (
+        {handInfo && (
           <Text style={[styles.scoreMeta, { color: colors.textMuted }]}>
-            Hand {hand.hand_number} / {room.max_cards * 2}
+            Hand {handInfo.handNumber} / {handInfo.totalHands}
           </Text>
         )}
       </View>
-      {hand?.cards_per_player != null && (
+      {handInfo && (
         <Text style={[styles.scoreSub, { color: colors.textMuted }]}>
-          {hand.cards_per_player} card{hand.cards_per_player === 1 ? '' : 's'} · {hand.trump_suit} trump
+          {handInfo.cardsPerPlayer} card{handInfo.cardsPerPlayer === 1 ? '' : 's'} · {handInfo.trump} trump
         </Text>
       )}
       <ScrollView style={styles.scoreList} showsVerticalScrollIndicator={false}>
-        {players.map((p) => {
-          const score = handScores.find((s) => s.session_id === p.session_id);
-          const total = totals[p.session_id] ?? 0;
-          const isMe = p.session_id === myPlayerId;
-          return (
-            <View
-              key={p.session_id}
-              style={[
-                styles.scoreRow,
-                {
-                  backgroundColor: isMe ? colors.surfaceSecondary : 'transparent',
-                  borderColor: colors.glassLight,
-                },
-              ]}
-            >
-              <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
-                {p.display_name}{isMe ? ' (you)' : ''}
-              </Text>
-              <Text style={[styles.scoreCell, { color: colors.textMuted }]}>
-                Bet {score?.bet ?? '–'} · Won {score?.taken_tricks ?? 0}
-              </Text>
-              <Text style={[styles.scoreTotal, { color: colors.textPrimary }]}>{total}</Text>
-            </View>
-          );
-        })}
+        {rows.map((r) => (
+          <View
+            key={r.id}
+            style={[
+              styles.scoreRow,
+              {
+                backgroundColor: r.isMe ? colors.surfaceSecondary : 'transparent',
+                borderColor: colors.glassLight,
+              },
+            ]}
+          >
+            <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
+              {r.name}{r.isMe ? ' (you)' : ''}
+            </Text>
+            <Text style={[styles.scoreCell, { color: colors.textMuted }]}>
+              Bet {r.bet ?? '–'} · Won {r.won}
+            </Text>
+            <Text style={[styles.scoreTotal, { color: colors.textPrimary }]}>{r.total}</Text>
+          </View>
+        ))}
       </ScrollView>
     </>
   );
 
-  const renderLastTrick = () => {
-    const winner = lastClosedTrick?.winner_seat != null
-      ? players.find((p) => p.seat_index === lastClosedTrick.winner_seat) ?? null
-      : null;
-    return (
-      <View style={styles.lastTrickWrap}>
-        <Text style={[styles.scoreTitle, { color: colors.textPrimary, padding: Spacing.md }]}>
-          Last trick
+  const renderLastTrick = () => (
+    <View style={styles.lastTrickWrap}>
+      <Text style={[styles.scoreTitle, { color: colors.textPrimary, padding: Spacing.md }]}>
+        Last trick
+      </Text>
+      {!lastTrick ? (
+        <Text style={[styles.scoreCell, { color: colors.textMuted, padding: Spacing.md }]}>
+          No tricks closed yet.
         </Text>
-        {!lastClosedTrick ? (
-          <Text style={[styles.scoreCell, { color: colors.textMuted, padding: Spacing.md }]}>
-            No tricks closed yet.
-          </Text>
-        ) : (
-          <>
-            <ScrollView contentContainerStyle={styles.lastTrickList}>
-              {(lastClosedTrick.cards ?? []).map((c, i) => {
-                const player = players.find((p) => p.seat_index === c.seat) ?? null;
-                const isWinner = lastClosedTrick.winner_seat === c.seat;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.lastTrickRow,
-                      {
-                        backgroundColor: isWinner ? colors.surfaceSecondary : 'transparent',
-                        borderColor: isWinner ? colors.highlight : colors.glassLight,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
-                      {player?.display_name ?? `Seat ${c.seat}`}
-                      {isWinner ? ' 👑' : ''}
-                    </Text>
-                    <Text style={[styles.cardGlyph, { color: colors.textPrimary }]}>{c.card}</Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-            {winner && (
-              <Text style={[styles.lastTrickFooter, { color: colors.success }]}>
-                {winner.display_name} won the trick
-              </Text>
-            )}
-          </>
-        )}
-      </View>
-    );
-  };
+      ) : (
+        <>
+          <ScrollView contentContainerStyle={styles.lastTrickList}>
+            {lastTrick.cards.map((c, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.lastTrickRow,
+                  {
+                    backgroundColor: c.isWinner ? colors.surfaceSecondary : 'transparent',
+                    borderColor: c.isWinner ? colors.highlight : colors.glassLight,
+                  },
+                ]}
+              >
+                <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {c.playerName}{c.isWinner ? ' 👑' : ''}
+                </Text>
+                <Text style={[styles.cardGlyph, { color: colors.textPrimary }]}>{c.cardLabel}</Text>
+              </View>
+            ))}
+          </ScrollView>
+          {lastTrick.winnerName && (
+            <Text style={[styles.lastTrickFooter, { color: colors.success }]}>
+              {lastTrick.winnerName} won the trick
+            </Text>
+          )}
+        </>
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {showSidePanes && (
-        <View
-          style={[
-            styles.sidePane,
-            styles.leftPane,
-            { backgroundColor: colors.surface, borderColor: colors.glassLight },
-          ]}
-        >
-          <View style={[styles.tabsRow, { borderBottomColor: colors.glassLight }]}>
-            {TABS.map((t) => {
-              const active = t.key === leftPanel;
-              return (
-                <Pressable
-                  key={t.key}
-                  onPress={() => setLeftPanel(t.key)}
+      <View
+        style={[
+          styles.sidePane,
+          styles.leftPane,
+          { backgroundColor: colors.surface, borderColor: colors.glassLight },
+        ]}
+      >
+        <View style={[styles.tabsRow, { borderBottomColor: colors.glassLight }]}>
+          {TABS.map((t) => {
+            const active = t.key === leftPanel;
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => setLeftPanel(t.key)}
+                style={[
+                  styles.tab,
+                  active && { backgroundColor: colors.accent + '14' },
+                  active && { borderBottomColor: colors.accent },
+                ]}
+                testID={`desktop-left-tab-${t.key}`}
+              >
+                <Icon
+                  name={t.icon}
+                  color={active ? colors.accent : colors.iconButtonText}
+                  size={18}
+                />
+                <Text
                   style={[
-                    styles.tab,
-                    active && { backgroundColor: colors.accent + '14' },
-                    active && { borderBottomColor: colors.accent },
+                    styles.tabLabel,
+                    { color: active ? colors.accent : colors.textMuted },
                   ]}
-                  testID={`desktop-left-tab-${t.key}`}
                 >
-                  <Icon
-                    name={t.icon}
-                    color={active ? colors.accent : colors.iconButtonText}
-                    size={18}
-                  />
-                  <Text
-                    style={[
-                      styles.tabLabel,
-                      { color: active ? colors.accent : colors.textMuted },
-                    ]}
-                  >
-                    {t.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.leftBody}>
-            {leftPanel === 'scoreboard' && renderScoreboard()}
-            {leftPanel === 'lastTrick' && renderLastTrick()}
-            {leftPanel === 'settings' && <SettingsBody onClose={() => {}} />}
-          </View>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
-      )}
 
-      <View style={styles.centerWrap}>
-        <View style={styles.center}>
-          <GameTableScreen {...props} hideChat={showSidePanes} />
+        <View style={styles.leftBody}>
+          {leftPanel === 'scoreboard' && renderScoreboard()}
+          {leftPanel === 'lastTrick' && renderLastTrick()}
+          {leftPanel === 'settings' && <SettingsBody onClose={() => {}} />}
         </View>
       </View>
 
-      {showSidePanes && (
+      <View style={styles.centerWrap}>
+        <View style={styles.center}>
+          <GameTableScreen {...props} hideChat={isMultiplayer} />
+        </View>
+      </View>
+
+      {isMultiplayer && (
         <View
           style={[
             styles.sidePane,
@@ -242,6 +248,115 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     </View>
   );
 };
+
+function buildLeftPaneData(args: {
+  isMultiplayer: boolean;
+  snapshot: any;
+  mpMyPlayerId: string | null;
+  sp: GameStore;
+}): {
+  rows: LeftRow[];
+  handInfo: LeftHandInfo | null;
+  lastTrick: LeftLastTrick | null;
+} {
+  const { isMultiplayer, snapshot, mpMyPlayerId, sp } = args;
+
+  if (isMultiplayer) {
+    const players = snapshot?.players ?? [];
+    const handScores = snapshot?.hand_scores ?? [];
+    const history = snapshot?.score_history ?? [];
+    const room = snapshot?.room ?? null;
+    const hand = snapshot?.current_hand ?? null;
+    const last = snapshot?.last_closed_trick ?? null;
+
+    const totals: Record<string, number> = {};
+    for (const h of history) {
+      for (const row of h.scores ?? []) {
+        totals[row.session_id] = (totals[row.session_id] ?? 0) + (row.hand_score ?? 0);
+      }
+    }
+
+    const rows: LeftRow[] = players.map((p: any) => {
+      const score = handScores.find((s: any) => s.session_id === p.session_id);
+      return {
+        id: p.session_id,
+        name: p.display_name,
+        bet: score?.bet ?? null,
+        won: score?.taken_tricks ?? 0,
+        total: totals[p.session_id] ?? 0,
+        isMe: p.session_id === mpMyPlayerId,
+      };
+    });
+
+    const handInfo: LeftHandInfo | null = (hand && room) ? {
+      handNumber: hand.hand_number,
+      totalHands: room.max_cards * 2,
+      cardsPerPlayer: hand.cards_per_player,
+      trump: hand.trump_suit,
+    } : null;
+
+    let lastTrick: LeftLastTrick | null = null;
+    if (last) {
+      const winnerPlayer = last.winner_seat != null
+        ? players.find((p: any) => p.seat_index === last.winner_seat) ?? null
+        : null;
+      lastTrick = {
+        cards: (last.cards ?? []).map((c: any) => {
+          const player = players.find((p: any) => p.seat_index === c.seat) ?? null;
+          return {
+            playerName: player?.display_name ?? `Seat ${c.seat}`,
+            cardLabel: c.card,
+            isWinner: last.winner_seat === c.seat,
+          };
+        }),
+        winnerName: winnerPlayer?.display_name ?? null,
+      };
+    }
+
+    return { rows, handInfo, lastTrick };
+  }
+
+  // Single-player — read from useGameStore.
+  const myId = sp.myPlayerId;
+  const rows: LeftRow[] = sp.players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    bet: p.bet ?? null,
+    won: p.tricksWon ?? 0,
+    total: (p.score ?? 0) + (p.bonus ?? 0),
+    isMe: p.id === myId,
+  }));
+
+  const handInfo: LeftHandInfo | null = sp.players.length > 0 ? {
+    handNumber: sp.handNumber,
+    totalHands: sp.totalHands,
+    cardsPerPlayer: sp.cardsPerPlayer,
+    trump: sp.trumpSuit,
+  } : null;
+
+  // Last fully-played trick from the current hand's history.
+  const tricks = sp.tricks ?? [];
+  const last = tricks.length > 0 ? tricks[tricks.length - 1] : null;
+  let lastTrick: LeftLastTrick | null = null;
+  if (last) {
+    const winnerPlayer = sp.players.find((p) => p.id === last.winnerId) ?? null;
+    lastTrick = {
+      cards: last.cards.map((c) => {
+        const player = sp.players.find((p) => p.id === c.playerId) ?? null;
+        const rank = typeof c.card.rank === 'number' ? String(c.card.rank) : c.card.rank;
+        const suitGlyph = ({ spades: '♠', hearts: '♥', clubs: '♣', diamonds: '♦' } as any)[c.card.suit] ?? c.card.suit;
+        return {
+          playerName: player?.name ?? '?',
+          cardLabel: `${rank}${suitGlyph}`,
+          isWinner: c.playerId === last.winnerId,
+        };
+      }),
+      winnerName: winnerPlayer?.name ?? null,
+    };
+  }
+
+  return { rows, handInfo, lastTrick };
+}
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
