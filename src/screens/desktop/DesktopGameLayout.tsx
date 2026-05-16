@@ -13,8 +13,8 @@
  * Mobile keeps the existing modal flow regardless.
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
@@ -22,16 +22,15 @@ import { useGameStore, type GameStore } from '../../store/gameStore';
 import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
-import { Icon, type IconName } from '../../components/Icon';
+import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
 
 type Props = GameTableScreenProps;
-type LeftPanel = 'scoreboard' | 'lastTrick' | 'settings';
 
-const TABS: Array<{ key: LeftPanel; icon: IconName; label: string }> = [
-  { key: 'scoreboard', icon: 'trophy',          label: 'Scores' },
-  { key: 'lastTrick',  icon: 'corner-up-left',  label: 'Last trick' },
-  { key: 'settings',   icon: 'settings',        label: 'Settings' },
-];
+const PANEL_TITLES: Record<LeftPanel, string> = {
+  scoreboard: 'Scoreboard',
+  lastTrick: 'Last trick',
+  settings: 'Settings',
+};
 
 // Unified data model for the left pane — fed by either the multiplayer
 // snapshot or the single-player gameStore so the renderers stay simple.
@@ -92,7 +91,22 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     avatarColor: senderSrc.avatar_color ?? null,
   } : null;
 
-  const [leftPanel, setLeftPanel] = useState<LeftPanel>('scoreboard');
+  const [leftPanel, setLeftPanel] = useState<LeftPanel | null>('scoreboard');
+  // Multiplayer rooms default chat ON; SP has no chat at all.
+  const [chatVisible, setChatVisible] = useState(isMultiplayer);
+  const ui = useMemo(() => ({
+    leftPanel,
+    toggleLeftPanel: (next: LeftPanel) =>
+      setLeftPanel((current) => (current === next ? null : next)),
+    chatVisible,
+    toggleChat: () => setChatVisible((v) => !v),
+  }), [leftPanel, chatVisible]);
+
+  const renderPaneHeader = (title: string) => (
+    <View style={[styles.paneHeader, { borderBottomColor: colors.glassLight }]}>
+      <Text style={[styles.paneHeaderText, { color: colors.textPrimary }]}>{title}</Text>
+    </View>
+  );
 
   const renderScoreboard = () => (
     <>
@@ -175,77 +189,50 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.sidePane,
-          styles.leftPane,
-          { backgroundColor: colors.surface, borderColor: colors.glassLight },
-        ]}
-      >
-        <View style={[styles.tabsRow, { borderBottomColor: colors.glassLight }]}>
-          {TABS.map((t) => {
-            const active = t.key === leftPanel;
-            return (
-              <Pressable
-                key={t.key}
-                onPress={() => setLeftPanel(t.key)}
-                style={[
-                  styles.tab,
-                  active && { backgroundColor: colors.accent + '14' },
-                  active && { borderBottomColor: colors.accent },
-                ]}
-                testID={`desktop-left-tab-${t.key}`}
-              >
-                <Icon
-                  name={t.icon}
-                  color={active ? colors.accent : colors.iconButtonText}
-                  size={18}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: active ? colors.accent : colors.textMuted },
-                  ]}
-                >
-                  {t.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+    <DesktopGameUIContext.Provider value={ui}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
+        {leftPanel && (
+          <View
+            style={[
+              styles.sidePane,
+              styles.leftPane,
+              { backgroundColor: colors.surface, borderColor: colors.glassLight },
+            ]}
+          >
+            {renderPaneHeader(PANEL_TITLES[leftPanel])}
+            <View style={styles.leftBody}>
+              {leftPanel === 'scoreboard' && renderScoreboard()}
+              {leftPanel === 'lastTrick' && renderLastTrick()}
+              {leftPanel === 'settings' && <SettingsBody onClose={() => {}} />}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.centerWrap}>
+          <View style={styles.center}>
+            <GameTableScreen {...props} hideChat={isMultiplayer} />
+          </View>
         </View>
 
-        <View style={styles.leftBody}>
-          {leftPanel === 'scoreboard' && renderScoreboard()}
-          {leftPanel === 'lastTrick' && renderLastTrick()}
-          {leftPanel === 'settings' && <SettingsBody onClose={() => {}} />}
-        </View>
+        {isMultiplayer && chatVisible && (
+          <View
+            style={[
+              styles.sidePane,
+              styles.rightPane,
+              { backgroundColor: colors.surface, borderColor: colors.glassLight },
+            ]}
+          >
+            <ChatPanel
+              mode="inline"
+              visible
+              onClose={() => {}}
+              sender={sender}
+              testIdPrefix="chat"
+            />
+          </View>
+        )}
       </View>
-
-      <View style={styles.centerWrap}>
-        <View style={styles.center}>
-          <GameTableScreen {...props} hideChat={isMultiplayer} />
-        </View>
-      </View>
-
-      {isMultiplayer && (
-        <View
-          style={[
-            styles.sidePane,
-            styles.rightPane,
-            { backgroundColor: colors.surface, borderColor: colors.glassLight },
-          ]}
-        >
-          <ChatPanel
-            mode="inline"
-            visible
-            onClose={() => {}}
-            sender={sender}
-            testIdPrefix="chat"
-          />
-        </View>
-      )}
-    </View>
+    </DesktopGameUIContext.Provider>
   );
 };
 
@@ -363,7 +350,7 @@ const styles = StyleSheet.create({
   centerWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
   center: { flex: 1, width: '100%', maxWidth: 1200 },
   sidePane: {
-    width: 320,
+    width: 400,
     margin: Spacing.md,
     borderRadius: Radius.lg,
     borderWidth: 1,
@@ -371,21 +358,12 @@ const styles = StyleSheet.create({
   },
   leftPane: { marginRight: 0 },
   rightPane: { marginLeft: 0 },
-  tabsRow: {
-    flexDirection: 'row',
+  paneHeader: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabLabel: { fontSize: 12, fontWeight: '600' },
+  paneHeaderText: { fontSize: 16, fontWeight: '700' },
   leftBody: { flex: 1 },
   scoreHeader: {
     flexDirection: 'row',

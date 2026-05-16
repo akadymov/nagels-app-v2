@@ -49,12 +49,7 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          {/* Cap inner content so banners (Save Progress, Profile,
-              etc.) don't stretch across the whole right pane on
-              ultrawide windows. */}
-          <View style={styles.profileInner}>
-            <SettingsBody onClose={() => {}} />
-          </View>
+          <SettingsBody onClose={() => {}} />
         </View>
       </View>
     </DesktopShell>
@@ -75,7 +70,6 @@ const styles = StyleSheet.create({
   },
   lobbyPane: { flexGrow: 13, flexShrink: 1, flexBasis: 0 }, // ~65%
   profilePane: { flexGrow: 7, flexShrink: 1, flexBasis: 0 }, // ~35%
-  profileInner: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
 });
 
 export default DesktopLobbyScreen;

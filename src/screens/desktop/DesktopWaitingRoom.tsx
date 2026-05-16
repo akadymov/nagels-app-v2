@@ -79,7 +79,7 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   sidePane: {
-    width: 360,
+    width: 400,
     margin: Spacing.md,
     borderRadius: Radius.lg,
     borderWidth: 1,

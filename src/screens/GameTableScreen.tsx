@@ -39,6 +39,7 @@ import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useSettingsStore } from '../store/settingsStore';
 import { useSettingsUIStore } from '../store/settingsUIStore';
+import { useDesktopGameUI } from './desktop/DesktopGameContext';
 import { SaveProgressModal } from '../components/SaveProgressModal';
 import { shouldShowAfterGame } from '../lib/auth/promptGate';
 import { useNavigation } from '@react-navigation/native';
@@ -153,6 +154,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // ── Single-player state (legacy engine for bots) ───────────
   const sp = useGameStore();
+
+  // Desktop wrapper (DesktopGameLayout) injects a UI context so its
+  // side panes can be toggled from the in-game top bar. Null in mobile.
+  const desktopUI = useDesktopGameUI();
 
   // Subscribe / unsubscribe to the room channel for the lifetime of GameTable.
   useEffect(() => {
@@ -944,11 +949,22 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </View>
           <View style={styles.topBarRow3}>
             <Pressable
-              onPress={() => useSettingsUIStore.getState().open()}
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              onPress={() => {
+                if (desktopUI) desktopUI.toggleLeftPanel('settings');
+                else useSettingsUIStore.getState().open();
+              }}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                desktopUI?.leftPanel === 'settings' && { borderColor: colors.accent, borderWidth: 2 },
+              ]}
               testID="game-btn-settings"
             >
-              <Icon name="settings" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="settings"
+                color={desktopUI?.leftPanel === 'settings' ? colors.accent : colors.iconButtonText}
+                size={20}
+              />
             </Pressable>
             {/* Exit button: visible to the SP player (bot game) and to the
                 multiplayer host. Non-host MP players use ready/leave from the
@@ -993,38 +1009,66 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             )}
             <Pressable
               onPress={() => {
-                if (vm.tricks.length > 0) setShowLastTrick(true);
+                if (vm.tricks.length === 0) return;
+                if (desktopUI) desktopUI.toggleLeftPanel('lastTrick');
+                else setShowLastTrick(true);
               }}
               disabled={vm.tricks.length === 0}
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: vm.tricks.length === 0 ? 0.3 : 1 },
+                desktopUI?.leftPanel === 'lastTrick' && { borderColor: colors.accent, borderWidth: 2 },
               ]}
               testID="game-btn-last-trick"
             >
-              <Icon name="corner-up-left" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="corner-up-left"
+                color={desktopUI?.leftPanel === 'lastTrick' ? colors.accent : colors.iconButtonText}
+                size={20}
+              />
             </Pressable>
             <Pressable
               onPress={() => {
-                setIsViewingScores(true);
-                setShowScoreboard(true);
+                if (desktopUI) {
+                  desktopUI.toggleLeftPanel('scoreboard');
+                } else {
+                  setIsViewingScores(true);
+                  setShowScoreboard(true);
+                }
               }}
-              style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                desktopUI?.leftPanel === 'scoreboard' && { borderColor: colors.accent, borderWidth: 2 },
+              ]}
               testID="game-btn-scores"
             >
-              <Icon name="trophy" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="trophy"
+                color={desktopUI?.leftPanel === 'scoreboard' ? colors.accent : colors.iconButtonText}
+                size={20}
+              />
             </Pressable>
             <Pressable
-              onPress={() => setShowChat(true)}
+              onPress={() => {
+                if (!isMultiplayer) return;
+                if (desktopUI) desktopUI.toggleChat();
+                else setShowChat(true);
+              }}
               disabled={!isMultiplayer}
               style={[
                 styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 !isMultiplayer && { opacity: 0.3 },
+                desktopUI?.chatVisible && isMultiplayer && { borderColor: colors.accent, borderWidth: 2 },
               ]}
               testID="game-btn-chat"
             >
-              <Icon name="chat" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="chat"
+                color={desktopUI?.chatVisible && isMultiplayer ? colors.accent : colors.iconButtonText}
+                size={20}
+              />
               {isMultiplayer && chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
@@ -1822,6 +1866,7 @@ const styles = StyleSheet.create({
   },
   betBannerModal: {
     width: '78%',
+    maxWidth: 420,
     borderRadius: Radius.lg,
     paddingTop: Spacing.xl,
     paddingBottom: Spacing.lg,
