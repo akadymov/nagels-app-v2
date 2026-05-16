@@ -30,7 +30,12 @@ export interface SeededGame {
 const POLL_MS = 600;
 const STUCK_S = 60;
 const STUCK_THRESHOLD = Math.ceil((STUCK_S * 1000) / POLL_MS);
-const DEFAULT_DEADLINE_MS = 5 * 60 * 1000; // 5 min hard cap
+// 5 min was too tight against the local supabase stack — first run
+// reached hand 4 in 5 min and aborted. Headless :8082 runs are
+// ~1 min/early-hand (vs ~30s on the manual :8081 dev server), so
+// 8 min gives reaching hand 5 a comfortable margin and is still
+// well under the 30-min per-test Playwright timeout.
+const DEFAULT_DEADLINE_MS = 8 * 60 * 1000;
 
 /**
  * Drive the SP game from the lobby to the requested in-game state.

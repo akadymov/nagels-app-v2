@@ -17,7 +17,9 @@ import { seedScenario } from '../fixtures/seed';
 test('notrump hand 5 deals with NT badge and betting UI', async ({ page }) => {
   await seedScenario(page, 'notrump-hand-5');
 
-  await expect(page.getByText(/Hand 5\s*\/\s*20/)).toBeVisible();
-  await expect(page.getByText(/\bNT\b|NO TRUMP/)).toBeVisible();
+  // Both the page header and the in-game status row render the hand
+  // counter — `.first()` avoids strict-mode duplicate-match failures.
+  await expect(page.getByText(/Hand 5\s*\/\s*20/).first()).toBeVisible();
+  await expect(page.getByText(/\bNT\b|NO TRUMP/).first()).toBeVisible();
   await expect(page.locator('[data-testid^="bet-btn-"]').first()).toBeVisible();
 });
