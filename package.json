@@ -20,7 +20,7 @@
     "demo:sp": "node demo/play-sp-demo.js",
     "demo:sp:prod": "DEMO_URL=$APP_URL node demo/play-sp-demo.js",
     "test:sp": "playwright test tests/e2e/sp-game.spec.js",
-    "test:sp:local": "LOCAL_SUPABASE=1 HEADLESS=1 playwright test tests/e2e/sp-game.spec.js",
+    "test:sp:local": "LOCAL_SUPABASE=1 HEADLESS=1 DEMO_URL=http://localhost:8082 playwright test tests/e2e/sp-game.spec.js",
     "test:sp:prod": "set -a; [ -f .env.local ] && . ./.env.local; set +a; DEMO_URL=\"${APP_URL:-$EXPO_PUBLIC_APP_URL}\" playwright test tests/e2e/sp-game.spec.js"
   },
   "dependencies": {
