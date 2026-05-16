@@ -44,6 +44,8 @@ export interface WaitingRoomScreenProps {
   onGameStart: () => void;
   onLeave: () => void;
   onSettings?: () => void;
+  /** Desktop wrappers hoist Chat into a side pane; suppress the modal mount. */
+  hideChat?: boolean;
 }
 
 /**
@@ -53,6 +55,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   onGameStart,
   onLeave,
   onSettings,
+  hideChat = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -562,7 +565,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           <Text style={styles.leaveButtonText}>{t('multiplayer.leaveRoom')}</Text>
         </Pressable>
       </ScrollView>
-      <ChatPanel
+      {!hideChat && <ChatPanel
         visible={showChat}
         onClose={() => setShowChat(false)}
         sender={(() => {
@@ -583,7 +586,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           }
           return null;
         })()}
-      />
+      />}
     </SafeAreaView>
   );
 };
