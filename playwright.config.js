@@ -24,8 +24,10 @@ const SLOW_MO = parseInt(process.env.SLOW_MO ?? '80', 10);
 
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 module.exports = {
-  testDir: './tests',
-  testMatch: '**/*.spec.js',
+  // Per-project `testDir` lives below. The top-level `testMatch`
+  // applies to every project. `testMatch` widens to .ts so future
+  // phase specs need no further config.
+  testMatch: '**/*.spec.{js,ts}',
   // A full Hard-bot game can take ~3-6 minutes per hand × 20 hands.
   // We cap each test at 12 minutes so a stuck game fails fast rather
   // than blocking CI.
@@ -52,4 +54,9 @@ module.exports = {
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },
+  projects: [
+    // Phase 1 ships with just the e2e project. smoke / scenario
+    // projects are added in Phase 4 / Phase 5.
+    { name: 'e2e', testDir: './tests/e2e' },
+  ],
 };
