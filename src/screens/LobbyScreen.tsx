@@ -46,6 +46,9 @@ export interface LobbyScreenProps {
   onRoomCreated: () => void;
   onRoomJoined: () => void;
   onSettings?: () => void;
+  /** Desktop split layouts surface "Save Progress" inside the Profile
+   *  pane, so the Lobby's own Sign In CTA would just duplicate that. */
+  hideAuthCta?: boolean;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
@@ -53,6 +56,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onRoomCreated,
   onRoomJoined,
   onSettings,
+  hideAuthCta = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -349,8 +353,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           />
         </View>
 
-        {/* Sign In / Create Account — visible to anonymous guests only */}
-        {isGuest && (
+        {/* Sign In / Create Account — visible to anonymous guests only.
+            Desktop wrappers set hideAuthCta to suppress this CTA since the
+            Profile pane already carries a Save Progress button. */}
+        {isGuest && !hideAuthCta && (
           <Pressable
             onPress={() => navigation.navigate('Auth')}
             style={[styles.signInBtn, { borderColor: colors.accent }]}

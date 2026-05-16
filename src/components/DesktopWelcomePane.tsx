@@ -75,7 +75,21 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           <Text style={styles.wordmark}>NÄGELS</Text>
         </View>
 
-        {showPrimer ? (
+        {/* Hero stays mounted at all times; primer card stacks below it
+            so the user can keep the game pitch visible while reading
+            the onboarding slides. */}
+        <Text style={styles.heroTitle}>{t('welcome.heroTitle')}</Text>
+        <Text style={styles.heroSubtitle}>{t('welcome.heroSubtitle')}</Text>
+        <View style={styles.features}>
+          {([1, 2, 3] as const).map((n) => (
+            <View key={n} style={styles.featureRow}>
+              <Text style={styles.check}>✓</Text>
+              <Text style={styles.featureText}>{t(`welcome.feature${n}`)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {showPrimer && (
           <View style={styles.primerCard}>
             <View style={styles.primerHeader}>
               <Pressable onPress={closePrimer} hitSlop={8} testID="desktop-primer-skip">
@@ -123,19 +137,6 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
               </Pressable>
             </View>
           </View>
-        ) : (
-          <>
-            <Text style={styles.heroTitle}>{t('welcome.heroTitle')}</Text>
-            <Text style={styles.heroSubtitle}>{t('welcome.heroSubtitle')}</Text>
-            <View style={styles.features}>
-              {([1, 2, 3] as const).map((n) => (
-                <View key={n} style={styles.featureRow}>
-                  <Text style={styles.check}>✓</Text>
-                  <Text style={styles.featureText}>{t(`welcome.feature${n}`)}</Text>
-                </View>
-              ))}
-            </View>
-          </>
         )}
 
         <View style={styles.spacer} />
@@ -198,18 +199,20 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // Hero
+  // Hero. RN Web's height calc for Text with explicit lineHeight has
+  // been flaky when the text wraps to >1 line — the container often
+  // sizes to the first line and subsequent content overlaps. Leaving
+  // lineHeight default and pushing the next block with marginBottom
+  // instead.
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 44,
-    lineHeight: 52,
+    fontSize: 40,
     fontWeight: '800',
-    marginBottom: 14,
+    marginBottom: 18,
   },
   heroSubtitle: {
     color: 'rgba(255, 255, 255, 0.85)',
     fontSize: 16,
-    lineHeight: 24,
     marginBottom: 24,
     maxWidth: 520,
   },
@@ -224,8 +227,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.35)',
     borderWidth: 1,
     borderRadius: 16,
-    padding: 28,
+    padding: 24,
     maxWidth: 560,
+    marginTop: 24,
   },
   primerHeader: {
     flexDirection: 'row',

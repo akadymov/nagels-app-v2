@@ -23,6 +23,12 @@ type Props = LobbyScreenProps;
 
 export const DesktopLobbyScreen: React.FC<Props> = (props) => {
   const { colors } = useTheme();
+  // The desktop layout already shows SettingsBody in the right pane,
+  // so the gear-button entry-point inside LobbyScreen would just open
+  // a modal duplicating those settings. Drop the onSettings prop to
+  // hide the gear.
+  const { onSettings: _drop, ...lobbyProps } = props;
+  void _drop;
 
   return (
     <DesktopShell>
@@ -34,7 +40,7 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          <LobbyScreen {...props} />
+          <LobbyScreen {...lobbyProps} hideAuthCta />
         </View>
         <View
           style={[
@@ -43,7 +49,12 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          <SettingsBody onClose={() => {}} />
+          {/* Cap inner content so banners (Save Progress, Profile,
+              etc.) don't stretch across the whole right pane on
+              ultrawide windows. */}
+          <View style={styles.profileInner}>
+            <SettingsBody onClose={() => {}} />
+          </View>
         </View>
       </View>
     </DesktopShell>
@@ -64,6 +75,7 @@ const styles = StyleSheet.create({
   },
   lobbyPane: { flexGrow: 13, flexShrink: 1, flexBasis: 0 }, // ~65%
   profilePane: { flexGrow: 7, flexShrink: 1, flexBasis: 0 }, // ~35%
+  profileInner: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
 });
 
 export default DesktopLobbyScreen;
