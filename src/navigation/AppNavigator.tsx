@@ -26,6 +26,9 @@ import { onAuthStateChange } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
 import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
+import type { LobbyScreenProps } from '../screens/LobbyScreen';
 
 export type RootStackParamList = {
   Welcome: {
@@ -274,6 +277,12 @@ const loadingStyles = StyleSheet.create({
 // MAIN NAVIGATOR
 // ============================================================
 
+// Route wrapper that picks desktop vs mobile Lobby at runtime.
+function LobbyRoute(props: LobbyScreenProps) {
+  const isDesktop = useIsDesktop();
+  return isDesktop ? <DesktopLobbyScreen {...props} /> : <LobbyScreen {...props} />;
+}
+
 export interface AppNavigatorProps {
   onWelcomeComplete?: () => void;
   onPrimerComplete?: () => void;
@@ -463,7 +472,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
 
             <Stack.Screen name="Lobby">
               {(props) => (
-                <LobbyScreen
+                <LobbyRoute
                   onQuickMatch={(difficulty, botCount, playerName) => {
                     (props.navigation as any).navigate('GameTable', {
                       isMultiplayer: false,
