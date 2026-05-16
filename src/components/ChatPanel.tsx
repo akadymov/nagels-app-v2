@@ -39,10 +39,14 @@ export interface ChatPanelProps {
   /** Field testID prefix — lets the demo find betting-chat-input vs.
    *  chat-input depending on where the panel is mounted. */
   testIdPrefix?: 'chat' | 'betting-chat';
+  /** `modal` (default) wraps the body in a React Native Modal —
+   *  used on mobile. `inline` renders the body directly so a desktop
+   *  layout can mount the chat as a permanent side panel. */
+  mode?: 'modal' | 'inline';
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  visible, onClose, sender, testIdPrefix = 'chat',
+  visible, onClose, sender, testIdPrefix = 'chat', mode = 'modal',
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -79,14 +83,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     });
   };
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
-        >
+  // In inline mode, visibility is controlled by the parent container —
+  // we always render the body; the side-pane decides if it's on screen.
+  if (mode === 'inline' && !visible) {
+    // Still render so messages keep arriving / unread counter updates;
+    // hosts simply don't mount this when they want it hidden.
+  }
+  const body = (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={[
+        mode === 'inline' ? styles.inlineSheet : styles.sheet,
+        { backgroundColor: colors.surface, borderColor: colors.glassLight },
+      ]}
+    >
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
               {t('chat.title', 'Chat')}
@@ -172,6 +182,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </Pressable>
           </View>
         </KeyboardAvoidingView>
+  );
+
+  if (mode === 'inline') {
+    return body;
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <Pressable style={styles.backdropTap} onPress={onClose} />
+        {body}
       </View>
     </Modal>
   );
@@ -187,6 +208,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
+    overflow: 'hidden',
+  },
+  inlineSheet: {
+    flex: 1,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   header: {

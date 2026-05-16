@@ -58,6 +58,9 @@ export interface GameTableScreenProps {
   isMultiplayer?: boolean;
   botDifficulty?: 'easy' | 'medium' | 'hard';
   botCount?: number;
+  /** Desktop wrappers hoist Chat into a side pane; suppress GameTable's
+   *  own modal mount so we don't render two chats. */
+  hideChat?: boolean;
 }
 
 const BOT_NAMES_BY_LANG: Record<string, string[]> = {
@@ -85,6 +88,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   isMultiplayer = false,
   botDifficulty = 'medium',
   botCount = 3,
+  hideChat = false,
 }) => {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
@@ -1264,8 +1268,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           )
         )}
 
-        {/* Chat panel — multiplayer only; SP has no peers to chat with. */}
-        {isMultiplayer && (() => {
+        {/* Chat panel — multiplayer only; SP has no peers to chat with.
+            Desktop wrappers set hideChat=true and mount their own side-pane chat. */}
+        {isMultiplayer && !hideChat && (() => {
           const me = mpPlayers.find((p) => p.session_id === myPlayerId) ?? null;
           const sp = !me && isSpectator && myPlayerId
             ? spectators.find((s: any) => s.session_id === myPlayerId) ?? null

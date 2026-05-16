@@ -29,9 +29,11 @@ import { useRoomStore } from '../store/roomStore';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
 import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
+import { DesktopGameLayout } from '../screens/desktop/DesktopGameLayout';
 import type { LobbyScreenProps } from '../screens/LobbyScreen';
 import type { WelcomeScreenProps } from '../screens/WelcomeScreen';
 import type { AuthScreenProps } from '../screens/AuthScreen';
+import type { GameTableScreenProps } from '../screens/GameTableScreen';
 
 export type RootStackParamList = {
   Welcome: {
@@ -304,6 +306,11 @@ function AuthRoute(props: AuthScreenProps & { welcomeProps: WelcomeScreenProps }
   return <AuthScreen {...authProps} />;
 }
 
+function GameTableRoute(props: GameTableScreenProps) {
+  const isDesktop = useIsDesktop();
+  return isDesktop ? <DesktopGameLayout {...props} /> : <GameTableScreen {...props} />;
+}
+
 export interface AppNavigatorProps {
   onWelcomeComplete?: () => void;
   onPrimerComplete?: () => void;
@@ -527,7 +534,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
 
             <Stack.Screen name="GameTable">
               {(props) => (
-                <GameTableScreen
+                <GameTableRoute
                   isMultiplayer={props.route?.params?.isMultiplayer || false}
                   botDifficulty={props.route?.params?.botDifficulty}
                   botCount={props.route?.params?.botCount}
