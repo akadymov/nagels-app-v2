@@ -28,10 +28,12 @@ module.exports = {
   // applies to every project. `testMatch` widens to .ts so future
   // phase specs need no further config.
   testMatch: '**/*.spec.{js,ts}',
-  // A full Hard-bot game can take ~3-6 minutes per hand × 20 hands.
-  // We cap each test at 12 minutes so a stuck game fails fast rather
-  // than blocking CI.
-  timeout: 12 * 60 * 1000,
+  // A full Hard-bot game in headless mode runs ~13-14 of 20 hands in
+  // 12 minutes on a 24 GB Apple Silicon laptop. 20 minutes leaves
+  // headroom for the full game to complete. Stalls are caught earlier
+  // by the 60s in-spec watchdog (see sp-game.spec.js), so this is the
+  // last-resort backstop rather than the primary fail signal.
+  timeout: 20 * 60 * 1000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   retries: 0,
