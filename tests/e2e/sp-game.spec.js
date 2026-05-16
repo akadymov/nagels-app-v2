@@ -75,6 +75,40 @@ async function dismissTipIfAny(p) {
   }
 }
 
+// Pointer-event-aware dismiss for the PWA install modal that pops up on
+// first lobby visit. Mirrors dismissTipIfAny — RN-web's Pressable needs
+// synthesized PointerEvents to fire onPress. Targets the always-present
+// X button (pwa-close).
+async function dismissPwaModalIfAny(p) {
+  const closeBtn = p.locator('[data-testid="pwa-close"]').first();
+  if (!(await closeBtn.isVisible().catch(() => false))) return false;
+  try {
+    await closeBtn.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const opts = {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: r.left + r.width / 2,
+        clientY: r.top + r.height / 2,
+        button: 0,
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true,
+      };
+      el.dispatchEvent(new PointerEvent('pointerdown', opts));
+      el.dispatchEvent(new MouseEvent('mousedown', opts));
+      el.dispatchEvent(new PointerEvent('pointerup', opts));
+      el.dispatchEvent(new MouseEvent('mouseup', opts));
+      el.dispatchEvent(new MouseEvent('click', opts));
+    });
+    await closeBtn.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 async function tryBet(p) {
   const allBtns = p.locator('[data-testid^="bet-btn-"]');
   const totalCount = await allBtns.count().catch(() => 0);
@@ -190,6 +224,15 @@ test(`SP game (vs ${PLAYERS - 1} Hard bots) completes without stalling`, async (
   await tap(page, 'btn-skip-to-lobby', 10_000);
   await sleep(400);
 
+  // PWA install modal pops up on first lobby visit (post mount) and
+  // intercepts pointer events on the difficulty selector. Dismiss it
+  // before touching the setup row. The wait is short — if the modal
+  // isn't shown, we move on immediately.
+  for (let i = 0; i < 6; i++) {
+    if (await dismissPwaModalIfAny(page)) break;
+    await sleep(250);
+  }
+
   // Quick Match config: player count + Hard difficulty.
   await tap(page, `player-count-${PLAYERS}`, 5_000);
   await sleep(200);
@@ -215,6 +258,11 @@ test(`SP game (vs ${PLAYERS - 1} Hard bots) completes without stalling`, async (
   // eslint-disable-next-line no-constant-condition
   while (true) {
     await sleep(POLL_MS);
+
+    if (await dismissPwaModalIfAny(page)) {
+      idle = 0;
+      continue;
+    }
 
     if (await dismissTipIfAny(page)) {
       idle = 0;
