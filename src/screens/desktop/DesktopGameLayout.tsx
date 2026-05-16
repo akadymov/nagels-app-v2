@@ -115,8 +115,10 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
         </View>
       )}
 
-      <View style={styles.center}>
-        <GameTableScreen {...props} hideChat={showSidePanes} />
+      <View style={styles.centerWrap}>
+        <View style={styles.center}>
+          <GameTableScreen {...props} hideChat={showSidePanes} />
+        </View>
       </View>
 
       {showSidePanes && (
@@ -142,7 +144,12 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
-  center: { flex: 1, minWidth: 0 },
+  // Wrap that fills the available width between side panes, then a
+  // centered inner box capped at ~1200 so the table stays balanced on
+  // 21:9 ultrawides without dwarfing a 14" laptop. Below 1200 the
+  // inner box stretches to fill its parent (width: '100%').
+  centerWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
+  center: { flex: 1, width: '100%', maxWidth: 1200 },
   sidePane: {
     width: 320,
     margin: Spacing.md,
