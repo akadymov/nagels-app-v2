@@ -30,10 +30,12 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
 import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
 import { DesktopGameLayout } from '../screens/desktop/DesktopGameLayout';
+import { DesktopWaitingRoom } from '../screens/desktop/DesktopWaitingRoom';
 import type { LobbyScreenProps } from '../screens/LobbyScreen';
 import type { WelcomeScreenProps } from '../screens/WelcomeScreen';
 import type { AuthScreenProps } from '../screens/AuthScreen';
 import type { GameTableScreenProps } from '../screens/GameTableScreen';
+import type { WaitingRoomScreenProps } from '../screens/WaitingRoomScreen';
 
 export type RootStackParamList = {
   Welcome: {
@@ -311,6 +313,11 @@ function GameTableRoute(props: GameTableScreenProps) {
   return isDesktop ? <DesktopGameLayout {...props} /> : <GameTableScreen {...props} />;
 }
 
+function WaitingRoomRoute(props: WaitingRoomScreenProps) {
+  const isDesktop = useIsDesktop();
+  return isDesktop ? <DesktopWaitingRoom {...props} /> : <WaitingRoomScreen {...props} />;
+}
+
 export interface AppNavigatorProps {
   onWelcomeComplete?: () => void;
   onPrimerComplete?: () => void;
@@ -522,7 +529,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
 
             <Stack.Screen name="WaitingRoom">
               {(props) => (
-                <WaitingRoomScreen
+                <WaitingRoomRoute
                   onGameStart={() => {
                     (props.navigation as any).navigate('GameTable', { isMultiplayer: true });
                   }}
