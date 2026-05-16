@@ -15,7 +15,12 @@
     "title": "Nägels",
     "tagline": "Read the table. Break the plan.",
     "quickStart": "Learn to Play",
-    "alreadyPlay": "Skip to Menu"
+    "alreadyPlay": "Skip to Menu",
+    "heroTitle": "A classic trick-taking card game,\nbuilt for friends.",
+    "heroSubtitle": "Play with bots in seconds, or spin up a private room and share the link.",
+    "feature1": "No download — works in any browser",
+    "feature2": "EN / RU / ES with full translations",
+    "feature3": "Stake the table by sharing one link"
   },
   "primer": {
     "swipeHint": "Swipe left or right to navigate",

@@ -15,7 +15,12 @@
     "title": "Nägels",
     "tagline": "Conoce las tuyas — baraja las ajenas.",
     "quickStart": "Aprender a Jugar",
-    "alreadyPlay": "Saltar al Menú"
+    "alreadyPlay": "Saltar al Menú",
+    "heroTitle": "Un clásico juego de bazas,\nhecho para amigos.",
+    "heroSubtitle": "Juega con bots en segundos o crea una sala privada y comparte el enlace.",
+    "feature1": "Sin instalación — funciona en cualquier navegador",
+    "feature2": "EN / RU / ES — totalmente traducido",
+    "feature3": "Reúne a todos con un solo enlace"
   },
   "primer": {
     "swipeHint": "Desliza izquierda o derecha para navegar",
