@@ -62,15 +62,23 @@ src/
 
 ## Testing
 
-Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`). The e2e tier includes SP vs bots and a 6-player multi-context game (4 mobile + 2 desktop).
+Three commands map to three release-day situations:
+
+| Situation | Command | Time | What runs |
+|---|---|---|---|
+| **Releasing a feature to prod** | `npm run smoke` | ~50s | jest unit + 9 smoke specs + 2 desktop-layout specs (headless, no Docker) |
+| **Big changes / sanity check** | `npm run sanity` | ~30 min | Full 6-player game (4 mobile + 2 desktop) against an isolated stack, watch it play |
+| **Recording a demo / feature showcase** | `npm run demo:record` | ~60–90 min | Same 6 players with fixed lang/theme/deck configs, deep-link join, per-hand chat + scoreboard + last-trick. Video.webm per player. |
+
+Requirements:
+- `smoke` — needs `:8081` dev server up (`npx expo start --port 8081`).
+- `sanity` and `demo:record` — boot their own isolated `:8082` + local Supabase via Playwright globalSetup; Docker required.
+
+Full five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`), env flags, CLI filters, registry, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
 
 ```bash
-HEADLESS=1 npm run test:fast    # pre-commit (~50s), needs :8081 up
-npm run test:all                # pre-push (~30 min), needs :8081 + Docker
-TILE_WINDOWS=1 npm run test:smoke  # watch headed on big monitor — 6 windows in a row
+npm run test:all                # full regression run, all 5 tiers (~55 min)
 ```
-
-Full docs — tier descriptions, env flags (`HEADLESS`, `SLOW_MO`, `DEMO_URL`, `LOCAL_SUPABASE`, `KEEP_SUPABASE`, `TILE_WINDOWS`), CLI filters, registry, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
 
 ## Game Rules
 

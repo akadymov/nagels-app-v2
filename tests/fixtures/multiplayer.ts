@@ -223,7 +223,11 @@ export async function tileContextWindows(pages: Page[]): Promise<void> {
   if (process.env.HEADLESS === '1') return;
 
   const mobileW = parseInt(process.env.DEMO_TILE_MOBILE_W ?? '380', 10);
-  const mobileH = parseInt(process.env.DEMO_TILE_MOBILE_H ?? '820', 10);
+  // 1040px window inner ≈ 932px viewport + ~108px chrome — full
+  // game UI fits without vertical scrolling. Bump above this if
+  // the layout grows; drop to ~820 if you're short on screen real
+  // estate and don't mind scrolling.
+  const mobileH = parseInt(process.env.DEMO_TILE_MOBILE_H ?? '1040', 10);
   const desktopW = parseInt(process.env.DEMO_TILE_DESKTOP_W ?? '1400', 10);
   const desktopH = parseInt(process.env.DEMO_TILE_DESKTOP_H ?? '900', 10);
   const cascadeShiftX = Math.round(desktopW * 0.2);

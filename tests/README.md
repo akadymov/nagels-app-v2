@@ -1,8 +1,23 @@
 # Tests
 
-Four-tier test suite for Nägels Online. Each tier targets a different
+Five-tier test suite for Nägels Online. Each tier targets a different
 class of regression. See the design spec for full rationale:
 `docs/superpowers/specs/2026-05-16-testing-strategy-design.md`.
+
+## TL;DR — which command to run when
+
+| Situation | Command | Time | Backend |
+|---|---|---|---|
+| 🚀 **Releasing a feature to prod** — fast pre-merge gate | `npm run smoke` | ~50s | manual `:8081` |
+| 🧪 **Big refactor / many changes — confidence run** | `npm run sanity` | ~30 min | isolated `:8082` + Docker |
+| 🎥 **Recording a feature-touching demo** | `npm run demo:record` | ~60–90 min | isolated `:8082` + Docker |
+| 🛡 **Full regression before push** | `npm run test:all` | ~55 min | both |
+
+`smoke` = unit + smoke + smoke-desktop (Headless, no Docker, requires :8081 dev server).
+`sanity` = `multiplayer-6p-mixed` headed (real Supabase room, 6 players, asserts game reaches scoreboard).
+`demo:record` = `multiplayer-demo` headed + tiled windows (4 registered + 2 guests, fixed lang/theme/deck, deep-link join, per-hand chat/last-trick/scoreboard, video.webm per player).
+
+Everything below is the full reference.
 
 ## Layout
 

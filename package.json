@@ -32,6 +32,9 @@
     "test:smoke:desktop": "DEMO_URL=http://localhost:8081 playwright test --project=smoke-desktop",
     "test:unit": "jest --no-coverage",
     "test:fast": "npm run test:unit && npm run test:smoke && npm run test:smoke:desktop",
+    "smoke": "HEADLESS=1 npm run test:fast",
+    "sanity": "npm run test:mp:local:headed",
+    "demo:record": "npm run demo:full:local:headed",
     "test:all": "tsx scripts/test-all.ts",
     "test:sp:prod": "set -a; [ -f .env.local ] && . ./.env.local; set +a; DEMO_URL=\"${APP_URL:-$EXPO_PUBLIC_APP_URL}\" playwright test tests/e2e/sp-game.spec.js"
   },
