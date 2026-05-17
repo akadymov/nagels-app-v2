@@ -28,7 +28,7 @@ import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
-import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useTurnTimeout } from '../lib/turnTimeout';
@@ -95,6 +95,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
   const isDesktop = useIsDesktop();
+  // Strict mouse-driven check used only for huge cards — keeps
+  // iPad Safari (touch, no hover) on the mobile card scale.
+  const isTrueDesktop = useIsTrueDesktop();
   // Live viewport — iOS Safari recomputes innerHeight after Modal opens
   // (URL bar collapse). Capturing it once at module load left the table /
   // hand sections sized to a stale value, leaking blank space below.
@@ -1373,7 +1376,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   selectedCards={selectedCard ? [selectedCard] : []}
                   playableCards={playableCards.map((c: any) => c.id)}
                   onCardPress={handleCardPress}
-                  size={isDesktop ? 'huge' : 'small'}
+                  size={isTrueDesktop ? 'huge' : 'small'}
                   horizontal={false}
                 />
               </View>

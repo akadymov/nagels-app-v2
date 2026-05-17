@@ -19,7 +19,7 @@ import { CardHand } from '../cards';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
-import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { useIsDesktop, useIsTrueDesktop } from '../../hooks/useIsDesktop';
 import { useDesktopGameUI } from '../../screens/desktop/DesktopGameContext';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
@@ -66,6 +66,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const isDesktop = useIsDesktop();
+  // Strict mouse-driven desktop check used only for huge cards —
+  // avoids blowing them up on iPad Safari in landscape.
+  const isTrueDesktop = useIsTrueDesktop();
   // Wired by DesktopGameLayout — drives the left-pane toggles.
   // Null on mobile / non-desktop wrappers; we fall back to modals.
   const desktopUI = useDesktopGameUI();
@@ -791,7 +794,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             </Text>
             <CardHand
               cards={sortedHandCards as any}
-              size={isDesktop ? 'huge' : 'tiny'}
+              size={isTrueDesktop ? 'huge' : 'tiny'}
               horizontal
               cardOverlap={myHandCards.length}
             />
