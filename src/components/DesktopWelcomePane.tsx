@@ -72,7 +72,7 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           {SUITS.map((s) => (
             <Text key={s.glyph} style={[styles.suit, { color: s.color }]}>{s.glyph}</Text>
           ))}
-          <Text style={styles.wordmark}>NÄGELS</Text>
+          <Text style={styles.wordmark} numberOfLines={1}>NÄGELS</Text>
         </View>
 
         {/* Hero stays mounted at all times; primer card stacks below it
@@ -189,7 +189,11 @@ const styles = StyleSheet.create({
   inner: { flex: 1, paddingHorizontal: 80, paddingTop: 80, paddingBottom: 56 },
 
   // Brand
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 36 },
+  // flexWrap on the row so on narrow desktop windows (~1024px,
+  // pane ≈ 500px) the wordmark moves to a second row instead of
+  // splitting char-by-char. The wordmark itself stays on one line
+  // (numberOfLines={1} + flexShrink: 0) so "NÄGELS" never breaks.
+  brandRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 36 },
   suit: { fontSize: 44, fontWeight: '800' },
   wordmark: {
     fontSize: 56,
@@ -197,6 +201,7 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     color: '#FFFFFF',
     marginLeft: 6,
+    flexShrink: 0,
   },
 
   // Hero. RN Web's height calc for Text with explicit lineHeight has
