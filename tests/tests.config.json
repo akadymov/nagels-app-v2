@@ -9,11 +9,9 @@
     }
   },
   "specs": [
-    { "name": "createRoom",          "tier": "unit",          "enabled": true  },
     { "name": "gameLoop",            "tier": "unit",          "enabled": true  },
-    { "name": "push-transitions",    "tier": "unit",          "enabled": true  },
-    { "name": "push-i18n",           "tier": "unit",          "enabled": true  },
-    { "name": "telegram",            "tier": "unit",          "enabled": true  },
+    { "name": "engine",              "tier": "unit",          "enabled": true  },
+    { "name": "local-backend",       "tier": "unit",          "enabled": true  },
     { "name": "boot",                "tier": "smoke",         "enabled": true  },
     { "name": "lobby",               "tier": "smoke",         "enabled": true  },
     { "name": "auth-modals",         "tier": "smoke",         "enabled": true  },

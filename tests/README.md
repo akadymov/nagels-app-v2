@@ -51,7 +51,7 @@ Plus:
 | `npm run test:all` | all five tiers via orchestrator | manual `:8081` + isolated `:8082` | ~30 min |
 | `npm run test:sp:prod` | SP e2e against `$APP_URL` | production | — |
 
-Edge-function tests (run separately for now — orchestrator integration in Phase 7+):
+Edge-function tests run separately for now — they're Deno suites, not Jest. Orchestrator integration is a Phase 7+ task; until then the registry's `unit` tier only carries the three real Jest specs (`gameLoop`, `engine`, `local-backend`).
 
 ```bash
 cd supabase/functions && deno test --allow-all

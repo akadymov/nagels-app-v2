@@ -140,9 +140,13 @@ function runTier(tier: Tier, names: string[]): TierResult {
     const pattern = names
       .map((n) => `/${n}\\.test\\.|__tests__/${n}\\.`)
       .join('|');
+    // jest 30 renamed --testPathPattern (singular) to --testPathPatterns
+    // (plural). The orchestrator targets jest 30+; older jest builds will
+    // need the singular form. Keep --no-coverage to avoid the istanbul
+    // instrumentation hit for routine pre-commit runs.
     const res = spawnSync(
       'npx',
-      ['jest', '--no-coverage', '--testPathPattern', pattern],
+      ['jest', '--no-coverage', '--testPathPatterns', pattern],
       { stdio: 'inherit', cwd: REPO_ROOT, env: process.env },
     );
     exitCode = res.status ?? 1;
