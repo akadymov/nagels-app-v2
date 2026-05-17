@@ -30,6 +30,17 @@ const HEADLESS = process.env.HEADLESS === '1';
 // SLOW_MO=0 to run as fast as Playwright allows.
 const SLOW_MO = parseInt(process.env.SLOW_MO ?? '80', 10);
 
+// Chromium background-tab throttling cuts non-focused windows' JS
+// timers to ~1Hz, which stalls every multi-context headed test
+// (multiplayer-6p-mixed, TILE_WINDOWS smoke). Always include these
+// flags so the multi-window path "just works"; they're no-ops for
+// headless and single-context runs. Mirrors demo/play-demo.js.
+const NO_THROTTLE_ARGS = [
+  '--disable-background-timer-throttling',
+  '--disable-renderer-backgrounding',
+  '--disable-backgrounding-occluded-windows',
+];
+
 // TILE_WINDOWS=1 → headed parallel run with per-worker --window-position
 // so the user can watch 6 mobile smoke specs in one row + desktop specs
 // cascaded with a 20% rightward shift on a big external monitor.
@@ -93,7 +104,7 @@ module.exports = {
   use: {
     baseURL: BASE,
     headless: HEADLESS,
-    launchOptions: { slowMo: SLOW_MO },
+    launchOptions: { slowMo: SLOW_MO, args: [...NO_THROTTLE_ARGS] },
     browserName: 'chromium',
     viewport: { width: 430, height: 932 },
     deviceScaleFactor: 3,
@@ -113,7 +124,10 @@ module.exports = {
     { name: 'smoke',    testDir: './tests/smoke',
       testIgnore: '**/desktop-layout.spec.ts',
       use: {
-        launchOptions: { slowMo: SLOW_MO, args: tileMobileArgs() },
+        launchOptions: {
+          slowMo: SLOW_MO,
+          args: [...NO_THROTTLE_ARGS, ...tileMobileArgs()],
+        },
       } },
     { name: 'smoke-desktop', testDir: './tests/smoke',
       testMatch: '**/desktop-layout.spec.ts',
@@ -125,7 +139,10 @@ module.exports = {
         userAgent:
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
           'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-        launchOptions: { slowMo: SLOW_MO, args: tileDesktopArgs() },
+        launchOptions: {
+          slowMo: SLOW_MO,
+          args: [...NO_THROTTLE_ARGS, ...tileDesktopArgs()],
+        },
       } },
   ],
 };
