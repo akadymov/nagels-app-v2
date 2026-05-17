@@ -62,7 +62,7 @@ src/
 
 ## Testing
 
-Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`).
+Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`). The e2e tier includes SP vs bots and a 6-player multi-context game (4 mobile + 2 desktop).
 
 ```bash
 HEADLESS=1 npm run test:fast    # pre-commit (~50s), needs :8081 up
