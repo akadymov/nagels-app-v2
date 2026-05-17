@@ -14,7 +14,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { Radius } from '../../constants';
+import { Radius, Spacing } from '../../constants';
 import { LobbyScreen, type LobbyScreenProps } from '../LobbyScreen';
 import { SettingsBody } from '../../components/SettingsBody';
 import { DesktopShell } from '../../components/DesktopShell';
@@ -66,6 +66,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     minHeight: 720,
     alignSelf: 'center',
+    gap: Spacing.md,
   },
   pane: {
     borderRadius: Radius.xl,

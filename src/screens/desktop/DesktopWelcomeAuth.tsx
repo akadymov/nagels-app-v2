@@ -24,6 +24,7 @@ import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { AuthScreen, type AuthScreenProps } from '../AuthScreen';
 import { LobbyScreen, type LobbyScreenProps } from '../LobbyScreen';
+import { SettingsBody } from '../../components/SettingsBody';
 import {
   DesktopWelcomePane,
   type DesktopWelcomePaneProps,
@@ -41,6 +42,17 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) =>
   const { user, isGuest } = useAuthStore();
   const isLoggedIn = !!user && !isGuest && !!user.email;
 
+  // Right-pane content for logged-in users: Lobby with profile
+  // sections spliced in. Identity (avatar / password / Google) sits
+  // right after the nickname; preferences (theme / deck / language /
+  // notifications / sign-out) live below the lobby CTAs.
+  const identitySlot = isLoggedIn ? (
+    <SettingsBody onClose={() => {}} only="identity" hideNickname />
+  ) : null;
+  const preferencesSlot = isLoggedIn ? (
+    <SettingsBody onClose={() => {}} only="preferences" />
+  ) : null;
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={styles.welcomePane}>
@@ -50,15 +62,20 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) =>
         style={[
           styles.rightPane,
           { backgroundColor: colors.background, borderColor: colors.glassLight },
-          // When the right pane hosts the Lobby it needs to fill
-          // the column edge-to-edge; the AuthScreen variant is
-          // centered in a narrow inner column instead.
           isLoggedIn ? styles.rightPaneLobby : styles.rightPaneAuth,
         ]}
       >
         {isLoggedIn ? (
           <View style={styles.lobbyContainer}>
-            <LobbyScreen {...lobby} hideAuthCta hideLogoHeader transparentBackground />
+            <LobbyScreen
+              {...lobby}
+              hideAuthCta
+              hideLogoHeader
+              transparentBackground
+              centerContent
+              afterNickname={identitySlot}
+              afterCtas={preferencesSlot}
+            />
           </View>
         ) : (
           <View style={styles.authInner}>
