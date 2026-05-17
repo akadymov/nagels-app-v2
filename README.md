@@ -81,6 +81,8 @@ npm run test:all -- --skip notrump-deal    # ditto
 
 Smoke specs use real `data-testid` selectors against the manual `:8081` dev server. Scenario + e2e tiers boot an isolated `:8082` Expo + local Supabase stack via Playwright `globalSetup` — your `:8081` dev server is untouched.
 
+Prefix any smoke command with `TILE_WINDOWS=1` for a tiled headed view on a big monitor (mobile: 6 windows in a row; desktop: cascade with 20% rightward shift). Details in [`tests/README.md`](tests/README.md).
+
 Spec registry lives in [`tests/tests.config.json`](tests/tests.config.json) — that's also where you find the spec names accepted by `--only` / `--skip`. Flip `enabled: false` to skip a flaky spec without removing it.
 
 ## Game Rules
