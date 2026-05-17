@@ -30,6 +30,41 @@ const HEADLESS = process.env.HEADLESS === '1';
 // SLOW_MO=0 to run as fast as Playwright allows.
 const SLOW_MO = parseInt(process.env.SLOW_MO ?? '80', 10);
 
+// TILE_WINDOWS=1 → headed parallel run with per-worker --window-position
+// so the user can watch 6 mobile smoke specs in one row + desktop specs
+// cascaded with a 20% rightward shift on a big external monitor.
+//   - smoke project: 6-per-row tile, wraps to row 2 for the 7th file.
+//   - smoke-desktop project: cascade, 20% of window width per worker.
+// Each worker is a fresh Node process; process.env.TEST_PARALLEL_INDEX
+// is set by Playwright before the config is re-evaluated, so the
+// per-worker x/y here is stable across retries.
+const TILE = process.env.TILE_WINDOWS === '1';
+const WORKER_IDX = parseInt(process.env.TEST_PARALLEL_INDEX ?? '0', 10);
+
+function tileMobileArgs() {
+  if (!TILE) return [];
+  const slotW = 470;   // viewport 430 + chrome ~40px
+  const slotH = 1000;  // viewport 932 + chrome ~68px
+  const perRow = 6;
+  const col = WORKER_IDX % perRow;
+  const row = Math.floor(WORKER_IDX / perRow);
+  return [
+    `--window-position=${col * slotW},${row * slotH}`,
+    `--window-size=${slotW},${slotH}`,
+  ];
+}
+
+function tileDesktopArgs() {
+  if (!TILE) return [];
+  const w = 1480;
+  const h = 980;
+  const shift = Math.round(w * 0.20);  // 296px
+  return [
+    `--window-position=${WORKER_IDX * shift},${WORKER_IDX * 40}`,
+    `--window-size=${w},${h}`,
+  ];
+}
+
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 module.exports = {
   // Phase 2: wired in but no-ops unless LOCAL_SUPABASE=1.
@@ -48,9 +83,12 @@ module.exports = {
   // backstop rather than the primary fail signal.
   timeout: 30 * 60 * 1000,
   expect: { timeout: 15_000 },
-  fullyParallel: false,
+  // Tiled mode parallelises within a project (each worker → its own
+  // window, positioned by tile{Mobile,Desktop}Args). Default stays
+  // serial so scenario/e2e + the headless CI path are unaffected.
+  fullyParallel: TILE,
   retries: 0,
-  workers: 1,
+  workers: TILE ? 6 : 1,
   reporter: 'list',
   use: {
     baseURL: BASE,
@@ -73,7 +111,10 @@ module.exports = {
     { name: 'e2e',      testDir: './tests/e2e' },
     { name: 'scenario', testDir: './tests/scenario' },
     { name: 'smoke',    testDir: './tests/smoke',
-      testIgnore: '**/desktop-layout.spec.ts' },
+      testIgnore: '**/desktop-layout.spec.ts',
+      use: {
+        launchOptions: { slowMo: SLOW_MO, args: tileMobileArgs() },
+      } },
     { name: 'smoke-desktop', testDir: './tests/smoke',
       testMatch: '**/desktop-layout.spec.ts',
       use: {
@@ -84,6 +125,7 @@ module.exports = {
         userAgent:
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
           'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+        launchOptions: { slowMo: SLOW_MO, args: tileDesktopArgs() },
       } },
   ],
 };

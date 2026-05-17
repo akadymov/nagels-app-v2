@@ -147,6 +147,21 @@ the start command in the error message if `:8081` is dead.
    testID to the production component (single-token, no behaviour
    change — see Task 1 of the Phase 4 plan).
 
+**Tiled headed mode (visual review on a big monitor):**
+
+```bash
+TILE_WINDOWS=1 npm run test:smoke           # 6 windows in a row, parallel
+TILE_WINDOWS=1 npm run test:smoke:desktop   # cascade with 20% rightward shift
+```
+
+Default Playwright run is serial (`workers: 1`, headed with slowMo).
+Setting `TILE_WINDOWS=1` bumps to `workers: 6 + fullyParallel: true`
+and positions each worker's Chromium window via `--window-position`
+based on `TEST_PARALLEL_INDEX`. Mobile: row layout (6 per row,
+470×1000 each — 7th wraps to row 2). Desktop: cascade with a 296px
+(20% × 1480) rightward shift + 40px vertical drop per worker.
+Scenario and e2e tiers are untouched.
+
 ## Cross-tier orchestrator (`npm run test:all`)
 
 Reads `tests/tests.config.json` and runs each tier in order:
