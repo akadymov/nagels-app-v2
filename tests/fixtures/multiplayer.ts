@@ -201,6 +201,79 @@ export async function runGameLoop(
 }
 
 /**
+ * Best-effort window placement for multi-context headed runs.
+ *
+ * Mobile contexts (viewport width < 1024) are laid out in a row on
+ * the left. Desktop contexts (≥ 1024) are cascaded on the right
+ * with a 280px shift per window. Headless runs no-op silently.
+ *
+ * Uses CDP Browser.setWindowBounds per page — Playwright's
+ * --window-position launch arg only positions the first window
+ * when multiple contexts share the same browser, so we have to
+ * push per-context bounds explicitly. Pattern mirrors
+ * demo/play-demo.js:pos().
+ *
+ * Heuristic geometry tuned for a 3440-wide ultrawide. Override
+ * via DEMO_TILE_MOBILE_W / DEMO_TILE_MOBILE_H /
+ * DEMO_TILE_DESKTOP_W / DEMO_TILE_DESKTOP_H env if your monitor
+ * differs; set DEMO_NO_TILE=1 to disable placement entirely.
+ */
+export async function tileContextWindows(pages: Page[]): Promise<void> {
+  if (process.env.DEMO_NO_TILE === '1') return;
+  if (process.env.HEADLESS === '1') return;
+
+  const mobileW = parseInt(process.env.DEMO_TILE_MOBILE_W ?? '380', 10);
+  const mobileH = parseInt(process.env.DEMO_TILE_MOBILE_H ?? '820', 10);
+  const desktopW = parseInt(process.env.DEMO_TILE_DESKTOP_W ?? '1400', 10);
+  const desktopH = parseInt(process.env.DEMO_TILE_DESKTOP_H ?? '900', 10);
+  const cascadeShiftX = Math.round(desktopW * 0.2);
+  const cascadeShiftY = 60;
+
+  let mobileCol = 0;
+  let desktopIdx = 0;
+  const mobileRowWidth = pages.filter((p) => {
+    const vp = p.viewportSize();
+    return !!vp && vp.width < 1024;
+  }).length * mobileW;
+
+  for (const page of pages) {
+    const vp = page.viewportSize();
+    if (!vp) continue;
+    const isDesktop = vp.width >= 1024;
+    let x: number;
+    let y: number;
+    let w: number;
+    let h: number;
+    if (isDesktop) {
+      x = mobileRowWidth + desktopIdx * cascadeShiftX;
+      y = desktopIdx * cascadeShiftY;
+      w = desktopW;
+      h = desktopH;
+      desktopIdx += 1;
+    } else {
+      x = mobileCol * mobileW;
+      y = 0;
+      w = mobileW;
+      h = mobileH;
+      mobileCol += 1;
+    }
+    try {
+      const session = await page.context().newCDPSession(page);
+      const { windowId } = (await session.send(
+        'Browser.getWindowForTarget',
+      )) as { windowId: number };
+      await session.send('Browser.setWindowBounds', {
+        windowId,
+        bounds: { left: x, top: y, width: w, height: h },
+      });
+      await session.detach().catch(() => {});
+    } catch {
+      /* CDP unavailable or wrong target — accept default OS placement */
+    }
+  }
+}
+
+/**
  * Skip the Welcome screen + dismiss PWA modal. Every player calls
  * this once on boot before createRoom/joinRoom.
  *

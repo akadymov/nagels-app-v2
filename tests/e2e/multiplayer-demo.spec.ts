@@ -35,6 +35,7 @@ import {
   markReady,
   startGame,
   enterLobbyAsGuest,
+  tileContextWindows,
 } from '../fixtures/multiplayer';
 import {
   loginAsRegistered,
@@ -201,6 +202,10 @@ test('6p multiplayer demo — feature-touching showcase', async ({
         console.log(`[demo:${slot.label}] 🛑 pageerror: ${e.message.slice(0, 200)}`);
       });
     }
+
+    // Tile the 6 windows: mobile row on the left, desktop cascade
+    // on the right. No-op for headless runs.
+    await tileContextWindows(pages);
 
     // ── Step 1: entry paths in parallel ────────────────────────
     await Promise.all(
