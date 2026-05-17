@@ -257,10 +257,16 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   );
 
   const renderFullTable = () => {
-    // Column width calculation
+    // Column width calculation. Embedded (desktop left pane) uses a
+    // narrow column with rotated name headers so 4-6 columns fit in
+    // a ~300px-wide pane; the modal variant uses the wider headers
+    // that wrap onto two lines.
     const playerCount = players.length;
-    const roundColW = 32;
-    const playerColW = Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
+    const roundColW = embedded ? 28 : 32;
+    const playerColW = embedded
+      ? 44
+      : Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
+    const headerMinHeight = embedded ? 96 : 38;
 
     return (
       <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
@@ -275,23 +281,37 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           </Text>
         )}
 
-        {isMidGame && (
+        {/* The brief↔detailed pill toggle at the top of embedded
+            mode replaces this old "Hide History" button. */}
+        {isMidGame && !embedded && (
           <Pressable onPress={() => setShowFull(false)} style={[styles.toggleBtn, { borderColor: colors.accent, marginBottom: Spacing.sm }]}>
             <Text style={[styles.toggleText, { color: colors.accent }]}>{t('scoreboard.hideHistory', 'Hide History')}</Text>
           </Pressable>
         )}
 
-        {/* Sticky column headers. Two-line cap so long nicknames wrap
-            instead of being cropped. */}
-        <View style={[styles.tableRow, { minHeight: 38 }]}>
+        {/* Column headers. Modal: two-line wrap. Embedded: nickname
+            rotated -90° (reads bottom-to-top) so the column can be
+            narrow enough to fit several players in a desktop pane. */}
+        <View style={[styles.tableRow, { minHeight: headerMinHeight, alignItems: 'flex-end' }]}>
           <View style={[styles.tableCell, { width: roundColW }]}>
             <Text style={[styles.headerText, { color: colors.textMuted }]}>#</Text>
           </View>
           {sortedPlayers.map((p) => (
-            <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
-              <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
-                {p.name}
-              </Text>
+            <View key={p.id} style={[styles.tableCell, { width: playerColW, height: embedded ? headerMinHeight : undefined }]}>
+              {embedded ? (
+                <View style={styles.rotatedHeaderWrap}>
+                  <Text
+                    style={[styles.headerText, styles.rotatedHeaderText, { color: colors.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
+                  {p.name}
+                </Text>
+              )}
             </View>
           ))}
         </View>
@@ -669,6 +689,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Rotated header for the embedded (desktop pane) variant — the
+  // text reads bottom-to-top so a long nickname fits in a narrow
+  // column. Wrap is an explicit-size square so the rotated child
+  // is positioned predictably.
+  rotatedHeaderWrap: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rotatedHeaderText: {
+    width: 80,
+    textAlign: 'center',
+    transform: [{ rotate: '-90deg' }],
   },
   divider: {
     height: 1,
