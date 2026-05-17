@@ -15,8 +15,11 @@ export function subscribeRoom(room_id: string) {
   unsubscribeRoom();
   currentRoomId = room_id;
   isSubscribed = false;
-  // Wipe chat from any previous room so messages don't leak across.
-  useChatStore.getState().reset();
+  // Bind chat to this room. If the persisted roomId matches (page
+  // refresh into the same room), keep prior messages so they survive
+  // the reload; otherwise wipe and rebind so we don't leak chat
+  // across rooms.
+  useChatStore.getState().setRoom(room_id);
   const supabase = getSupabaseClient();
   // broadcast.self=true so the sender of a chat message also receives
   // their own broadcast through the listener — otherwise the user
