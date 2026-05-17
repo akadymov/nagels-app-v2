@@ -795,7 +795,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <CardHand
               cards={sortedHandCards as any}
               size={isTrueDesktop ? 'huge' : 'tiny'}
-              horizontal
+              // Desktop: render in a 5-per-row grid so the whole hand
+              // is visible at once (Akula: "нельзя заставлять угадывать
+              // про горизонтальный скролл"). Mobile keeps the
+              // overlapping single-row scroller to save space.
+              horizontal={!isTrueDesktop}
               cardOverlap={myHandCards.length}
             />
           </View>
