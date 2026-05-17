@@ -4,20 +4,31 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Colors, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 
 interface GameLogoProps {
   size?: 'sm' | 'md' | 'xs';
+  // When provided, the logo becomes a Pressable that calls onPress.
+  // Screens that don't want logo navigation (Auth, ResetPassword,
+  // Lobby — already there) simply omit this prop.
+  onPress?: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
 }
 
-export const GameLogo: React.FC<GameLogoProps> = ({ size = 'md' }) => {
+export const GameLogo: React.FC<GameLogoProps> = ({
+  size = 'md',
+  onPress,
+  testID,
+  accessibilityLabel,
+}) => {
   const { colors } = useTheme();
   const isSm = size === 'sm';
   const isXs = size === 'xs';
 
-  return (
+  const inner = (
     <View style={[styles.container, isXs && styles.containerXs]}>
       {!isXs && <Text style={[styles.shark, isSm && styles.sharkSm]}>🦈</Text>}
       <Text style={[styles.wordmark, isSm && styles.wordmarkSm, isXs && styles.wordmarkXs, { color: colors.accent }]}>
@@ -38,6 +49,21 @@ export const GameLogo: React.FC<GameLogoProps> = ({ size = 'md' }) => {
         </Text>
       </View>
     </View>
+  );
+
+  if (!onPress) return inner;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
+      {inner}
+    </Pressable>
   );
 };
 
@@ -83,5 +109,8 @@ const styles = StyleSheet.create({
   },
   suitXs: {
     fontSize: 7,
+  },
+  pressed: {
+    opacity: 0.6,
   },
 });

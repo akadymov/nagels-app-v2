@@ -282,7 +282,11 @@
     "leaveAnyway": "Leave anyway",
     "leftMidGame": "🚪 {{name}} left the game",
     "endGameConfirmTitle": "End the game?",
-    "endGameConfirmBody": "This closes the room for everyone. Everyone returns to the lobby and the room is gone for good.\n\nIf you just need to step away — close the tab instead. You'll come back to the same room."
+    "endGameConfirmBody": "This closes the room for everyone. Everyone returns to the lobby and the room is gone for good.\n\nIf you just need to step away — close the tab instead. You'll come back to the same room.",
+    "leaveRoomConfirmTitle": "Leave the room?",
+    "leaveRoomConfirmBody": "You'll go back to the lobby. The room stays open — you can rejoin from the invite link if it's still there.",
+    "leaveRoomHostConfirmTitle": "Close the room?",
+    "leaveRoomHostConfirmBody": "You're the host. Leaving closes the room for everyone — players go back to the lobby and the room is gone."
   },
   "pwa": {
     "title": "Add Nägels to your home screen",

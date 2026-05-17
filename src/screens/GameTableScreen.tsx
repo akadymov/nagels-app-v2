@@ -210,6 +210,38 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     await leaveWithConfirm(room.id, t, { isHost: true });
   }, [room?.id, t, onExit, isMultiplayer, sp]);
 
+  // Logo-tap leave: same surface as the exit button, but available
+  // to non-host players too. Spectators leave without confirm; SP
+  // and multiplayer participants (host + non-host) see a confirm
+  // dialog with role-appropriate wording.
+  const handleLogoLeave = useCallback(async () => {
+    if (!isMultiplayer) {
+      const msg = String(t('game.leaveBotGameConfirm', 'Leave this game? Your progress will be lost.'));
+      const accept = typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm(msg)
+        : true;
+      if (!accept) return;
+      try { sp.reset(); } catch {}
+      onExit?.();
+      return;
+    }
+    if (!room?.id) return;
+    if (useRoomStore.getState().isSpectator) {
+      try {
+        await gameClient.leaveRoomAsSpectator(room.id);
+      } catch (err) {
+        console.error('[GameTable] leaveRoomAsSpectator failed:', err);
+      }
+      unsubscribeRoom();
+      useRoomStore.getState().reset();
+      onExit?.();
+      return;
+    }
+    const ok = await leaveWithConfirm(room.id, t, { isHost });
+    if (!ok) return;
+    onExit?.();
+  }, [isMultiplayer, room?.id, t, sp, isHost, onExit]);
+
   // Spectator leave — no confirm prompt, just detach and exit.
   const handleSpectatorLeave = useCallback(async () => {
     const roomId = room?.id;
@@ -919,7 +951,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         {/* Top Bar */}
         <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
           <View style={styles.topBarRow1}>
-            <GameLogo size="xs" />
+            <GameLogo
+              size="xs"
+              onPress={handleLogoLeave}
+              testID="app-logo-button"
+              accessibilityLabel={t('multiplayer.leaveConfirmTitle')}
+            />
           </View>
           <View style={styles.topBarRow2}>
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
