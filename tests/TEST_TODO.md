@@ -13,7 +13,6 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `btn-play-again-scoreboard` — src/screens/ScoreboardModal.tsx:392
 - [ ] `btn-share-spectator` — src/screens/WaitingRoomScreen.tsx:334
 - [ ] `btn-welcome-signout` — src/screens/WelcomeScreen.tsx:155
-- [ ] `btn-welcome-signout-desktop` — src/screens/desktop/DesktopWelcomeAuth.tsx:75
 - [ ] `desktop-primer-skip` — src/components/DesktopWelcomePane.tsx:95
 - [ ] `desktop-welcome-learn` — src/components/DesktopWelcomePane.tsx:147
 - [ ] `feedback-fab` — src/components/FeedbackButton.tsx:74
@@ -46,7 +45,6 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `waiting-btn-settings` — src/screens/WaitingRoomScreen.tsx:294
 - [ ] `waiting-btn-sync` — src/screens/WaitingRoomScreen.tsx:267
 - [ ] `welcome-profile` — src/screens/WelcomeScreen.tsx:137
-- [ ] `welcome-profile-desktop` — src/screens/desktop/DesktopWelcomeAuth.tsx:57
 <!-- AUTO-DETECTED:END -->
 
 ## Manual notes

@@ -187,7 +187,22 @@ const argv = process.argv.slice(2);
 const updateTodo = argv.includes('--update-todo');
 const verbose = argv.includes('--verbose');
 
-const orphans = refs.filter((r) => !refMatchesAnySrc(r, src));
+// Only exact-match (`=`) selectors are flagged as orphans. Operator
+// selectors (`*=`, `^=`, `$=`) are intentionally tolerant — used for
+// defensive matching (legacy "signin" vs "sign-in") and suffix sweeps
+// (`-got-it` over `onboarding-tip-*-got-it`). A false-positive orphan
+// there would just train us to ignore the list.
+//
+// ALLOWLIST: aspirational exact-match selectors that the test treats
+// as soft-skip (assertion no-ops if the element is absent). These are
+// placeholders for future src testIDs we intend to add.
+const ORPHAN_ALLOWLIST = new Set<string>([
+  'desktop-game-left', // assertNoOverflow split-pane (soft-skip)
+  'desktop-game-right',
+]);
+const orphans = refs.filter(
+  (r) => r.op === '=' && !ORPHAN_ALLOWLIST.has(r.value) && !refMatchesAnySrc(r, src),
+);
 const uncoveredSrc = src.filter(
   (s) => s.kind === 'static' && !refs.some((r) => srcMatchesRef(s, r)),
 );
