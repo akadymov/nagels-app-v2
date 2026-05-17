@@ -40,7 +40,13 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          <LobbyScreen {...lobbyProps} hideAuthCta />
+          {/* Cap the lobby form at 600px on ultra-wide desktops —
+              same pattern as the embedded lobby in DesktopWelcomeAuth.
+              The outer pane still flexes to its ~65% column; only the
+              inner column is capped. */}
+          <View style={styles.lobbyInner}>
+            <LobbyScreen {...lobbyProps} hideAuthCta />
+          </View>
         </View>
         <View
           style={[
@@ -68,7 +74,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
-  lobbyPane: { flexGrow: 13, flexShrink: 1, flexBasis: 0 }, // ~65%
+  lobbyPane: {
+    flexGrow: 13,
+    flexShrink: 1,
+    flexBasis: 0, // ~65%
+    alignItems: 'center', // center the capped inner column
+  },
+  lobbyInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 600,
+  },
   profilePane: { flexGrow: 7, flexShrink: 1, flexBasis: 0 }, // ~35%
 });
 
