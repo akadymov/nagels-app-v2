@@ -56,10 +56,13 @@ test.describe('private room', () => {
       .first()
       .click({ timeout: 5_000 });
 
+    // 30s budget covers TILE_WINDOWS=1 parallel mode where 6 smoke
+    // specs hit :8081 simultaneously and the join request can take
+    // 10–15s under load. Serial runs resolve in <1s.
     const msg = await Promise.race([
       dialogMsg,
       new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('No dialog within 10s')), 10_000),
+        setTimeout(() => reject(new Error('No dialog within 30s')), 30_000),
       ),
     ]);
     expect(msg).toMatch(errorPattern);
