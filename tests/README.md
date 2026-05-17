@@ -20,11 +20,13 @@ Plus:
 - `src/__tests__/`                          — frontend unit (Jest)
 - `supabase/functions/_shared/__tests__/`   — edge-function unit (Deno)
 
-## Status (Phase 4 — Smoke + orchestrator shipped)
+## Status (Phase 6 — Multi-context e2e shipped)
 
 - ✅ `tests/e2e/sp-game.spec.js` — single-player vs Hard bots, full game.
   - Manual `:8081` dev server: `npm run test:sp`
   - Isolated `:8082` Expo + local supabase: `npm run test:sp:local`
+- ✅ `tests/e2e/multiplayer-6p-mixed.spec.ts` — 4 mobile + 2 desktop, real room, full game.
+  - `npm run test:mp:local` (~30 min spec + ~1 min boot)
 - ✅ `tests/scenario/notrump-deal.spec.ts` — POC scenario.
   - `npm run test:scenario:local` (~6 min spec + ~1 min boot)
 - ✅ `tests/smoke/*.spec.ts` — 7 mobile + 1 desktop spec against `:8081`.
@@ -33,9 +35,10 @@ Plus:
 - ✅ Reusable click helpers `tests/fixtures/actions.ts`.
 - ✅ Scenario seeding `tests/fixtures/seed.ts`.
 - ✅ Smoke helpers `tests/fixtures/smoke.ts`.
+- ✅ Multiplayer helpers `tests/fixtures/multiplayer.ts`.
 - ✅ Edge-function unit tests: `cd supabase/functions && deno test --allow-all`.
 - ✅ Cross-tier orchestrator: `npm run test:all` (see Orchestrator section below).
-- ⏳ Additional scenarios / multi-context e2e — Phase 5+.
+- ⏳ Phase 6.1+: host-exit, reconnect, spectator multi-context specs.
 
 ## Running
 
@@ -47,6 +50,8 @@ Plus:
 | `npm run test:fast` | unit + smoke + smoke-desktop | manual `:8081` | ~50s |
 | `npm run test:sp` | SP e2e (full game vs bots) | manual `:8081`, headed | ~13 min |
 | `npm run test:sp:local` | same SP e2e | isolated `:8082` + local Supabase | ~22 min |
+| `npm run test:mp` | Multiplayer 6p mixed (debug, headed) | manual `:8081` | ~25 min |
+| `npm run test:mp:local` | Multiplayer 6p mixed (canonical) | isolated `:8082` + local Supabase | ~30 min |
 | `npm run test:scenario:local` | scenario tier (notrump-deal) | isolated `:8082` + local Supabase | ~7 min |
 | `npm run test:all` | all five tiers via orchestrator | manual `:8081` + isolated `:8082` | ~30 min |
 | `npm run test:sp:prod` | SP e2e against `$APP_URL` | production | — |
@@ -203,6 +208,57 @@ Scenario and e2e tiers are untouched.
 - Inside `npm run test:all` the flag only affects the smoke tiers;
   scenario and e2e still run on the isolated `:8082` stack
   (headless by orchestrator design).
+
+## Multiplayer e2e (`tests/e2e/multiplayer-6p-mixed.spec.ts`)
+
+Phase 6 baseline — the first true multi-context e2e. Six players in
+one real Supabase-backed room, mixed viewports:
+
+- P0..P3: mobile (iPhone 15 Pro Max @ 430×932)
+- P4..P5: desktop (1440×900)
+- P5 is host (creates room, starts game)
+
+Flow:
+
+1. All six contexts skip-to-lobby and dismiss the PWA modal.
+2. Host taps `player-count-6` → `tab-create` → `btn-create-room`,
+   captures the 6-char room code from `[data-testid="room-code"]`.
+3. The other five `tab-join` → fill code → `btn-join-room`.
+4. All five guests tap `btn-ready`; host taps `btn-start-game`.
+5. Each context runs `runGameLoop` in parallel (dismiss tips → bet →
+   play → Continue → repeat) until `scoreboard-winner-banner`
+   appears. The loop is the strip-down of `demo/play-demo.js`'s
+   proven flow — no chat, no last-trick replay, no profile setup.
+6. Spec asserts every context returned `'game-over'`, plus the
+   banner is still visible on at least one mobile AND one desktop
+   page (catches viewport-class regressions).
+
+**Run modes:**
+
+```bash
+npm run test:mp:local   # canonical: :8082 stack, headless, ~30 min
+npm run test:mp         # debug: manual :8081, headed, ~25 min
+```
+
+**Memory budget:** 6 chromium contexts + Expo `:8082` + Supabase
+docker ≈ 3 GB. Close Chrome / Slack before running on the 24 GB
+MacBook — `memory-guard.sh` denies new spawns at <2 GB free.
+
+**Debug tips:**
+
+- Logs are tagged `[mp:P0]`..`[mp:P5]` — failure messages always
+  identify which player stalled.
+- Trace files: `test-results/multiplayer-6p-mixed-*/trace.zip` —
+  `npx playwright show-trace <file>` opens the interactive viewer
+  with one tab per player.
+- If `runGameLoop` returns `'idle-timeout'` for one player, that
+  player's UI never advanced — usually a stuck onboarding tip or a
+  realtime desync. Widen the tip selector or press the in-game
+  sync button manually before re-running.
+
+**Out of scope for this spec** (deferred to Phase 6.1+):
+mid-game host exit, reconnect after disconnect, spectator mode,
+chat assertions, mixed player-count games.
 
 ## Cross-tier orchestrator (`npm run test:all`)
 
