@@ -62,28 +62,14 @@ src/
 
 ## Testing
 
-Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`). Full details in [`tests/README.md`](tests/README.md).
+Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`).
 
 ```bash
-# Pre-commit (~50s, requires :8081 dev server):
-HEADLESS=1 npm run test:fast
-
-# Per-tier:
-npm run test:unit             # jest (no dev server needed)
-npm run test:smoke            # 9 mobile smoke specs (requires :8081)
-npm run test:smoke:desktop    # 2 desktop-layout specs at 1440x900
-
-# Pre-push / full suite (~30 min, requires :8081 + Docker):
-npm run test:all              # all five tiers in order, single summary
-npm run test:all -- --only boot,lobby      # CLI filters
-npm run test:all -- --skip notrump-deal    # ditto
+HEADLESS=1 npm run test:fast    # pre-commit (~50s), needs :8081 up
+npm run test:all                # pre-push (~30 min), needs :8081 + Docker
 ```
 
-Smoke specs use real `data-testid` selectors against the manual `:8081` dev server. Scenario + e2e tiers boot an isolated `:8082` Expo + local Supabase stack via Playwright `globalSetup` — your `:8081` dev server is untouched.
-
-Prefix any smoke command with `TILE_WINDOWS=1` for a tiled headed view on a big monitor (mobile: 6 windows in a row; desktop: cascade with 20% rightward shift). Details in [`tests/README.md`](tests/README.md).
-
-Spec registry lives in [`tests/tests.config.json`](tests/tests.config.json) — that's also where you find the spec names accepted by `--only` / `--skip`. Flip `enabled: false` to skip a flaky spec without removing it.
+Full docs — tier descriptions, CLI filters, registry, tiled windows, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
 
 ## Game Rules
 

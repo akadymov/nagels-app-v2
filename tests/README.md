@@ -39,19 +39,45 @@ Plus:
 
 ## Running
 
-```bash
-npm run test:sp              # SP e2e against manual :8081 dev server (headed)
-npm run test:sp:local        # SP e2e against isolated :8082 + local supabase (headless)
-npm run test:scenario:local  # Scenario tier (notrump-deal POC) against :8082 (headless)
-npm run test:smoke           # 7 smoke specs against manual :8081 dev server (~90s)
-npm run test:smoke:desktop   # 1 desktop-layout spec at 1440x900 against :8081 (~30s)
-npm run test:sp:prod         # SP e2e against $APP_URL (production)
-```
+| Command | What it runs | Backend | Duration |
+|---|---|---|---|
+| `npm run test:unit` | jest unit suite | none | ~2s |
+| `npm run test:smoke` | 9 mobile smoke specs | manual `:8081` | ~40s |
+| `npm run test:smoke:desktop` | 2 desktop-layout specs | manual `:8081` | ~5s |
+| `npm run test:fast` | unit + smoke + smoke-desktop | manual `:8081` | ~50s |
+| `npm run test:sp` | SP e2e (full game vs bots) | manual `:8081`, headed | ~13 min |
+| `npm run test:sp:local` | same SP e2e | isolated `:8082` + local Supabase | ~22 min |
+| `npm run test:scenario:local` | scenario tier (notrump-deal) | isolated `:8082` + local Supabase | ~7 min |
+| `npm run test:all` | all five tiers via orchestrator | manual `:8081` + isolated `:8082` | ~30 min |
+| `npm run test:sp:prod` | SP e2e against `$APP_URL` | production | — |
 
-Edge-function tests (run separately for now — orchestrator in Phase 7):
+Edge-function tests (run separately for now — orchestrator integration in Phase 7+):
 
 ```bash
 cd supabase/functions && deno test --allow-all
+```
+
+## Environment flags
+
+All scripts honour these env vars — prepend on the CLI to override:
+
+| Flag | Effect | Default |
+|---|---|---|
+| `HEADLESS=1` | Run Chromium headless (CI / background runs) | unset → headed with `slowMo: 80` |
+| `SLOW_MO=N` | Per-action delay in ms (headed mode only) | `80` |
+| `DEMO_URL=…` | Override the URL Playwright hits | `:8081` (or `:8082` w/ LOCAL_SUPABASE) |
+| `LOCAL_SUPABASE=1` | Boot isolated Supabase + Expo on `:8082` via `globalSetup` | unset → manual `:8081` |
+| `KEEP_SUPABASE=1` | Don't `supabase stop` on teardown — reuse stack on next run | unset → full teardown |
+| `TILE_WINDOWS=1` | Headed parallel run with tiled Chromium windows (smoke only) | unset → serial single window |
+
+Examples:
+
+```bash
+HEADLESS=1 npm run test:smoke              # CI-style headless
+SLOW_MO=300 npm run test:smoke             # slower playback for live review
+TILE_WINDOWS=1 npm run test:smoke          # 6-up tiled layout (see Smoke tier section)
+KEEP_SUPABASE=1 npm run test:sp:local      # reuse local stack across runs
+DEMO_URL=$APP_URL npm run test:smoke       # smoke against staging/production
 ```
 
 ## Local backend (LOCAL_SUPABASE=1)
@@ -218,6 +244,53 @@ disappears silently.
 3. The orchestrator warns (but does not fail) if a registry entry
    has no matching spec file on disk — that's how stale entries get
    noticed.
+
+## Monitoring and cleanup
+
+`test:all` runs for ~30 min, often invoked with `&` or in a background
+shell. Quick recipes:
+
+```bash
+# Anything test-related running right now?
+ps aux | grep -E "playwright|test-all|tsx scripts" | grep -v grep
+
+# Local Supabase Docker containers (booted by globalSetup):
+docker ps --filter "name=supabase" --format 'table {{.Names}}\t{{.Status}}'
+
+# Is the isolated test Expo (:8082) listening? (it's gone after teardown)
+lsof -i :8082 -sTCP:LISTEN -P -n
+```
+
+Background runs spawned with `&` write to your shell's stdout; if you
+redirected to a file, tail it:
+
+```bash
+npm run test:all > /tmp/testall.log 2>&1 &
+tail -f /tmp/testall.log     # Ctrl-C to detach (job keeps running)
+```
+
+**Interrupting a run** (e.g., to start over after fixing a flaky spec):
+
+```bash
+# 1. Kill the orchestrator (children die with it):
+ps aux | grep "tsx scripts/test-all" | grep -v grep | awk '{print $2}' | xargs kill
+
+# 2. If Supabase Docker stack is still up after the kill:
+supabase stop --no-backup
+
+# 3. Stale isolated Expo on :8082 (rare — globalTeardown usually wins):
+lsof -i :8082 -t | xargs -r kill
+```
+
+**Artifacts from a failed run** live under `test-results/` (gitignored):
+
+```bash
+ls test-results/                                  # failed-spec folders
+npx playwright show-trace test-results/<dir>/trace.zip   # interactive trace viewer
+open test-results/<dir>/video.webm                # record of the actual run
+```
+
+`test-results/` is wiped at the start of every new Playwright invocation, so save anything you want to keep before the next run.
 
 ## Conventions
 
