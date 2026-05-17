@@ -216,6 +216,22 @@ export async function runGameLoop(
  */
 export async function enterLobbyAsGuest(page: Page): Promise<void> {
   await page.goto('/');
+
+  // Pre-seed the "save progress" prompt dismissal flags (see
+  // src/lib/auth/promptGate.ts). For anonymous users, clicking
+  // btn-create-room or finishing a game would otherwise show a
+  // one-time modal that blocks performCreateRoom from firing,
+  // leaving the spec stuck waiting for room-code. The flags live in
+  // AsyncStorage, which on web maps to plain localStorage.
+  await page.evaluate(() => {
+    try {
+      localStorage.setItem('auth_prompt_before_create_dismissed_v1', '1');
+      localStorage.setItem('auth_prompt_after_game_dismissed_v1', '1');
+    } catch {
+      /* localStorage unavailable — let the modal handlers cope */
+    }
+  });
+
   const vp = page.viewportSize();
   const isDesktop = !!vp && vp.width >= 1024;
   const continueTestId = isDesktop
