@@ -22,6 +22,7 @@ import { useGameStore, type GameStore } from '../../store/gameStore';
 import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
+import { PlayingCard } from '../../components/cards';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
 
 type Props = GameTableScreenProps;
@@ -50,7 +51,11 @@ interface LeftHandInfo {
 }
 interface LeftLastTrickCard {
   playerName: string;
-  cardLabel: string;
+  // Parsed suit + rank so we can render an actual PlayingCard.
+  // Akula: "слева сейчас показываются названия и коды карт — этого
+  // недостаточно, нужны изображения".
+  suit: 'spades' | 'hearts' | 'clubs' | 'diamonds';
+  rank: string | number;
   isWinner: boolean;
 }
 interface LeftLastTrick {
@@ -174,7 +179,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
                 <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
                   {c.playerName}{c.isWinner ? ' 👑' : ''}
                 </Text>
-                <Text style={[styles.cardGlyph, { color: colors.textPrimary }]}>{c.cardLabel}</Text>
+                <PlayingCard suit={c.suit} rank={c.rank} size="small" />
               </View>
             ))}
           </ScrollView>
@@ -290,9 +295,13 @@ function buildLeftPaneData(args: {
       lastTrick = {
         cards: (last.cards ?? []).map((c: any) => {
           const player = players.find((p: any) => p.seat_index === c.seat) ?? null;
+          // Snapshot stores cards as "spades-9" / "hearts-king".
+          const [rawSuit, rawRank] = String(c.card ?? '').split('-');
+          const rank: string | number = /^\d+$/.test(rawRank ?? '') ? parseInt(rawRank, 10) : rawRank;
           return {
             playerName: player?.display_name ?? `Seat ${c.seat}`,
-            cardLabel: c.card,
+            suit: (rawSuit as LeftLastTrickCard['suit']) ?? 'spades',
+            rank,
             isWinner: last.winner_seat === c.seat,
           };
         }),
@@ -330,11 +339,10 @@ function buildLeftPaneData(args: {
     lastTrick = {
       cards: last.cards.map((c) => {
         const player = sp.players.find((p) => p.id === c.playerId) ?? null;
-        const rank = typeof c.card.rank === 'number' ? String(c.card.rank) : c.card.rank;
-        const suitGlyph = ({ spades: '♠', hearts: '♥', clubs: '♣', diamonds: '♦' } as any)[c.card.suit] ?? c.card.suit;
         return {
           playerName: player?.name ?? '?',
-          cardLabel: `${rank}${suitGlyph}`,
+          suit: c.card.suit as LeftLastTrickCard['suit'],
+          rank: c.card.rank,
           isWinner: c.playerId === last.winnerId,
         };
       }),
