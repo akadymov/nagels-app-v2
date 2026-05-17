@@ -68,10 +68,13 @@ const ROSTER = [
 const PLAYER_COUNT = ROSTER.length;
 const HOST_IDX = ROSTER.findIndex((r) => r.role === 'host');
 
-// 45-minute hard ceiling. A 6p full game routinely needs ~25-30 min
-// against the local :8082 stack; the slack covers boot, room sync,
-// and one transient retry.
-test.setTimeout(45 * 60 * 1000);
+// 60-minute hard ceiling. First successful headless run reached
+// hand 13/20 at the 30-min mark on the 24 GB MacBook — roughly
+// 2.5 min/hand, so 20 hands lands around 50 min wall-clock. Add
+// 10 min slack for boot, room sync, and one transient retry.
+// Headed mode (TILE_WINDOWS=1 / test:mp:local:headed) is a few
+// minutes slower due to slowMo, still fits the budget.
+test.setTimeout(60 * 60 * 1000);
 
 test('6p mixed (4 mobile + 2 desktop) full game to scoreboard', async ({
   browser,
