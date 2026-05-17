@@ -416,9 +416,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         onPress={() => {
           if (!isAllowed || !isMyTurn) return;
           if (isPending) {
-            // Second tap on the highlighted chip = confirm.
+            // Second tap on the highlighted chip deselects it.
+            // Commit only fires via the explicit bet-confirm
+            // button — matches the intuitive pattern users expect
+            // from selection UI elsewhere.
             setPendingBet(null);
-            handleBet(bet);
             return;
           }
           setPendingBet(bet);
