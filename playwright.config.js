@@ -72,5 +72,18 @@ module.exports = {
   projects: [
     { name: 'e2e',      testDir: './tests/e2e' },
     { name: 'scenario', testDir: './tests/scenario' },
+    { name: 'smoke',    testDir: './tests/smoke',
+      testIgnore: '**/desktop-layout.spec.ts' },
+    { name: 'smoke-desktop', testDir: './tests/smoke',
+      testMatch: '**/desktop-layout.spec.ts',
+      use: {
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 2,
+        isMobile: false,
+        hasTouch: false,
+        userAgent:
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
+          'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+      } },
   ],
 };
