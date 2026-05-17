@@ -1,20 +1,21 @@
 /**
  * DesktopWelcomePane — left half of the desktop Welcome + Auth layout.
  *
- * Two modes:
- *  - default: marketing hero (suits + NÄGELS wordmark, headline,
- *    subtitle, feature checklist, Learn to Play + Continue/Skip,
- *    inline language switcher pinned bottom-left)
- *  - primer: an inline onboarding carousel that takes over the
- *    centre region. Brand cluster stays at top, CTAs stay at bottom.
- *    Tapping "Got it"/"Let's Play!" on the last slide closes back
- *    to the marketing hero — the user is still on the same desktop
- *    welcome page with the auth form on the right.
+ * Order top → bottom (always):
+ *   brand → hero/features → CTAs → language row → primer (when open)
+ *
+ * The primer is an inline onboarding carousel that mounts BELOW the
+ * CTAs and language row when the user clicks "Learn to Play". Buttons
+ * stay visible — the primer doesn't take over, it expands below.
+ *
+ * Primer body height is locked to the tallest of the 3 slides (per
+ * locale) via a one-shot hidden measurement pass — no layout shift
+ * when the user navigates between slides.
  *
  * The auth form lives in the right pane — no Sign In button here.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../hooks/useTheme';
@@ -64,6 +65,24 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
   const primerPrev = () => { if (primerIndex > 0) setPrimerIndex(primerIndex - 1); };
   const currentSlide = PRIMER_SLIDES[primerIndex];
 
+  // Lock primer body to the tallest of the 3 slides so there's no
+  // layout shift when navigating between them. One-shot measurement
+  // via a hidden absolute layer; re-measures on language change.
+  const [primerBodyMinHeight, setPrimerBodyMinHeight] = useState<number | null>(null);
+  const slideHeightsRef = useRef<Record<string, number>>({});
+  const recordSlideHeight = (slide: string, h: number) => {
+    if (slideHeightsRef.current[slide] === h) return;
+    slideHeightsRef.current[slide] = h;
+    if (Object.keys(slideHeightsRef.current).length >= PRIMER_SLIDES.length) {
+      const max = Math.max(...Object.values(slideHeightsRef.current));
+      setPrimerBodyMinHeight(max);
+    }
+  };
+  useEffect(() => {
+    slideHeightsRef.current = {};
+    setPrimerBodyMinHeight(null);
+  }, [i18n.language]);
+
   return (
     <View style={[styles.root, { backgroundColor: colors.accent }]}>
       <View style={styles.inner}>
@@ -89,56 +108,6 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           ))}
         </View>
 
-        {showPrimer && (
-          <View style={styles.primerCard}>
-            <View style={styles.primerHeader}>
-              <Pressable onPress={closePrimer} hitSlop={8} testID="desktop-primer-skip">
-                <Text style={styles.primerSkip}>{t('common.skip', 'Skip')}</Text>
-              </Pressable>
-              <Text style={styles.primerProgress}>
-                {primerIndex + 1} / {PRIMER_SLIDES.length}
-              </Text>
-            </View>
-
-            <Text style={styles.primerTitle}>
-              {t(`primer.${currentSlide}.title`)}
-            </Text>
-            <Text style={styles.primerVisual}>
-              {t(`primer.${currentSlide}.visual`)}
-            </Text>
-            <Text style={styles.primerDesc}>
-              {t(`primer.${currentSlide}.description`)}
-            </Text>
-
-            <View style={styles.primerDots}>
-              {PRIMER_SLIDES.map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.primerDot,
-                    i === primerIndex && styles.primerDotActive,
-                  ]}
-                />
-              ))}
-            </View>
-
-            <View style={styles.primerNav}>
-              <Pressable
-                onPress={primerPrev}
-                disabled={primerIndex === 0}
-                style={[styles.primerNavBtn, primerIndex === 0 && styles.primerNavBtnDisabled]}
-              >
-                <Text style={styles.primerNavText}>← Prev</Text>
-              </Pressable>
-              <Pressable onPress={primerNext} style={styles.primerNavBtnPrimary}>
-                <Text style={styles.primerNavTextPrimary}>
-                  {t(`primer.${currentSlide}.button`)}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-
         <View style={styles.spacer} />
 
         {/* CTA group hugs the widest child (primary "▶ Learn to Play" /
@@ -148,9 +117,8 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
         <View style={styles.ctaGroup}>
           <Pressable
             onPress={openPrimer}
-            style={[styles.primaryBtn, showPrimer && styles.primaryBtnHidden]}
+            style={styles.primaryBtn}
             testID="desktop-welcome-learn"
-            disabled={showPrimer}
           >
             <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
           </Pressable>
@@ -191,6 +159,84 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
             );
           })}
         </View>
+
+        {showPrimer && (
+          <View style={styles.primerCard}>
+            <View style={styles.primerHeader}>
+              <Pressable onPress={closePrimer} hitSlop={8} testID="desktop-primer-skip">
+                <Text style={styles.primerSkip}>{t('common.skip', 'Skip')}</Text>
+              </Pressable>
+              <Text style={styles.primerProgress}>
+                {primerIndex + 1} / {PRIMER_SLIDES.length}
+              </Text>
+            </View>
+
+            {/* Hidden measurement pass — renders all 3 slide bodies
+                stacked, absolutely positioned + opacity 0. Each
+                onLayout reports its natural height; once all are in,
+                we lock the visible body to the max. Unmounts itself
+                afterward. Re-runs on locale change. */}
+            {primerBodyMinHeight === null && (
+              <View pointerEvents="none" style={styles.primerMeasureLayer}>
+                {PRIMER_SLIDES.map((slide) => (
+                  <View
+                    key={`measure-${slide}`}
+                    style={styles.primerBody}
+                    onLayout={(e) => recordSlideHeight(slide, e.nativeEvent.layout.height)}
+                  >
+                    <Text style={styles.primerTitle}>{t(`primer.${slide}.title`)}</Text>
+                    <Text style={styles.primerVisual}>{t(`primer.${slide}.visual`)}</Text>
+                    <Text style={styles.primerDesc}>{t(`primer.${slide}.description`)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View
+              style={[
+                styles.primerBody,
+                primerBodyMinHeight !== null && { minHeight: primerBodyMinHeight },
+              ]}
+            >
+              <Text style={styles.primerTitle}>
+                {t(`primer.${currentSlide}.title`)}
+              </Text>
+              <Text style={styles.primerVisual}>
+                {t(`primer.${currentSlide}.visual`)}
+              </Text>
+              <Text style={styles.primerDesc}>
+                {t(`primer.${currentSlide}.description`)}
+              </Text>
+            </View>
+
+            <View style={styles.primerDots}>
+              {PRIMER_SLIDES.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.primerDot,
+                    i === primerIndex && styles.primerDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+
+            <View style={styles.primerNav}>
+              <Pressable
+                onPress={primerPrev}
+                disabled={primerIndex === 0}
+                style={[styles.primerNavBtn, primerIndex === 0 && styles.primerNavBtnDisabled]}
+              >
+                <Text style={styles.primerNavText}>← Prev</Text>
+              </Pressable>
+              <Pressable onPress={primerNext} style={styles.primerNavBtnPrimary}>
+                <Text style={styles.primerNavTextPrimary}>
+                  {t(`primer.${currentSlide}.button`)}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -238,7 +284,8 @@ const styles = StyleSheet.create({
   check: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
   featureText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500' },
 
-  // Primer container — appears in place of the hero/features block
+  // Primer container — appears below the CTAs/lang row when the
+  // user clicks "Learn to Play".
   primerCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.10)',
     borderColor: 'rgba(255, 255, 255, 0.35)',
@@ -247,6 +294,17 @@ const styles = StyleSheet.create({
     padding: 24,
     maxWidth: 560,
     marginTop: 24,
+  },
+  primerBody: {
+    // Natural content height; visible body has its minHeight set
+    // dynamically once the hidden measurement pass completes.
+  },
+  primerMeasureLayer: {
+    position: 'absolute',
+    left: 24, // matches primerCard padding so wrap width is identical
+    right: 24,
+    top: 24,
+    opacity: 0,
   },
   primerHeader: {
     flexDirection: 'row',
@@ -307,7 +365,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginBottom: 12,
   },
-  primaryBtnHidden: { opacity: 0 },
   primaryBtnText: {
     color: '#13428f',
     fontSize: 16,
