@@ -33,6 +33,7 @@ import {
   startGame,
   runGameLoop,
   enterLobbyAsGuest,
+  tileContextWindows,
 } from '../fixtures/multiplayer';
 
 const MOBILE_VP = {
@@ -108,6 +109,11 @@ test('6p mixed (4 mobile + 2 desktop) full game to scoreboard', async ({
         console.log(`[mp:${slot.label}] 🛑 pageerror: ${e.message.slice(0, 200)}`);
       });
     }
+
+    // Tile the 6 windows when running headed: mobile row on the
+    // left, desktop cascade on the right. No-op for headless CI
+    // and for the test:all (HEADLESS=1) path.
+    await tileContextWindows(pages);
 
     // ── Step 1: every player enters the Lobby ────────────────────
     // Stagger by 400ms so the bundler's first compile doesn't get
