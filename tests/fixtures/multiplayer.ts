@@ -232,4 +232,32 @@ export async function enterLobbyAsGuest(page: Page): Promise<void> {
     .locator('[data-testid="btn-quick-match"]')
     .first()
     .waitFor({ state: 'visible', timeout: 10_000 });
+
+  // Anonymous sign-in is async — it kicks off on app boot via
+  // AuthService and writes the session into localStorage under
+  // `sb-<project-ref>-auth-token`. Without this wait, the very next
+  // createRoom/joinRoom click can fire before [Auth] Session ready
+  // and the edge function returns "not_signed_in". 15s budget is
+  // plenty against the local stack (typically <500ms).
+  await page.waitForFunction(
+    () => {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+          try {
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            if (parsed?.user?.id) return true;
+            if (parsed?.access_token) return true;
+          } catch {
+            /* malformed entry — keep polling */
+          }
+        }
+      }
+      return false;
+    },
+    null,
+    { timeout: 15_000, polling: 200 },
+  );
 }
