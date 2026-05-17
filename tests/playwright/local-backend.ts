@@ -54,6 +54,8 @@ export function assertLocalUrl(url: string): void {
 
 export interface RuntimePaths {
   envTest: string;
+  envLocal: string;
+  envLocalBackup: string;
   runtimeDir: string;
   expoPid: string;
   expoLog: string;
@@ -67,6 +69,8 @@ export function runtimePaths(projectRoot: string): RuntimePaths {
   const runtimeDir = path.join(projectRoot, 'tests', '.runtime');
   return {
     envTest: path.join(projectRoot, '.env.test'),
+    envLocal: path.join(projectRoot, '.env.local'),
+    envLocalBackup: path.join(runtimeDir, '.env.local.bak'),
     runtimeDir,
     expoPid: path.join(runtimeDir, 'expo.pid'),
     expoLog: path.join(runtimeDir, 'expo.log'),

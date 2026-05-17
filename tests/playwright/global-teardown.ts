@@ -62,6 +62,24 @@ export default async function globalTeardown(): Promise<void> {
   } catch {
     /* fine */
   }
+
+  // Restore the dev's real .env.local (we overwrote it with local
+  // Supabase values during globalSetup). If the backup is missing,
+  // .env.local was absent before the run started — delete the
+  // test-version we wrote so the working tree is clean.
+  try {
+    if (fs.existsSync(paths.envLocalBackup)) {
+      log('restoring .env.local from backup');
+      fs.copyFileSync(paths.envLocalBackup, paths.envLocal);
+      fs.unlinkSync(paths.envLocalBackup);
+    } else if (fs.existsSync(paths.envLocal)) {
+      // No backup → .env.local didn't exist before; remove our
+      // synthetic one to leave the tree as we found it.
+      fs.unlinkSync(paths.envLocal);
+    }
+  } catch (e: unknown) {
+    log(`.env.local restore failed (manual cleanup required): ${(e as Error).message}`);
+  }
 }
 
 function sleep(ms: number): Promise<void> {

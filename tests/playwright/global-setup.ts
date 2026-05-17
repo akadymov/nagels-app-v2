@@ -59,6 +59,25 @@ export default async function globalSetup(): Promise<void> {
   ].join('\n');
   fs.writeFileSync(paths.envTest, envTest, 'utf8');
 
+  // Expo's Metro bundler inlines EXPO_PUBLIC_* vars from .env.local at
+  // build time, overriding any process.env values passed via spawn().
+  // The dev's checked-out .env.local points at the prod Supabase
+  // project, so without this override the test Expo (:8082) would
+  // anonymous-sign-in against prod and create real test rooms there
+  // (silent for the SP-only e2e tier — multiplayer e2e exposes it
+  // immediately). Back up the dev's .env.local and replace it with
+  // the local-Supabase values for the duration of the run. Teardown
+  // restores it.
+  if (fs.existsSync(paths.envLocal)) {
+    log('backing up .env.local → tests/.runtime/.env.local.bak');
+    fs.copyFileSync(paths.envLocal, paths.envLocalBackup);
+  } else if (fs.existsSync(paths.envLocalBackup)) {
+    // A previous run was interrupted before teardown restored the
+    // backup. The backup is the source of truth — don't trample it.
+    log('stale .env.local.bak found (prior run interrupted) — keeping it');
+  }
+  fs.writeFileSync(paths.envLocal, envTest, 'utf8');
+
   log(`spawning expo on :${EXPO_PORT}…`);
   const logFd = fs.openSync(paths.expoLog, 'w');
   const child = spawn('npx', ['expo', 'start', '--port', String(EXPO_PORT)], {
