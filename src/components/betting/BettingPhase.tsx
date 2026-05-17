@@ -20,6 +20,7 @@ import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { useDesktopGameUI } from '../../screens/desktop/DesktopGameContext';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
 import { useGameStore } from '../../store/gameStore';
@@ -65,6 +66,9 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const isDesktop = useIsDesktop();
+  // Wired by DesktopGameLayout — drives the left-pane toggles.
+  // Null on mobile / non-desktop wrappers; we fall back to modals.
+  const desktopUI = useDesktopGameUI();
 
   // Multiplayer reads from the realtime room store. Single-player
   // (vs. bots) doesn't have a server-side room, so we synthesize a
@@ -563,17 +567,25 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
           </View>
           <View style={styles.topBarRow2}>
             <Pressable
-              onPress={() => useSettingsUIStore.getState().open()}
+              onPress={() => {
+                if (desktopUI) desktopUI.toggleLeftPanel('settings');
+                else useSettingsUIStore.getState().open();
+              }}
               style={[
                 isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+                desktopUI?.leftPanel === 'settings' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               hitSlop={8}
               testID="betting-btn-settings"
             >
-              <Icon name="settings" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="settings"
+                color={desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText}
+                size={20}
+              />
               {isDesktop && (
-                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText }]}>
                   {t('settings.title')}
                 </Text>
               )}
@@ -635,17 +647,25 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               </Pressable>
             )}
             <Pressable
-              onPress={onShowScore}
+              onPress={() => {
+                if (desktopUI) desktopUI.toggleLeftPanel('scoreboard');
+                else onShowScore?.();
+              }}
               style={[
                 isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+                desktopUI?.leftPanel === 'scoreboard' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               hitSlop={8}
               testID="betting-btn-scores"
             >
-              <Icon name="trophy" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="trophy"
+                color={desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText}
+                size={20}
+              />
               {isDesktop && (
-                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText }]}>
                   {t('game.score')}
                 </Text>
               )}
