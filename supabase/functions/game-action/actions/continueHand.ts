@@ -12,7 +12,7 @@ export async function continueHand(
   action: Extract<Action, { kind: 'continue_hand' }>,
 ): Promise<ActionResult> {
   const { data: hand } = await svc.from('hands')
-    .select('id, room_id, hand_number, phase')
+    .select('id, room_id, hand_number, phase, starting_seat')
     .eq('id', action.hand_id).maybeSingle();
   if (!hand || hand.room_id !== action.room_id) {
     return { ok: false, error: 'unknown_hand',
@@ -50,7 +50,12 @@ export async function continueHand(
   const minCardsPerHand = (room as { min_cards_per_hand?: number }).min_cards_per_hand ?? 1;
   const cardsPerPlayer = getHandCards(nextNum, room.max_cards, minCardsPerHand);
   const trumpSuit = getTrumpForHand(nextNum);
-  const startingSeat = (nextNum - 1) % room.player_count;
+  // Rotate one seat forward from whoever started the previous hand
+  // (was: (nextNum - 1) % player_count, which silently assumed hand 1
+  // always started at seat 0). With startGame now randomizing the
+  // initial seat, the rotation has to be relative to the previous
+  // hand's starting_seat instead of the absolute hand number.
+  const startingSeat = (hand.starting_seat + 1) % room.player_count;
   const seed = crypto.randomUUID();
 
   const deck = seededShuffle(createDeck(), seed);

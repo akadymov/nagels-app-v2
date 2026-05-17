@@ -37,14 +37,17 @@ const PATHS: Record<IconName, string> = {
     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>' +
     '<polyline points="16 17 21 12 16 7"/>' +
     '<line x1="21" y1="12" x2="9" y2="12"/>',
+  // Latest Lucide trophy — rounded bowl + handle ears + stem +
+  // base. The previous variant read as "Greek column top" because
+  // the bowl had straight vertical sides; this one tapers cleanly
+  // into the stem and reads as a championship cup.
   trophy:
-    '<line x1="6" y1="9" x2="6" y2="21"/>' +
-    '<line x1="18" y1="9" x2="18" y2="21"/>' +
-    '<path d="M5 4h14a1 1 0 0 1 1 1v3a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V5a1 1 0 0 1 1-1z"/>' +
-    '<path d="M18 4h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2"/>' +
-    '<path d="M6 4H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2"/>' +
-    '<line x1="8" y1="21" x2="16" y2="21"/>' +
-    '<line x1="12" y1="13" x2="12" y2="21"/>',
+    '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>' +
+    '<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>' +
+    '<path d="M4 22h16"/>' +
+    '<path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>' +
+    '<path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>' +
+    '<path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
   chat:
     '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
   refresh:
