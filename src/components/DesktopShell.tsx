@@ -69,11 +69,14 @@ export const DesktopShell: React.FC<DesktopShellProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Center content on ultrawide; cap at the Figma frame width.
+  // Center content on ultrawide; cap at 1264 so the visible content
+  // box (1264 − 2 × 32 padding) is exactly 1200 — matching the
+  // 600 + 600 pane row used inside this shell (Akula: "the brand
+  // row was wider than the content below it").
   inner: {
     flex: 1,
     width: '100%',
-    maxWidth: 1920,
+    maxWidth: 1264,
     alignSelf: 'center',
     paddingHorizontal: 32,
     paddingTop: 24,
