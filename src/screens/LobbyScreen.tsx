@@ -53,6 +53,11 @@ export interface LobbyScreenProps {
    *  in-screen logo header (small NÄGELS above the nickname row)
    *  is duplicate clutter there. */
   hideLogoHeader?: boolean;
+  /** When true, the outer SafeAreaView uses a transparent background
+   *  so the surrounding desktop pane's surface color shows through.
+   *  Mobile still wants the dark page-background color, so default
+   *  stays false. */
+  transparentBackground?: boolean;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
@@ -62,6 +67,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onSettings,
   hideAuthCta = false,
   hideLogoHeader = false,
+  transparentBackground = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -322,7 +328,13 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: transparentBackground ? 'transparent' : colors.background },
+      ]}
+      edges={['top', 'bottom']}
+    >
       {/* Logo — hidden in desktop shells that already show the brand
           cluster up top. The gear stays available because mobile and
           some desktop variants still need it. */}
