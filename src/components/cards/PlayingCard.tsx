@@ -217,9 +217,13 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'flex-start',
+    // Disable browser text-selection on web so a fast double-tap to
+    // confirm a card play doesn't highlight the suit glyph instead.
+    userSelect: 'none' as any,
   },
   pressableContainer: {
     alignSelf: 'flex-start',
+    userSelect: 'none' as any,
   },
   pressed: {
     transform: [{ scale: 0.95 }],
@@ -246,6 +250,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 20,
     letterSpacing: -0.5,
+    userSelect: 'none' as any,
   },
   centerContainer: {
     flex: 1,
@@ -254,6 +259,7 @@ const styles = StyleSheet.create({
   },
   centerSuit: {
     fontWeight: '700',
+    userSelect: 'none' as any,
   },
   cardBack: {
     position: 'relative',
