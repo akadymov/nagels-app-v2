@@ -67,9 +67,10 @@ Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`)
 ```bash
 HEADLESS=1 npm run test:fast    # pre-commit (~50s), needs :8081 up
 npm run test:all                # pre-push (~30 min), needs :8081 + Docker
+TILE_WINDOWS=1 npm run test:smoke  # watch headed on big monitor — 6 windows in a row
 ```
 
-Full docs — tier descriptions, CLI filters, registry, tiled windows, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
+Full docs — tier descriptions, env flags (`HEADLESS`, `SLOW_MO`, `DEMO_URL`, `LOCAL_SUPABASE`, `KEEP_SUPABASE`, `TILE_WINDOWS`), CLI filters, registry, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
 
 ## Game Rules
 
