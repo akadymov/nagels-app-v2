@@ -86,7 +86,11 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const navigation = useNavigation<any>();
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
-  const isAnonymous = !!user && (user as { is_anonymous?: boolean }).is_anonymous === true;
+  // "Anonymous" = not a registered user yet. The Supabase user.is_anonymous
+  // flag isn't always populated on every session (especially right after
+  // a refresh), so we OR with the canonical isGuest flag from authStore.
+  const isAnonymous =
+    isGuest || (!!user && (user as { is_anonymous?: boolean }).is_anonymous === true);
   const push = usePushSubscribe();
   const [showPwaModal, setShowPwaModal] = useState(false);
   const pwaInstalled = isStandalone();
@@ -227,7 +231,11 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
       };
 
   return (
-    <View style={{ flex: 1 }}>
+    // When embedded the outer View must NOT flex:1 — inside a
+    // centered scroll container that would stretch the slot to the
+    // full pane height and look like a huge gap before the next
+    // sibling.
+    <View style={embedded ? undefined : { flex: 1 }}>
       <Container {...containerProps}>
         {/* === SAVE PROGRESS (anonymous-only) === */}
         {showSaveProgress && isAnonymous && (
