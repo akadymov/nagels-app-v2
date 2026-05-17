@@ -203,10 +203,25 @@ export async function runGameLoop(
 /**
  * Skip the Welcome screen + dismiss PWA modal. Every player calls
  * this once on boot before createRoom/joinRoom.
+ *
+ * Viewport-aware: mobile renders WelcomeScreen with the testID
+ * `btn-skip-to-lobby`, but at width ≥ 1024 the route swaps to
+ * `DesktopWelcomeAuth` whose CTA uses `desktop-welcome-continue`
+ * (see src/screens/desktop/DesktopWelcomeAuth.tsx +
+ * src/components/DesktopWelcomePane.tsx). The downstream
+ * LobbyScreen and WaitingRoomScreen are mounted directly inside
+ * the desktop wrappers, so their testIDs (player-count-N,
+ * tab-create, btn-create-room, room-code, btn-ready,
+ * btn-start-game, etc.) are unchanged.
  */
 export async function enterLobbyAsGuest(page: Page): Promise<void> {
   await page.goto('/');
-  await tap(page, 'btn-skip-to-lobby', 20_000);
+  const vp = page.viewportSize();
+  const isDesktop = !!vp && vp.width >= 1024;
+  const continueTestId = isDesktop
+    ? 'desktop-welcome-continue'
+    : 'btn-skip-to-lobby';
+  await tap(page, continueTestId, 20_000);
   // PWA modal pops up ~600ms after lobby mount; poll for it.
   for (let i = 0; i < 8; i++) {
     if (await dismissPwaModalIfAny(page)) break;
