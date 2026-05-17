@@ -21,6 +21,7 @@
     { "name": "i18n",                "tier": "smoke",         "enabled": true  },
     { "name": "desktop-layout",      "tier": "smoke-desktop", "enabled": true  },
     { "name": "notrump-deal",        "tier": "scenario",      "enabled": true  },
-    { "name": "sp-game",             "tier": "end-to-end",    "enabled": true  }
+    { "name": "sp-game",             "tier": "end-to-end",    "enabled": true  },
+    { "name": "multiplayer-6p-mixed", "tier": "end-to-end",   "enabled": true  }
   ]
 }
