@@ -55,10 +55,33 @@ src/
 
 | Command | Description |
 |---------|-------------|
-| `npx expo start` | Start dev server |
+| `npx expo start --port 8081` | Start dev server |
 | `npm run tunnel` | ngrok tunnel for device testing |
 | `npm run demo` | 2-player automated demo |
 | `npm run demo:6players` | 6-player automated demo |
+
+## Testing
+
+Five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`). Full details in [`tests/README.md`](tests/README.md).
+
+```bash
+# Pre-commit (~50s, requires :8081 dev server):
+HEADLESS=1 npm run test:fast
+
+# Per-tier:
+npm run test:unit             # jest (no dev server needed)
+npm run test:smoke            # 9 mobile smoke specs (requires :8081)
+npm run test:smoke:desktop    # 2 desktop-layout specs at 1440x900
+
+# Pre-push / full suite (~30 min, requires :8081 + Docker):
+npm run test:all              # all five tiers in order, single summary
+npm run test:all -- --only boot,lobby      # CLI filters
+npm run test:all -- --skip notrump-deal    # ditto
+```
+
+Smoke specs use real `data-testid` selectors against the manual `:8081` dev server. Scenario + e2e tiers boot an isolated `:8082` Expo + local Supabase stack via Playwright `globalSetup` — your `:8081` dev server is untouched.
+
+Spec registry lives in [`tests/tests.config.json`](tests/tests.config.json); flip `enabled: false` to skip a flaky spec without removing it.
 
 ## Game Rules
 
