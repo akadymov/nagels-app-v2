@@ -6,12 +6,14 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 
 <!-- AUTO-DETECTED:BEGIN — do not edit manually; rewritten by test:lint --update-todo -->
 - [ ] `auth-google` — src/screens/AuthScreen.tsx:191
-- [ ] `betting-btn-chat` — src/components/betting/BettingPhase.tsx:598
-- [ ] `betting-leave` — src/components/betting/BettingPhase.tsx:570
-- [ ] `btn-learn-to-play` — src/screens/WelcomeScreen.tsx:101
+- [ ] `betting-btn-chat` — src/components/betting/BettingPhase.tsx:600
+- [ ] `betting-leave` — src/components/betting/BettingPhase.tsx:572
+- [ ] `btn-learn-to-play` — src/screens/WelcomeScreen.tsx:102
 - [ ] `btn-link-google` — src/components/SettingsBody.tsx:348
 - [ ] `btn-play-again-scoreboard` — src/screens/ScoreboardModal.tsx:392
 - [ ] `btn-share-spectator` — src/screens/WaitingRoomScreen.tsx:334
+- [ ] `btn-welcome-signout` — src/screens/WelcomeScreen.tsx:155
+- [ ] `btn-welcome-signout-desktop` — src/screens/desktop/DesktopWelcomeAuth.tsx:75
 - [ ] `desktop-primer-skip` — src/components/DesktopWelcomePane.tsx:95
 - [ ] `desktop-welcome-learn` — src/components/DesktopWelcomePane.tsx:147
 - [ ] `feedback-fab` — src/components/FeedbackButton.tsx:74
@@ -43,6 +45,8 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `waiting-btn-chat` — src/screens/WaitingRoomScreen.tsx:277
 - [ ] `waiting-btn-settings` — src/screens/WaitingRoomScreen.tsx:294
 - [ ] `waiting-btn-sync` — src/screens/WaitingRoomScreen.tsx:267
+- [ ] `welcome-profile` — src/screens/WelcomeScreen.tsx:137
+- [ ] `welcome-profile-desktop` — src/screens/desktop/DesktopWelcomeAuth.tsx:57
 <!-- AUTO-DETECTED:END -->
 
 ## Manual notes

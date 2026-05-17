@@ -18,6 +18,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
+import { signOut } from '../lib/supabase/authService';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -127,6 +128,39 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
           </Pressable>
         )}
 
+        {/* Profile snippet for logged-in users — replaces the
+            Sign In CTA. Shows avatar, display name, email, and
+            a Sign Out button. Per feedback (2026-05-16):
+            "не нужно показывать форму логина или регистрации в
+            случае, если игрок уже залогинен". */}
+        {isLoggedIn && (
+          <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.accent }]} testID="welcome-profile">
+            <Text style={[styles.profileAvatar, { color: colors.accent }]}>
+              {(user?.user_metadata?.avatar as string | undefined) || '🦈'}
+            </Text>
+            <View style={styles.profileText}>
+              <Text style={[styles.profileName, { color: colors.textPrimary }]} numberOfLines={1}>
+                {(user?.user_metadata?.display_name as string | undefined) || user?.email?.split('@')[0] || 'Player'}
+              </Text>
+              {!!user?.email && (
+                <Text style={[styles.profileEmail, { color: colors.textMuted }]} numberOfLines={1}>
+                  {user.email}
+                </Text>
+              )}
+            </View>
+            <Pressable
+              onPress={async () => { try { await signOut(); } catch { /* surface errors via re-render */ } }}
+              hitSlop={8}
+              style={[styles.profileSignOutBtn, { borderColor: colors.error }]}
+              testID="btn-welcome-signout"
+            >
+              <Text style={[styles.profileSignOutText, { color: colors.error }]}>
+                {t('auth.signOut')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Language switcher */}
         <View style={[styles.langRow, { backgroundColor: colors.surface }]}>
           {['en', 'ru', 'es'].map((lang) => (
@@ -229,6 +263,42 @@ const styles = StyleSheet.create({
   },
   btnSecondaryText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  profileCard: {
+    width: Math.min(SW - 64, 340),
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  profileAvatar: {
+    fontSize: 32,
+  },
+  profileText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  profileName: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  profileEmail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  profileSignOutBtn: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  profileSignOutText: {
+    fontSize: 13,
     fontWeight: '600',
   },
   langRow: {
