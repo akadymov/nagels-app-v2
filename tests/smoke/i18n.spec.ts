@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ensureDevServer, findUntranslatedKeys } from '../fixtures/smoke';
+import { ensureDevServer, findUntranslatedKeys, dismissLobbyOverlays } from '../fixtures/smoke';
 
 /**
  * Smoke 7/8 — for each of EN, RU, ES, walk the Welcome + Lobby +
@@ -28,6 +28,8 @@ test.describe('i18n', () => {
         .locator('[data-testid="btn-quick-match"]')
         .first()
         .waitFor({ state: 'visible', timeout: 10_000 });
+
+      await dismissLobbyOverlays(page);
 
       // Switch language via Settings.
       await page

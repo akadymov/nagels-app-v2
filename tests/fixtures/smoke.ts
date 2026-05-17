@@ -8,6 +8,7 @@
  */
 
 import { request, type Page } from '@playwright/test';
+import { dismissPwaModalIfAny, dismissTipIfAny } from './actions';
 
 const SMOKE_BASE_URL = process.env.DEMO_URL || 'http://localhost:8081';
 
@@ -127,3 +128,20 @@ export async function assertNoOverflow(
 export const freshContextHooks = {
   storageState: undefined as undefined,
 };
+
+/**
+ * After entering the Lobby, the PWA install modal pops up on a 600ms
+ * delay and the onboarding tip can also intercept clicks. Poll for
+ * both, dismissing as they appear. Mirrors the sp-game.spec pattern.
+ */
+export async function dismissLobbyOverlays(page: Page): Promise<void> {
+  for (let i = 0; i < 8; i++) {
+    const closedPwa = await dismissPwaModalIfAny(page);
+    const closedTip = await dismissTipIfAny(page);
+    if (closedPwa || closedTip) {
+      // Loop again — dismissing one may reveal another.
+      continue;
+    }
+    await page.waitForTimeout(250);
+  }
+}

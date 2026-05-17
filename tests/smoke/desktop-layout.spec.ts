@@ -19,8 +19,10 @@ test.beforeAll(async () => {
 test.describe('desktop layout', () => {
   test('lobby has no horizontal overflow at 1440x900', async ({ page }) => {
     await page.goto('/');
+    // Desktop renders DesktopWelcomeAuth (welcome+auth split) instead of
+    // the plain WelcomeScreen; the continue CTA has a different testID.
     await page
-      .locator('[data-testid="btn-skip-to-lobby"]')
+      .locator('[data-testid="desktop-welcome-continue"]')
       .first()
       .click({ timeout: 15_000 });
     await page
@@ -35,8 +37,10 @@ test.describe('desktop layout', () => {
     page,
   }) => {
     await page.goto('/');
+    // Desktop renders DesktopWelcomeAuth (welcome+auth split) instead of
+    // the plain WelcomeScreen; the continue CTA has a different testID.
     await page
-      .locator('[data-testid="btn-skip-to-lobby"]')
+      .locator('[data-testid="desktop-welcome-continue"]')
       .first()
       .click({ timeout: 15_000 });
     await page
