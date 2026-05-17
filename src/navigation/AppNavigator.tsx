@@ -494,7 +494,11 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                     onAlreadyPlay={() => (props.navigation as any).navigate('Lobby')}
                     onSignIn={() => (props.navigation as any).navigate('Auth')}
                     authProps={{
-                      onBack: () => (props.navigation as any).goBack(),
+                      // Welcome is the stack root — goBack() is a no-op
+                      // here, so "Continue as Guest" in the embedded
+                      // AuthScreen would do nothing. Route it to the
+                      // Lobby instead (same as Skip to Menu).
+                      onBack: () => (props.navigation as any).navigate('Lobby'),
                       onSuccess: () => (props.navigation as any).navigate('Lobby'),
                     }}
                     lobbyProps={{
