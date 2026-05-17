@@ -1,86 +1,70 @@
 /**
  * Desktop Welcome + Auth — split layout.
  *
- * Left pane: marketing / onboarding hero (DesktopWelcomePane).
- * Right pane:
- *   - guest / signed-out users → AuthScreen (capped at ~380px so the
- *     form doesn't sprawl across half a 1920-wide window).
- *   - signed-in users → a profile card with display name, email, and
- *     a Sign Out button. Per feedback (2026-05-16, Akula): the auth
- *     form should not be shown when the user is already logged in.
+ * Left pane: marketing / onboarding hero (DesktopWelcomePane). For
+ * logged-in users the "Continue to Lobby" CTA is hidden — the
+ * lobby is already mounted in the right pane.
  *
- * Below 1024px each screen keeps its own dedicated mobile layout via
- * the route-level branching in AppNavigator.
+ * Right pane:
+ *   - guest / signed-out users → AuthScreen (capped at ~420px so the
+ *     form doesn't sprawl across half a 1920-wide window).
+ *   - signed-in users → the full LobbyScreen mounted directly, so
+ *     a logged-in user lands one click away from a match without
+ *     navigating off the welcome route.
+ *
+ * Below 1024px each screen keeps its own dedicated mobile layout
+ * via the route-level branching in AppNavigator. The mobile
+ * WelcomeScreen still shows a compact profile card + Sign-Out for
+ * logged-in users, which is intentional (small screen ergonomics
+ * make a single column the right choice there).
  */
 
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { AuthScreen, type AuthScreenProps } from '../AuthScreen';
+import { LobbyScreen, type LobbyScreenProps } from '../LobbyScreen';
 import {
   DesktopWelcomePane,
   type DesktopWelcomePaneProps,
 } from '../../components/DesktopWelcomePane';
 import { useAuthStore } from '../../store/authStore';
-import { signOut } from '../../lib/supabase/authService';
 
 interface Props {
   welcome: DesktopWelcomePaneProps;
   auth: AuthScreenProps;
+  lobby: LobbyScreenProps;
 }
 
-export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth }) => {
+export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
   const { user, isGuest } = useAuthStore();
   const isLoggedIn = !!user && !isGuest && !!user.email;
-
-  const onSignOut = async (): Promise<void> => {
-    try {
-      await signOut();
-    } catch {
-      /* surface errors via re-render */
-    }
-  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={styles.welcomePane}>
         <DesktopWelcomePane {...welcome} />
       </View>
-      <View style={[styles.authPane, { backgroundColor: colors.background, borderColor: colors.glassLight }]}>
-        <View style={styles.authInner}>
-          {isLoggedIn ? (
-            <View
-              style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.accent }]}
-              testID="welcome-profile-desktop"
-            >
-              <Text style={[styles.profileAvatar, { color: colors.accent }]}>
-                {(user?.user_metadata?.avatar as string | undefined) || '🦈'}
-              </Text>
-              <Text style={[styles.profileName, { color: colors.textPrimary }]} numberOfLines={1}>
-                {(user?.user_metadata?.display_name as string | undefined) ||
-                  user?.email?.split('@')[0] ||
-                  'Player'}
-              </Text>
-              {!!user?.email && (
-                <Text style={[styles.profileEmail, { color: colors.textMuted }]} numberOfLines={1}>
-                  {user.email}
-                </Text>
-              )}
-              <Pressable
-                onPress={onSignOut}
-                style={[styles.signOutBtn, { borderColor: colors.error }]}
-                testID="btn-welcome-signout-desktop"
-              >
-                <Text style={[styles.signOutText, { color: colors.error }]}>{t('auth.signOut')}</Text>
-              </Pressable>
-            </View>
-          ) : (
+      <View
+        style={[
+          styles.rightPane,
+          { backgroundColor: colors.background, borderColor: colors.glassLight },
+          // When the right pane hosts the Lobby it needs to fill
+          // the column edge-to-edge; the AuthScreen variant is
+          // centered in a narrow inner column instead.
+          isLoggedIn ? styles.rightPaneLobby : styles.rightPaneAuth,
+        ]}
+      >
+        {isLoggedIn ? (
+          <View style={styles.lobbyContainer}>
+            <LobbyScreen {...lobby} hideAuthCta />
+          </View>
+        ) : (
+          <View style={styles.authInner}>
             <AuthScreen {...auth} hideBack />
-          )}
-        </View>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -89,51 +73,27 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   welcomePane: { flex: 1, minWidth: 0 },
-  authPane: {
+  rightPane: {
     flex: 1,
     minWidth: 0,
     borderLeftWidth: 1,
+  },
+  rightPaneAuth: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rightPaneLobby: {
+    // Lobby controls its own scroll + safe area — give it the full pane.
+  },
   // Auth form constrained per Figma — the form itself never exceeds
-  // ~380px even on a 1920-wide window.
+  // ~420px even on a 1920-wide window.
   authInner: {
     width: '100%',
     maxWidth: 420,
     paddingHorizontal: 24,
   },
-  profileCard: {
-    width: '100%',
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    gap: 8,
-  },
-  profileAvatar: {
-    fontSize: 56,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  profileEmail: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  signOutBtn: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  signOutText: {
-    fontSize: 15,
-    fontWeight: '600',
+  lobbyContainer: {
+    flex: 1,
   },
 });
 
