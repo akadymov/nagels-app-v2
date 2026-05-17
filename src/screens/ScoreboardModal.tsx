@@ -72,6 +72,12 @@ export interface ScoreboardModalProps {
   onContinue: () => void;
   onPlayAgain?: () => void;
   onClose?: () => void;
+  /** When true, render the scoreboard contents inline (no Modal /
+   *  overlay / close button) so it can live inside the desktop
+   *  left pane. The brief / detailed toggle remains visible so the
+   *  user can switch between the two views (Akula: "давать
+   *  возможность переключать между подробной и краткой записью"). */
+  embedded?: boolean;
 }
 
 export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
@@ -87,6 +93,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   onContinue,
   onPlayAgain,
   onClose,
+  embedded = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -350,6 +357,71 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     );
   };
 
+  // Brief / detailed toggle row — used in embedded mode where the
+  // scoreboard lives in the desktop left pane and can flip between
+  // a compact and a hand-by-hand view at will.
+  const renderViewToggle = () => (
+    <View style={[styles.viewToggleRow, { borderBottomColor: colors.glassLight }]}>
+      <Pressable
+        onPress={() => setShowFull(false)}
+        style={[
+          styles.viewTogglePill,
+          { borderColor: colors.glassLight },
+          !showFull && { backgroundColor: colors.accent, borderColor: colors.accent },
+        ]}
+      >
+        <Text style={[styles.viewToggleText, { color: !showFull ? '#ffffff' : colors.textSecondary }]}>
+          {t('scoreboard.brief', 'Brief')}
+        </Text>
+      </Pressable>
+      <Pressable
+        onPress={() => setShowFull(true)}
+        style={[
+          styles.viewTogglePill,
+          { borderColor: colors.glassLight },
+          showFull && { backgroundColor: colors.accent, borderColor: colors.accent },
+        ]}
+      >
+        <Text style={[styles.viewToggleText, { color: showFull ? '#ffffff' : colors.textSecondary }]}>
+          {t('scoreboard.detailed', 'Detailed')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  if (embedded) {
+    return (
+      <View style={[styles.embeddedRoot, { backgroundColor: colors.background }]}>
+        {renderViewToggle()}
+        {isGameOver && renderWinnerBanner()}
+        {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
+        {/* Game-over Play Again button stays even when embedded —
+            the host needs an explicit action to restart the room.
+            Mid-game embedded view doesn't need a Continue button:
+            the next hand auto-loads when the server advances. */}
+        {isGameOver && (
+          <View style={styles.footer}>
+            {isHost && onPlayAgain ? (
+              <Pressable
+                style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+                onPress={onPlayAgain}
+                testID="btn-play-again-scoreboard"
+              >
+                <Text style={styles.continueBtnText}>{t('scoreboard.playAgain')}</Text>
+              </Pressable>
+            ) : (
+              <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
+                <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                  {t('scoreboard.waitingForHost', 'Waiting for host…')}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
       {/* First-time scoring explainer. Renders above the scoreboard the
@@ -422,6 +494,27 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  embeddedRoot: {
+    flex: 1,
+  },
+  viewToggleRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+  },
+  viewTogglePill: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  viewToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -434,6 +527,12 @@ const styles = StyleSheet.create({
     minHeight: 300,
     paddingTop: Spacing.lg,
     paddingHorizontal: Spacing.md,
+    // Cap the winner / scoreboard panel width on desktop so it
+    // doesn't sprawl across an ultrawide window — Akula: "сделай
+    // её тоже 600 пикселей".
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   closeBtn: {
     // Top: 0 inside SafeAreaView lines the ✕ up with the title row's

@@ -133,6 +133,8 @@
     "waitingForHost": "Esperando al anfitrión…",
     "showHistory": "Ver historial",
     "hideHistory": "Ocultar historial",
+    "brief": "Breve",
+    "detailed": "Detallado",
     "leading": "lidera",
     "wins": "¡gana!",
     "rank": "Puesto",
