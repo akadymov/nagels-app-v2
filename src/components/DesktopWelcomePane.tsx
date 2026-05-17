@@ -108,13 +108,11 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           ))}
         </View>
 
-        <View style={styles.spacer} />
-
         {/* CTA group hugs the widest child (primary "▶ Learn to Play" /
             "▶ Научиться играть" / "▶ Aprender a Jugar") and stretches
             the secondary to match. Equal-width buttons across all
             languages without per-locale measurement. */}
-        <View style={styles.ctaGroup}>
+        <View style={[styles.ctaGroup, styles.ctaGroupTopSpace]}>
           <Pressable
             onPress={openPrimer}
             style={styles.primaryBtn}
@@ -351,13 +349,12 @@ const styles = StyleSheet.create({
   },
   primerNavTextPrimary: { color: '#13428f', fontSize: 14, fontWeight: '700' },
 
-  spacer: { flex: 1, minHeight: 24 },
-
   // CTAs — wrapped in ctaGroup so primary and secondary share width.
   ctaGroup: {
     alignSelf: 'flex-start',
     alignItems: 'stretch',
   },
+  ctaGroupTopSpace: { marginTop: 32 },
   primaryBtn: {
     paddingHorizontal: 28,
     paddingVertical: 14,
