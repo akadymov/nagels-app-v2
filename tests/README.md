@@ -188,6 +188,22 @@ based on `TEST_PARALLEL_INDEX`. Mobile: row layout (6 per row,
 (20% × 1480) rightward shift + 40px vertical drop per worker.
 Scenario and e2e tiers are untouched.
 
+**Caveats:**
+
+- `TILE_WINDOWS=1` is incompatible with `HEADLESS=1` — headless
+  Chromium ignores `--window-position`. Make sure `HEADLESS` is
+  unset (`echo $HEADLESS` should print nothing).
+- Mobile row needs a monitor ≥ **2880px wide** to fit all 6 windows
+  on one row (6 × 470 = 2820 + slack). Narrower screens visually
+  wrap, but `TEST_PARALLEL_INDEX` still assigns row=0 — the OS just
+  clamps the off-screen windows. To change the per-row count, edit
+  `tileMobileArgs()` in `playwright.config.js` (`perRow` constant).
+- Window size/shift constants also live in `tileMobileArgs()` /
+  `tileDesktopArgs()` — tweak there if your display geometry differs.
+- Inside `npm run test:all` the flag only affects the smoke tiers;
+  scenario and e2e still run on the isolated `:8082` stack
+  (headless by orchestrator design).
+
 ## Cross-tier orchestrator (`npm run test:all`)
 
 Reads `tests/tests.config.json` and runs each tier in order:
