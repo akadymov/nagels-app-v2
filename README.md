@@ -74,7 +74,7 @@ Requirements:
 - `smoke` — needs `:8081` dev server up (`npx expo start --port 8081`).
 - `sanity` and `demo:record` — boot their own isolated `:8082` + local Supabase via Playwright globalSetup; Docker required.
 
-Full five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`), env flags, CLI filters, registry, monitoring background runs, cleanup — in **[`tests/README.md`](tests/README.md)**.
+Full five-tier suite (`unit` / `smoke` / `smoke-desktop` / `scenario` / `end-to-end`), env flags, CLI filters, registry, monitoring background runs, cleanup, **the `test:lint` policy for keeping tests in sync with `src/` changes** — in **[`tests/README.md`](tests/README.md)** and **[`CLAUDE.md`](CLAUDE.md)**.
 
 ```bash
 npm run test:all                # full regression run, all 5 tiers (~55 min)

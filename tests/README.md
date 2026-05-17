@@ -386,6 +386,58 @@ disappears silently.
    has no matching spec file on disk — that's how stale entries get
    noticed.
 
+## Keeping tests in sync with src — `test:lint` + TEST_TODO.md
+
+When features change, testIDs in `src/` drift away from what the
+specs reference. Two failure modes:
+
+- **Orphans** — a testID in a spec selector no longer exists in
+  src (renamed / removed). Tests fail loudly next time they run.
+- **Uncovered** — a new testID in src that no spec references.
+  No failure; the gap is silent.
+
+`scripts/test-coverage-check.ts` (run via `npm run test:lint`)
+detects both. It's wired into `test:fast` so every smoke run
+prints a summary:
+
+```text
+───── Test coverage check ─────
+src testIDs (static, unique):  67  (71 occurrences across files)
+test data-testid references:  123
+
+⚠  ORPHANS — referenced in tests but not in src/ (4):
+   -got-it                      (op '$=')  tests/fixtures/actions.ts:35
+   …
+
+?  UNCOVERED — in src/ but no test references: 38 / 67 testIDs.
+   Run `npm run test:lint -- --verbose` for the full list.
+   Or `npm run test:lint -- --update-todo` to refresh tests/TEST_TODO.md.
+```
+
+Exit code is always 0 — the lint is informational, not a gate.
+Some orphans are intentional (fallback OR selectors, deferred
+placeholders); read each before "fixing".
+
+**`tests/TEST_TODO.md`** is the human-curated list of pending
+coverage. The auto-detected section is rewritten by
+`npm run test:lint -- --update-todo`. The `## Manual notes`
+section below the markers is preserved across reruns — use it
+for things the regex doesn't see (flow-level UX, error states,
+multi-context scenarios).
+
+**Agent workflow when changing src testIDs:**
+
+1. Touched `testID=...` in src → `npm run test:lint`, surface
+   orphans to the user.
+2. Added a new testID → `npm run test:lint -- --update-todo`,
+   mention the addition in the final reply.
+3. Changed a UX flow (extra modal, reordered steps) → the lint
+   won't catch flow drift; read the affected specs and decide
+   manually whether they need updates.
+
+See `CLAUDE.md` "Keeping tests in sync with src changes" for the
+canonical rubric.
+
 ## Monitoring and cleanup
 
 `test:all` runs for ~30 min, often invoked with `&` or in a background

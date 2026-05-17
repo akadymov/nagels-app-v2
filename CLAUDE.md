@@ -32,6 +32,27 @@ Three release-day situations map to three commands:
 - `sanity` and `demo:record` boot their own isolated `:8082` Expo + local Supabase via Playwright `globalSetup`; the user's `:8081` is untouched.
 - For interpreting failures: detailed troubleshooting in `tests/README.md` (Multiplayer e2e + Multiplayer DEMO sections).
 
+## Keeping tests in sync with src changes
+
+Tests reference production `testID` props by string. When src changes, tests can silently rot or get out of sync. Tooling:
+
+- `npm run test:lint` — scans src for `testID="..."` / `testIDPrefix="..."` and tests for `[data-testid="..."]` / `tap(p, "...")` / `exists(p, "...")` calls. Surfaces:
+  - **Orphans** — testIDs referenced in tests but missing from src (rename / removal). Warning, doesn't fail.
+  - **Uncovered** — testIDs in src that no test references. Counter + entries in `tests/TEST_TODO.md`.
+- Runs automatically as part of `npm run smoke` (`test:fast`). Exit code is always 0.
+- `npm run test:lint -- --update-todo` rewrites the auto-section of `tests/TEST_TODO.md`.
+- `npm run test:lint -- --verbose` prints the full uncovered list.
+
+### Agent responsibilities
+
+Whenever you (or another agent) **add, rename, or remove a `testID`** in `src/`:
+
+1. Run `npm run test:lint` and surface the orphan list to the user. If an orphan is a rename, propose the test-side change. If it's a deliberate removal, propose the spec deletion.
+2. If you introduce a **new testID** (new screen, new button, new modal), run `npm run test:lint -- --update-todo` so `tests/TEST_TODO.md` reflects it. Briefly mention it in your final user message — e.g., "Added testID `btn-foo`; appended to TEST_TODO.md, please decide if it needs smoke coverage."
+3. If you **change a UX flow** (extra confirmation modal, reordered steps), the existing testIDs may still match but the flow no longer matches the test's assumptions. testIDs only tell you what's wired — they don't tell you what's correct. Read affected specs (`tests/smoke/`, `tests/e2e/`) and decide whether the spec needs updates. Surface to the user.
+
+The user works alone and forgets easily. **Visibility > automation.** A short final-message line — "test:lint shows 3 orphans I think we should fix" — is exactly what they need.
+
 ## Env
 `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_URL`
 
