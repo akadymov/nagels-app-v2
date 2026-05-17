@@ -28,6 +28,7 @@ import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useTurnTimeout } from '../lib/turnTimeout';
@@ -93,6 +94,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
+  const isDesktop = useIsDesktop();
   // Live viewport — iOS Safari recomputes innerHeight after Modal opens
   // (URL bar collapse). Capturing it once at module load left the table /
   // hand sections sized to a stale value, leaking blank space below.
@@ -992,6 +994,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               }}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 desktopUI?.leftPanel === 'settings' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1002,6 +1005,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 color={desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText }]}>
+                  {t('settings.title')}
+                </Text>
+              )}
             </Pressable>
             {/* Exit button: visible to the SP player (bot game) and to the
                 multiplayer host. Non-host MP players use ready/leave from the
@@ -1011,6 +1019,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 onPress={handleEndGame}
                 style={({ pressed }) => [
                   styles.iconBtn,
+                  isDesktop && styles.iconBtnLabeled,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderColor: colors.glassLight,
@@ -1021,6 +1030,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 accessibilityLabel={t('multiplayer.endGameConfirmTitle')}
               >
                 <Icon name="door" color={colors.iconButtonText} size={20} />
+                {isDesktop && (
+                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('game.exit')}
+                  </Text>
+                )}
               </Pressable>
             )}
             {isMultiplayer && (
@@ -1029,6 +1043,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 disabled={isRefreshing}
                 style={[
                   styles.iconBtn,
+                  isDesktop && styles.iconBtnLabeled,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderColor: colors.glassLight,
@@ -1042,6 +1057,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   color={colors.iconButtonText}
                   size={20}
                 />
+                {isDesktop && (
+                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('game.sync')}
+                  </Text>
+                )}
               </Pressable>
             )}
             <Pressable
@@ -1053,6 +1073,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               disabled={vm.tricks.length === 0}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: vm.tricks.length === 0 ? 0.3 : 1 },
                 desktopUI?.leftPanel === 'lastTrick' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1063,6 +1084,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 color={desktopUI?.leftPanel === 'lastTrick' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'lastTrick' ? '#ffffff' : colors.iconButtonText }]}>
+                  {t('game.lastTrick')}
+                </Text>
+              )}
             </Pressable>
             <Pressable
               onPress={() => {
@@ -1075,6 +1101,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               }}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 desktopUI?.leftPanel === 'scoreboard' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1085,6 +1112,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 color={desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText }]}>
+                  {t('game.score')}
+                </Text>
+              )}
             </Pressable>
             <Pressable
               onPress={() => {
@@ -1095,6 +1127,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               disabled={!isMultiplayer}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 !isMultiplayer && { opacity: 0.3 },
                 desktopUI?.chatVisible && isMultiplayer && { backgroundColor: colors.accent, borderColor: colors.accent },
@@ -1106,6 +1139,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 color={desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText}
                 size={20}
               />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText }]}>
+                  {t('game.chat')}
+                </Text>
+              )}
               {isMultiplayer && chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
@@ -1341,7 +1379,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   selectedCards={selectedCard ? [selectedCard] : []}
                   playableCards={playableCards.map((c: any) => c.id)}
                   onCardPress={handleCardPress}
-                  size="small"
+                  size={isDesktop ? 'huge' : 'small'}
                   horizontal={false}
                 />
               </View>
@@ -1595,6 +1633,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Desktop variant — pill with icon + text label.
+  iconBtnLabeled: {
+    width: undefined,
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  iconBtnLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   iconBtnText: {
     fontSize: 16,
