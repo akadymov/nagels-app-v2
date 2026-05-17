@@ -20,20 +20,22 @@ Plus:
 - `src/__tests__/`                          — frontend unit (Jest)
 - `supabase/functions/_shared/__tests__/`   — edge-function unit (Deno)
 
-## Status (Phase 3 — Fixtures + POC scenario)
+## Status (Phase 4a — Smoke tier shipped)
 
-- ✅ `tests/e2e/sp-game.spec.js` — single-player vs Hard bots, full game
-  to scoreboard.
-  - Against the manual `:8081` dev server: `npm run test:sp`
-  - Against an isolated `:8082` Expo + local supabase: `npm run test:sp:local`
-- ✅ `tests/scenario/notrump-deal.spec.ts` — POC for the scenario tier.
-  UI-drives SP to hand 5 (no-trump) and asserts the dealt state.
-  - `npm run test:scenario:local` (~6 min spec + ~1 min supabase boot)
-- ✅ Reusable click helpers in `tests/fixtures/actions.ts`
-  (`tryBet`, `tryPlay`, `dismissTipIfAny`, `dismissPwaModalIfAny`, `tap`, …).
-- ✅ Scenario seeding helper `tests/fixtures/seed.ts` (`seedScenario`).
-- ✅ Edge-function unit tests: `cd supabase/functions && deno test --allow-all`
-- ⏳ Smoke / additional scenarios / multi-context — Phase 4+.
+- ✅ `tests/e2e/sp-game.spec.js` — single-player vs Hard bots, full game.
+  - Manual `:8081` dev server: `npm run test:sp`
+  - Isolated `:8082` Expo + local supabase: `npm run test:sp:local`
+- ✅ `tests/scenario/notrump-deal.spec.ts` — POC scenario.
+  - `npm run test:scenario:local` (~6 min spec + ~1 min boot)
+- ✅ `tests/smoke/*.spec.ts` — 7 mobile + 1 desktop spec against `:8081`.
+  - `npm run test:smoke` (~90s)
+  - `npm run test:smoke:desktop` (~30s)
+- ✅ Reusable click helpers `tests/fixtures/actions.ts`.
+- ✅ Scenario seeding `tests/fixtures/seed.ts`.
+- ✅ Smoke helpers `tests/fixtures/smoke.ts`.
+- ✅ Edge-function unit tests: `cd supabase/functions && deno test --allow-all`.
+- ⏳ Cross-tier orchestrator (`npm run test:all`) — Phase 4b.
+- ⏳ Additional scenarios / multi-context e2e — Phase 5+.
 
 ## Running
 
@@ -41,6 +43,8 @@ Plus:
 npm run test:sp              # SP e2e against manual :8081 dev server (headed)
 npm run test:sp:local        # SP e2e against isolated :8082 + local supabase (headless)
 npm run test:scenario:local  # Scenario tier (notrump-deal POC) against :8082 (headless)
+npm run test:smoke           # 7 smoke specs against manual :8081 dev server (~90s)
+npm run test:smoke:desktop   # 1 desktop-layout spec at 1440x900 against :8081 (~30s)
 npm run test:sp:prod         # SP e2e against $APP_URL (production)
 ```
 
@@ -109,6 +113,39 @@ scenarios that total runtime becomes painful, revisit.
 
 **Shared click helpers** live in `tests/fixtures/actions.ts`. Reuse
 them — don't re-extract from `sp-game.spec.js`.
+
+## Smoke tier (`tests/smoke/`)
+
+8 specs that prove the app boots, renders, and navigates. Runs against
+the manual `:8081` dev server — start it yourself with
+`npx expo start --port 8081` before running.
+
+| Spec | What it proves |
+|------|---------------|
+| `boot.spec.ts` | Welcome renders, Skip-to-Lobby navigates to Lobby. |
+| `lobby.spec.ts` | Tabs switch, Quick Match / Create / Join CTAs render. |
+| `auth-modals.spec.ts` | Auth screen opens, sign-in/sign-up tabs toggle. |
+| `settings.spec.ts` | Theme + language pills change on click. |
+| `quickmatch-entry.spec.ts` | Quick Match reaches game table. |
+| `private-room.spec.ts` | Bad join code surfaces an error. |
+| `i18n.spec.ts` | No untranslated keys in EN/RU/ES. |
+| `desktop-layout.spec.ts` | 1440×900 layout has no overflow / pane overlap. |
+
+**Why `:8081` and not `:8082`?** Smoke is the fast, side-effect-free
+pre-commit check. The local Supabase stack adds ~1 min boot and
+hits Postgres / Realtime / Auth for assertions that don't need them.
+Keep the heavy stack for scenario + e2e.
+
+**Why not auto-start the dev server?** Auto-spawn would conflict with
+the one Akula already has open in a browser. Smoke fails fast with
+the start command in the error message if `:8081` is dead.
+
+**Adding a new smoke spec:**
+1. Drop a `<name>.spec.ts` in `tests/smoke/`. It auto-picks-up.
+2. Call `ensureDevServer()` in `test.beforeAll`.
+3. Use existing `data-testid` selectors; if none exists, add a
+   testID to the production component (single-token, no behaviour
+   change — see Task 1 of the Phase 4 plan).
 
 ## Conventions
 
