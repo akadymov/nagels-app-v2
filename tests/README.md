@@ -20,7 +20,7 @@ Plus:
 - `src/__tests__/`                          — frontend unit (Jest)
 - `supabase/functions/_shared/__tests__/`   — edge-function unit (Deno)
 
-## Status (Phase 4a — Smoke tier shipped)
+## Status (Phase 4 — Smoke + orchestrator shipped)
 
 - ✅ `tests/e2e/sp-game.spec.js` — single-player vs Hard bots, full game.
   - Manual `:8081` dev server: `npm run test:sp`
@@ -34,7 +34,7 @@ Plus:
 - ✅ Scenario seeding `tests/fixtures/seed.ts`.
 - ✅ Smoke helpers `tests/fixtures/smoke.ts`.
 - ✅ Edge-function unit tests: `cd supabase/functions && deno test --allow-all`.
-- ⏳ Cross-tier orchestrator (`npm run test:all`) — Phase 4b.
+- ✅ Cross-tier orchestrator: `npm run test:all` (see Orchestrator section below).
 - ⏳ Additional scenarios / multi-context e2e — Phase 5+.
 
 ## Running
@@ -146,6 +146,55 @@ the start command in the error message if `:8081` is dead.
 3. Use existing `data-testid` selectors; if none exists, add a
    testID to the production component (single-token, no behaviour
    change — see Task 1 of the Phase 4 plan).
+
+## Cross-tier orchestrator (`npm run test:all`)
+
+Reads `tests/tests.config.json` and runs each tier in order:
+`unit → smoke → smoke-desktop → scenario → end-to-end`.
+
+```bash
+# Pre-commit: ~2 min (no Docker, requires :8081 up).
+npm run test:fast
+
+# Pre-push: ~30 min (boots Supabase + isolated Expo, also requires :8081 up).
+npm run test:all
+
+# CLI overrides (do NOT mutate the registry):
+npm run test:all -- --skip notrump-deal,sp-game
+npm run test:all -- --only boot,lobby
+npm run test:all -- --tag '!flaky'
+```
+
+**Registry semantics:**
+
+`tests/tests.config.json` is a single committed JSON file. Each entry:
+
+| Field | Required | Meaning |
+|-------|----------|---------|
+| `name` | yes | Spec basename without extension. Must match a real spec file. |
+| `tier` | yes | One of `unit`, `smoke`, `smoke-desktop`, `scenario`, `end-to-end`. |
+| `enabled` | yes | If `false`, the spec is silently skipped, but always shown in the summary's skip report. |
+| `note` | no | Shown in skip report alongside the spec name. |
+| `tags` | no | String array for `--tag` filtering. |
+
+**Skip vs registry vs CLI precedence**:
+
+1. `enabled: false` always wins.
+2. `--only` narrows the set after registry filtering.
+3. `--skip` removes from the narrowed set.
+4. `--tag` removes by tag predicate.
+
+All skipped specs are listed in the final summary block so nothing
+disappears silently.
+
+**Adding a new spec to the registry:**
+
+1. Add an entry to `tests/tests.config.json`.
+2. Run `npm run test:all -- --only <new-name>` and confirm the
+   right tier runs.
+3. The orchestrator warns (but does not fail) if a registry entry
+   has no matching spec file on disk — that's how stale entries get
+   noticed.
 
 ## Conventions
 
