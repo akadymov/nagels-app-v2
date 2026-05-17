@@ -83,7 +83,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rightPaneLobby: {
-    // Lobby controls its own scroll + safe area — give it the full pane.
+    // Lobby controls its own scroll + safe area, but on ultra-wide
+    // desktops we still center it in a ≤600px column so the form
+    // doesn't stretch across half a 1920+ window.
+    alignItems: 'center',
   },
   // Auth form constrained per Figma — the form itself never exceeds
   // ~420px even on a 1920-wide window.
@@ -94,6 +97,8 @@ const styles = StyleSheet.create({
   },
   lobbyContainer: {
     flex: 1,
+    width: '100%',
+    maxWidth: 600,
   },
 });
 
