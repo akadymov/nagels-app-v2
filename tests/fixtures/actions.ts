@@ -132,6 +132,20 @@ export async function tryBet(p: Page, playerCount: number): Promise<number | fal
     await enabled.first().click({ timeout: 3000, force: true }).catch(() => {});
   }
   await sleep(400);
+
+  // After commit fe677b1+, the chip tap is select-only — the bet is
+  // only placed when bet-confirm is clicked (or the same chip is
+  // tapped again, but the explicit button is the canonical path).
+  const confirm = p.locator('[data-testid="bet-confirm"]').first();
+  if (await confirm.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    try {
+      await confirm.click({ timeout: 3_000 });
+    } catch (_) {
+      await confirm.click({ timeout: 3_000, force: true }).catch(() => {});
+    }
+    await sleep(400);
+  }
+
   // Bet panel hides after a successful placeBet.
   if (!(await enabled.first().isVisible({ timeout: 200 }).catch(() => false))) {
     return choice;

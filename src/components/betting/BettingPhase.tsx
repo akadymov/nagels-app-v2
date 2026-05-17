@@ -734,6 +734,38 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 
             <View style={styles.betButtons}>{allBets.map(renderBetChip)}</View>
 
+            {/* Explicit Confirm button — the second-tap-on-chip
+                gesture still works for muscle-memory players, but
+                feedback (2026-05-08, 2026-05-16) was clear that a
+                separate button is the discoverable affordance. */}
+            <Pressable
+              onPress={() => {
+                if (pendingBet === null) return;
+                const bet = pendingBet;
+                setPendingBet(null);
+                handleBet(bet);
+              }}
+              disabled={pendingBet === null}
+              style={[
+                styles.betConfirm,
+                pendingBet === null
+                  ? { backgroundColor: colors.surface, borderColor: colors.glassLight, opacity: 0.45 }
+                  : { backgroundColor: colors.accent, borderColor: colors.accent },
+              ]}
+              testID="bet-confirm"
+            >
+              <Text
+                style={[
+                  styles.betConfirmText,
+                  { color: pendingBet === null ? colors.textMuted : '#ffffff' },
+                ]}
+              >
+                {pendingBet === null
+                  ? t('game.confirmBet')
+                  : `${t('game.confirmBet')}: ${pendingBet}`}
+              </Text>
+            </Pressable>
+
             {allowedBets.length === 0 && (
               <Text style={[styles.noBetsText, { color: colors.error }]}>No valid bets available</Text>
             )}
@@ -929,6 +961,25 @@ const styles = StyleSheet.create({
   },
   betChipText: {
     fontSize: 24,
+    fontWeight: '700',
+  },
+  betConfirm: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 48,
+  },
+  betConfirmText: {
+    fontSize: 17,
     fontWeight: '700',
   },
   playersGrid: {
