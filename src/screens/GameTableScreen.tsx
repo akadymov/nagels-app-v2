@@ -611,6 +611,30 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }
   }, [vm.phase, desktopUI]);
 
+  // Desktop auto-advance: with the modal suppressed, there's no
+  // "Continue" button for the player to click after a hand closes.
+  // Wait a generous beat so the score can be read, then advance the
+  // hand the same way handleScoreboardContinue would. Game-over
+  // ('finished') is skipped — that state needs an explicit host
+  // action ("Play Again") on the embedded scoreboard.
+  useEffect(() => {
+    if (!desktopUI) return;
+    if (vm.phase !== 'scoring') return;
+    const DESKTOP_AUTO_CONTINUE_MS = 6000;
+    const t = setTimeout(() => {
+      if (isMultiplayer) {
+        if (room?.id && hand?.id) {
+          gameClient
+            .continueHand(room.id, hand.id)
+            .catch((err) => console.error('[GameTable] auto continueHand failed:', err));
+        }
+      } else if (sp.handNumber < sp.totalHands) {
+        sp.nextHand();
+      }
+    }, DESKTOP_AUTO_CONTINUE_MS);
+    return () => clearTimeout(t);
+  }, [vm.phase, desktopUI, isMultiplayer, room?.id, hand?.id, sp]);
+
   // Compute playable cards
   const playableCards = useMemo(() => {
     if (!vm.myPlayer || vm.phase !== 'playing') return [];
