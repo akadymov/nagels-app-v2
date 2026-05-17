@@ -47,8 +47,23 @@ export async function loginAsRegistered(
       /* ignore */
     }
   });
-  // Welcome's "Sign in" CTA. Same testID on desktop wrapper.
-  await tap(page, 'btn-sign-in', 20_000);
+
+  // Mobile: Welcome screen → btn-sign-in opens AuthScreen.
+  // Desktop: DesktopWelcomeAuth renders AuthScreen directly in the
+  // right pane (src/screens/desktop/DesktopWelcomeAuth.tsx) — there
+  // is no btn-sign-in to click, the email/password fields are
+  // already on screen.
+  const vp = page.viewportSize();
+  const isDesktop = !!vp && vp.width >= 1024;
+  if (!isDesktop) {
+    await tap(page, 'btn-sign-in', 20_000);
+  } else {
+    // Wait for the auth pane to mount before typing.
+    await page
+      .locator('[data-testid="auth-input-email"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
+  }
   // signIn tab is default but tap explicitly for idempotency.
   await tap(page, 'auth-tab-signIn', 8_000);
   await page.locator('[data-testid="auth-input-email"]').first().fill(email);
