@@ -33,6 +33,14 @@ import { isStandalone, isMobileWeb } from '../lib/pwaInstall';
 
 export interface SettingsBodyProps {
   onClose: () => void;
+  /** Render only a slice of the body — used by the Welcome page
+   *  desktop layout where identity sits inline after the nickname
+   *  input and the rest of the settings sit below the lobby CTAs.
+   *  Undefined = render everything (existing behavior). */
+  only?: 'identity' | 'preferences';
+  /** Hide the Profile-section nickname row. Lobby provides its
+   *  own nickname input — duplicating it here is just noise. */
+  hideNickname?: boolean;
 }
 
 const AVATAR_PRESETS = ['🦈', '🐺', '🦊', '🐻', '🐱', '🎯', '🎲', '🃏', '👑', '💎', '🔥', '⭐', '🏆'];
@@ -68,7 +76,11 @@ const pillStyles = StyleSheet.create({
   pillText: { fontSize: 14, fontWeight: '500' },
 });
 
-export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
+export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideNickname = false }) => {
+  const showSaveProgress = only === undefined;
+  const showIdentity = only !== 'preferences';
+  const showPreferences = only !== 'identity';
+  const showLogout = only !== 'identity'; // logout lives with preferences
   const { t } = useTranslation();
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
@@ -200,16 +212,25 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
     } catch {}
   };
 
+  // When embedded inside another scroll view (LobbyScreen on the
+  // Welcome page), we render a plain View — nested ScrollViews break
+  // touch behavior and produce a confusing scroll-within-scroll.
+  const embedded = only !== undefined;
+  const Container = embedded ? (View as any) : ScrollView;
+  const containerProps = embedded
+    ? { style: { gap: Spacing.md } }
+    : {
+        style: { flex: 1 },
+        contentContainerStyle: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 },
+        showsVerticalScrollIndicator: false,
+        keyboardShouldPersistTaps: 'handled',
+      };
+
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <Container {...containerProps}>
         {/* === SAVE PROGRESS (anonymous-only) === */}
-        {isAnonymous && (
+        {showSaveProgress && isAnonymous && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               {t('auth.saveProgressTitle', 'Save your progress')}
@@ -230,12 +251,14 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
           </View>
         )}
 
-        {/* === PROFILE === */}
-        {user && (
+        {/* === PROFILE / IDENTITY === */}
+        {showIdentity && user && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-              {t('profile.title', 'Profile')}
-            </Text>
+            {only !== 'identity' && (
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                {t('profile.title', 'Profile')}
+              </Text>
+            )}
 
             <View style={styles.avatarRow}>
               <View style={[styles.avatarCircle, { backgroundColor: avatarColor }]}>
@@ -259,21 +282,23 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
               )}
             </View>
 
-            <View style={styles.nicknameRow}>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
-                value={nickname}
-                onChangeText={setNickname}
-                maxLength={20}
-                autoCapitalize="words"
-                placeholder={String(t('profile.editNickname', 'Nickname'))}
-                placeholderTextColor={colors.textMuted}
-                testID="settings-nickname"
-              />
-              <Pressable style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={handleSaveProfile} testID="settings-save">
-                <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
-              </Pressable>
-            </View>
+            {!hideNickname && (
+              <View style={styles.nicknameRow}>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
+                  value={nickname}
+                  onChangeText={setNickname}
+                  maxLength={20}
+                  autoCapitalize="words"
+                  placeholder={String(t('profile.editNickname', 'Nickname'))}
+                  placeholderTextColor={colors.textMuted}
+                  testID="settings-nickname"
+                />
+                <Pressable style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={handleSaveProfile} testID="settings-save">
+                  <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
+                </Pressable>
+              </View>
+            )}
 
             <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>
               {t('profile.chooseAvatar', 'Choose Avatar')}
@@ -359,7 +384,8 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
         )}
 
         {/* === THEME === */}
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+        {showPreferences && (
+        <View key="theme" style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('settings.theme', 'Theme')}</Text>
           <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>{t('settings.themeDesc')}</Text>
           <OptionPills
@@ -374,8 +400,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
             testIDPrefix="theme"
           />
         </View>
+        )}
 
         {/* === DECK === */}
+        {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('settings.deckStyle', 'Deck Colors')}</Text>
           <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>{t('settings.deckDesc')}</Text>
@@ -396,8 +424,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
             <Text style={[styles.previewSuit, { color: fourColorDeck ? '#308552' : '#1a1a1a' }]}>♣</Text>
           </View>
         </View>
+        )}
 
         {/* === LANGUAGE === */}
+        {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('settings.language', 'Language')}</Text>
           <View style={{ height: Spacing.md }} />
@@ -413,8 +443,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
             testIDPrefix="lang"
           />
         </View>
+        )}
 
         {/* === HAPTICS === */}
+        {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('settings.haptics', 'Vibration')}
@@ -431,8 +463,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
             testIDPrefix="haptics"
           />
         </View>
+        )}
 
         {/* === NOTIFICATIONS === */}
+        {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
             {t('settings.notifications', 'Notifications')}
@@ -466,9 +500,10 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
             </Text>
           )}
         </View>
+        )}
 
         {/* === INSTALL APP === */}
-        {pwaPromptApplies && (
+        {showPreferences && pwaPromptApplies && (
           <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
               {t('pwa.settingsTitle')}
@@ -487,12 +522,12 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose }) => {
         )}
 
         {/* === LOGOUT === */}
-        {isLoggedIn && (
+        {showLogout && isLoggedIn && (
           <Pressable style={[styles.logoutBtn, { borderColor: colors.error }]} onPress={handleLogout}>
             <Text style={[styles.logoutText, { color: colors.error }]}>{t('auth.signOut')}</Text>
           </Pressable>
         )}
-      </ScrollView>
+      </Container>
 
       {showConfirmAlert && (
         <View style={[styles.toast, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>

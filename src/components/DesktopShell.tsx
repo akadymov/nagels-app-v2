@@ -69,14 +69,14 @@ export const DesktopShell: React.FC<DesktopShellProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Center content on ultrawide; cap at 1264 so the visible content
-  // box (1264 − 2 × 32 padding) is exactly 1200 — matching the
-  // 600 + 600 pane row used inside this shell (Akula: "the brand
-  // row was wider than the content below it").
+  // Center content on ultrawide; cap at 1280 so the visible content
+  // box (1280 − 2 × 32 padding) is exactly 1216 — matching the
+  // 600 + 16 gap + 600 pane row used inside this shell (Akula:
+  // "the brand row should line up with the panes below").
   inner: {
     flex: 1,
     width: '100%',
-    maxWidth: 1264,
+    maxWidth: 1280,
     alignSelf: 'center',
     paddingHorizontal: 32,
     paddingTop: 24,

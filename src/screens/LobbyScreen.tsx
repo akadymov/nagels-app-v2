@@ -58,6 +58,19 @@ export interface LobbyScreenProps {
    *  Mobile still wants the dark page-background color, so default
    *  stays false. */
   transparentBackground?: boolean;
+  /** Slot rendered right after the nickname row. Desktop welcome uses
+   *  this to surface the identity cluster (avatar / password / Google)
+   *  inline next to the nickname. */
+  afterNickname?: React.ReactNode;
+  /** Slot rendered after all CTAs (tab content). Desktop welcome uses
+   *  this for the preferences cluster (theme / deck / language /
+   *  notifications / sign-out). */
+  afterCtas?: React.ReactNode;
+  /** When true, the inner ScrollView contentContainer gets
+   *  flexGrow:1 + justifyContent:'center' so short content sits
+   *  centered vertically in the pane. Used by the desktop welcome
+   *  right pane; mobile keeps top-aligned content. */
+  centerContent?: boolean;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
@@ -68,6 +81,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   hideAuthCta = false,
   hideLogoHeader = false,
   transparentBackground = false,
+  afterNickname,
+  afterCtas,
+  centerContent = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -351,7 +367,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          centerContent && { flexGrow: 1, justifyContent: 'center' },
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -373,6 +392,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             testID="input-player-name"
           />
         </View>
+
+        {afterNickname}
 
         {/* Sign In / Create Account — visible to anonymous guests only.
             Desktop wrappers set hideAuthCta to suppress this CTA since the
@@ -527,6 +548,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             </Pressable>
           </View>
         )}
+
+        {afterCtas}
       </ScrollView>
 
       {/* Email confirmation alert (replaces Alert.alert which doesn't work on web) */}
