@@ -60,6 +60,7 @@
     "jest": "^30.3.0",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
+    "tsx": "^4.22.1",
     "typescript": "~5.9.2"
   },
   "private": true
