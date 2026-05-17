@@ -593,9 +593,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 />
               </Pressable>
             )}
-            {isMultiplayer && (
+            {/* Exit button: same gate as GameTableScreen — visible to
+                SP and to the multiplayer host. Non-host MP players
+                still use the logo→leave path. handleLogoLeave is the
+                generic handler that branches on SP / spectator / host. */}
+            {(!isMultiplayer || (!!mpMyPlayerId && mpSnapshot?.room?.host_session_id === mpMyPlayerId)) && (
               <Pressable
-                onPress={handleLeave}
+                onPress={handleLogoLeave}
                 style={({ pressed }) => [
                   styles.iconBtn,
                   {

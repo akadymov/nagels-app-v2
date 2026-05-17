@@ -71,7 +71,11 @@ export async function startGame(
   const minCardsPerHand = (room as { min_cards_per_hand?: number }).min_cards_per_hand ?? 1;
   const cardsPerPlayer = getHandCards(handNumber, safeMaxCards, minCardsPerHand);
   const trumpSuit = getTrumpForHand(handNumber);
-  const startingSeat = 0;
+  // Randomize the first-bidder seat so the host isn't always the
+  // first to act in game 1. Subsequent hands rotate from this seat
+  // (see continueHand). Akula: "позиции игроков должны шаффлиться
+  // начиная с первой же игры".
+  const startingSeat = Math.floor(Math.random() * actualPlayerCount);
   const seed = crypto.randomUUID();
 
   const deck = seededShuffle(createDeck(), seed);
