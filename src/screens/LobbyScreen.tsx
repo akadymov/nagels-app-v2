@@ -49,6 +49,10 @@ export interface LobbyScreenProps {
   /** Desktop split layouts surface "Save Progress" inside the Profile
    *  pane, so the Lobby's own Sign In CTA would just duplicate that. */
   hideAuthCta?: boolean;
+  /** Desktop shells already show the brand cluster up top — the
+   *  in-screen logo header (small NÄGELS above the nickname row)
+   *  is duplicate clutter there. */
+  hideLogoHeader?: boolean;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({
@@ -57,6 +61,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   onRoomJoined,
   onSettings,
   hideAuthCta = false,
+  hideLogoHeader = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -318,15 +323,19 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-      {/* Logo */}
-      <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
-        <GameLogo size="sm" />
-        {onSettings && (
-          <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn} testID="btn-open-settings">
-            <Text style={{ fontSize: 20, color: colors.textPrimary }}>⚙</Text>
-          </Pressable>
-        )}
-      </View>
+      {/* Logo — hidden in desktop shells that already show the brand
+          cluster up top. The gear stays available because mobile and
+          some desktop variants still need it. */}
+      {!hideLogoHeader && (
+        <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
+          <GameLogo size="sm" />
+          {onSettings && (
+            <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn} testID="btn-open-settings">
+              <Text style={{ fontSize: 20, color: colors.textPrimary }}>⚙</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <ScrollView
         style={styles.scroll}
