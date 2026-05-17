@@ -25,7 +25,7 @@ export interface PlayingCardProps {
   selected?: boolean;
   playable?: boolean;
   disabled?: boolean;
-  size?: 'tiny' | 'small' | 'medium' | 'large';
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
   onPress?: () => void;
   style?: any;
   testID?: string;
@@ -83,6 +83,16 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           height: 140,
           cornerSize: 18,
           centerSuitSize: 40,
+        };
+      // ~2x of "small" — for desktop betting / play where there's
+      // plenty of horizontal room and the player wants to read
+      // suits and ranks at a glance.
+      case 'huge':
+        return {
+          width: 140,
+          height: 196,
+          cornerSize: 24,
+          centerSuitSize: 56,
         };
       default: // medium
         return {

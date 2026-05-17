@@ -19,6 +19,7 @@ import { CardHand } from '../cards';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
 import { useGameStore } from '../../store/gameStore';
@@ -63,6 +64,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
+  const isDesktop = useIsDesktop();
 
   // Multiplayer reads from the realtime room store. Single-player
   // (vs. bots) doesn't have a server-side room, so we synthesize a
@@ -564,11 +566,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               onPress={() => useSettingsUIStore.getState().open()}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
               ]}
               hitSlop={8}
+              testID="betting-btn-settings"
             >
               <Icon name="settings" color={colors.iconButtonText} size={20} />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  {t('settings.title')}
+                </Text>
+              )}
             </Pressable>
             {isMultiplayer && (
               <Pressable
@@ -576,6 +585,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 disabled={isRefreshing}
                 style={[
                   styles.iconBtn,
+                  isDesktop && styles.iconBtnLabeled,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderWidth: 1,
@@ -591,6 +601,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   color={colors.iconButtonText}
                   size={20}
                 />
+                {isDesktop && (
+                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('game.sync')}
+                  </Text>
+                )}
               </Pressable>
             )}
             {/* Exit button: same gate as GameTableScreen — visible to
@@ -602,6 +617,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 onPress={handleLogoLeave}
                 style={({ pressed }) => [
                   styles.iconBtn,
+                  isDesktop && styles.iconBtnLabeled,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderWidth: 1,
@@ -614,23 +630,36 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 accessibilityLabel={t('multiplayer.leaveAnyway')}
               >
                 <Icon name="door" color={colors.iconButtonText} size={20} />
+                {isDesktop && (
+                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('game.exit')}
+                  </Text>
+                )}
               </Pressable>
             )}
             <Pressable
               onPress={onShowScore}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
               ]}
               hitSlop={8}
+              testID="betting-btn-scores"
             >
               <Icon name="trophy" color={colors.iconButtonText} size={20} />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  {t('game.score')}
+                </Text>
+              )}
             </Pressable>
             <Pressable
               onPress={() => setShowChat(true)}
               disabled={!isMultiplayer}
               style={[
                 styles.iconBtn,
+                isDesktop && styles.iconBtnLabeled,
                 {
                   backgroundColor: colors.iconButtonBg,
                   borderWidth: 1,
@@ -642,6 +671,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               hitSlop={8}
             >
               <Icon name="chat" color={colors.iconButtonText} size={20} />
+              {isDesktop && (
+                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  {t('game.chat')}
+                </Text>
+              )}
               {chatUnread > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
@@ -742,7 +776,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             </Text>
             <CardHand
               cards={sortedHandCards as any}
-              size="tiny"
+              size={isDesktop ? 'huge' : 'tiny'}
               horizontal
               cardOverlap={myHandCards.length}
             />
@@ -929,6 +963,18 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnLabeled: {
+    width: undefined,
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  iconBtnLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   iconBtnText: {
     fontSize: 18,

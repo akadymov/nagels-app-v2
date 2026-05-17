@@ -86,12 +86,8 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
   return (
     <View style={[styles.root, { backgroundColor: colors.accent }]}>
       <View style={styles.inner}>
-        {/* Content cluster — centered horizontally + vertically in
-            the pane. Primer sits below the cluster (outside) so it
-            can grow without pushing the cluster off-screen; per
-            Akula it's fine for primer to land slightly below center. */}
-        <View style={styles.cluster}>
-        {/* Brand cluster — coloured, larger than the auth-form copy */}
+        {/* Brand — anchored at the top of the pane. Stays mounted in
+            both modes (default marketing + primer). */}
         <View style={styles.brandRow}>
           {SUITS.map((s) => (
             <Text key={s.glyph} style={[styles.suit, { color: s.color }]}>{s.glyph}</Text>
@@ -99,73 +95,12 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           <Text style={styles.wordmark} numberOfLines={1}>NÄGELS</Text>
         </View>
 
-        {/* Hero stays mounted at all times; primer card stacks below it
-            so the user can keep the game pitch visible while reading
-            the onboarding slides. */}
-        <Text style={styles.heroTitle}>{t('welcome.heroTitle')}</Text>
-        <Text style={styles.heroSubtitle}>{t('welcome.heroSubtitle')}</Text>
-        <View style={styles.features}>
-          {([1, 2, 3] as const).map((n) => (
-            <View key={n} style={styles.featureRow}>
-              <Text style={styles.check}>✓</Text>
-              <Text style={styles.featureText}>{t(`welcome.feature${n}`)}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* CTA group hugs the widest child (primary "▶ Learn to Play" /
-            "▶ Научиться играть" / "▶ Aprender a Jugar") and stretches
-            the secondary to match. Equal-width buttons across all
-            languages without per-locale measurement. */}
-        <View style={[styles.ctaGroup, styles.ctaGroupTopSpace]}>
-          <Pressable
-            onPress={openPrimer}
-            style={styles.primaryBtn}
-            testID="desktop-welcome-learn"
-          >
-            <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
-          </Pressable>
-
-          {/* "Continue to Lobby" / "Skip to Menu" CTA — only shown
-              for guests. On desktop logged-in users see the Lobby
-              mounted directly in the right pane (DesktopWelcomeAuth),
-              so this button would be a no-op. */}
-          {!isLoggedIn && (
-            <Pressable
-              onPress={onAlreadyPlay}
-              style={styles.secondaryBtn}
-              testID="desktop-welcome-continue"
-            >
-              <Text style={styles.secondaryBtnText}>
-                {t('welcome.alreadyPlay')}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-
-        <View style={styles.langRow}>
-          {(Object.keys(languages) as LanguageCode[]).map((code, i) => {
-            const isActive = code === currentLang;
-            return (
-              <React.Fragment key={code}>
-                {i > 0 && <Text style={styles.langDot}>·</Text>}
-                <Pressable
-                  onPress={() => changeLanguage(code)}
-                  hitSlop={8}
-                  testID={`desktop-lang-${code}`}
-                >
-                  <Text style={[styles.langLink, isActive && styles.langLinkActive]}>
-                    {code.toUpperCase()}
-                  </Text>
-                </Pressable>
-              </React.Fragment>
-            );
-          })}
-        </View>
-        </View>{/* /cluster */}
-
-        {showPrimer && (
-          <View style={styles.primerCard}>
+        {/* Middle section — swaps between the marketing pitch (hero
+            + features + CTAs) and the onboarding primer. Centered
+            both axes inside the remaining vertical space. */}
+        <View style={styles.middleSection}>
+          {showPrimer ? (
+            <View style={styles.primerCard}>
             <View style={styles.primerHeader}>
               <Pressable onPress={closePrimer} hitSlop={8} testID="desktop-primer-skip">
                 <Text style={styles.primerSkip}>{t('common.skip', 'Skip')}</Text>
@@ -239,8 +174,67 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
                 </Text>
               </Pressable>
             </View>
-          </View>
-        )}
+            </View>
+          ) : (
+            <View style={styles.defaultContent}>
+              <Text style={styles.heroTitle}>{t('welcome.heroTitle')}</Text>
+              <Text style={styles.heroSubtitle}>{t('welcome.heroSubtitle')}</Text>
+              <View style={styles.features}>
+                {([1, 2, 3] as const).map((n) => (
+                  <View key={n} style={styles.featureRow}>
+                    <Text style={styles.check}>✓</Text>
+                    <Text style={styles.featureText}>{t(`welcome.feature${n}`)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA group — equal-width primary + secondary, hugs
+                  the widest child via alignItems:'stretch'. */}
+              <View style={[styles.ctaGroup, styles.ctaGroupTopSpace]}>
+                <Pressable
+                  onPress={openPrimer}
+                  style={styles.primaryBtn}
+                  testID="desktop-welcome-learn"
+                >
+                  <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
+                </Pressable>
+                {!isLoggedIn && (
+                  <Pressable
+                    onPress={onAlreadyPlay}
+                    style={styles.secondaryBtn}
+                    testID="desktop-welcome-continue"
+                  >
+                    <Text style={styles.secondaryBtnText}>
+                      {t('welcome.alreadyPlay')}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Language switcher — anchored at the bottom, always
+            visible in both modes. */}
+        <View style={styles.langRow}>
+          {(Object.keys(languages) as LanguageCode[]).map((code, i) => {
+            const isActive = code === currentLang;
+            return (
+              <React.Fragment key={code}>
+                {i > 0 && <Text style={styles.langDot}>·</Text>}
+                <Pressable
+                  onPress={() => changeLanguage(code)}
+                  hitSlop={8}
+                  testID={`desktop-lang-${code}`}
+                >
+                  <Text style={[styles.langLink, isActive && styles.langLinkActive]}>
+                    {code.toUpperCase()}
+                  </Text>
+                </Pressable>
+              </React.Fragment>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -248,20 +242,24 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  // Brand anchored to top, language switcher anchored to bottom,
+  // middle section flex:1 between them. The middle section swaps
+  // between the marketing pitch and the onboarding primer.
   inner: {
     flex: 1,
     paddingHorizontal: 80,
     paddingTop: 80,
     paddingBottom: 56,
-    // Vertically + horizontally center the cluster. Primer (when
-    // open) stacks below the cluster and may sit a touch below
-    // center; Akula confirmed that's the desired feel.
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  cluster: {
-    // Hugs its children's natural max width; left-alignment inside
-    // (default) is preserved, only the cluster as a whole moves.
+  middleSection: {
+    flex: 1,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  defaultContent: {
+    // Children stay left-aligned within this natural-width column.
   },
 
   // Brand
