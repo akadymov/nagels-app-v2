@@ -21,18 +21,29 @@ export default async function globalSetup(): Promise<void> {
   const paths = runtimePaths(PROJECT_ROOT);
   fs.mkdirSync(paths.runtimeDir, { recursive: true });
 
-  if (!isSupabaseUp()) {
-    log('starting local supabase…');
-    execSync('supabase start', { stdio: 'inherit', cwd: PROJECT_ROOT });
-  } else {
-    log('supabase already up (KEEP_SUPABASE iteration)');
-  }
+  // Always run `supabase start` — it's idempotent and quick when
+  // containers are already up, AND it brings the running set into
+  // alignment with config.toml. Previously we short-circuited via
+  // isSupabaseUp() to save a couple of seconds on KEEP_SUPABASE
+  // iterations, but supabase CLI v2.95.4's `db reset` then sees
+  // out-of-spec services and stops EVERYTHING (Kong, Auth, Realtime
+  // included), leaving `supabase status` with only DB_URL set. The
+  // few-second savings aren't worth that footgun.
+  log(isSupabaseUp() ? 're-aligning local supabase…' : 'starting local supabase…');
+  execSync('supabase start', { stdio: 'inherit', cwd: PROJECT_ROOT });
 
   log('applying migrations via supabase db reset…');
   execSync('supabase db reset --local --no-seed --yes', {
     stdio: 'inherit',
     cwd: PROJECT_ROOT,
   });
+
+  // Belt-and-suspenders: in some CLI versions `db reset` itself stops
+  // services that were running but flagged disabled in config.toml,
+  // OR essential services if it can't reconcile state. A second
+  // `supabase start` brings everything back into the expected shape
+  // before we read `supabase status`.
+  execSync('supabase start', { stdio: 'inherit', cwd: PROJECT_ROOT });
 
   const statusJson = execSync('supabase status -o json', {
     cwd: PROJECT_ROOT,
