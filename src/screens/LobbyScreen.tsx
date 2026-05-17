@@ -322,7 +322,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
         <GameLogo size="sm" />
         {onSettings && (
-          <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn}>
+          <Pressable onPress={onSettings} hitSlop={12} style={styles.settingsBtn} testID="btn-open-settings">
             <Text style={{ fontSize: 20, color: colors.textPrimary }}>⚙</Text>
           </Pressable>
         )}
