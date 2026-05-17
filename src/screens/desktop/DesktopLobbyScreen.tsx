@@ -32,15 +32,15 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
 
   return (
     <DesktopShell>
+      {/* Both panes are fixed at 600px so the two forms read as a
+          matched pair. The row is centered horizontally inside the
+          shell so on ultra-wide screens the 1200px content cluster
+          sits in the middle instead of hugging the left edge. */}
       <View style={styles.row}>
-        {/* Lobby pane is fixed at 600px so the form has a stable
-            width across all desktop sizes. The Profile pane flexes
-            to fill the rest, so together the two forms span the
-            full active page width without an awkward gap. */}
         <View
           style={[
             styles.pane,
-            styles.lobbyPane,
+            styles.fixedPane,
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
@@ -49,7 +49,7 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
         <View
           style={[
             styles.pane,
-            styles.profilePane,
+            styles.fixedPane,
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
@@ -65,18 +65,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     minHeight: 720,
+    alignSelf: 'center',
   },
   pane: {
     borderRadius: Radius.xl,
     borderWidth: 1,
     overflow: 'hidden',
   },
-  lobbyPane: {
+  fixedPane: {
     width: 600,
     flexShrink: 0,
-  },
-  profilePane: {
-    flex: 1,
   },
 });
 
