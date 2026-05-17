@@ -32,11 +32,28 @@ export default async function globalSetup(): Promise<void> {
   log(isSupabaseUp() ? 're-aligning local supabase…' : 'starting local supabase…');
   execSync('supabase start', { stdio: 'inherit', cwd: PROJECT_ROOT });
 
+  // Run `supabase db reset` with one retry. v2.95.4 of the CLI
+  // occasionally returns "Error status 502: An invalid response
+  // was received from the upstream server" during the
+  // `Restarting containers...` phase — Kong responds before the
+  // restarted Auth container is healthy. A `supabase start`
+  // re-align + retry resolves it; if the second attempt fails too,
+  // the error is real and propagates.
   log('applying migrations via supabase db reset…');
-  execSync('supabase db reset --local --no-seed --yes', {
-    stdio: 'inherit',
-    cwd: PROJECT_ROOT,
-  });
+  try {
+    execSync('supabase db reset --local --no-seed --yes', {
+      stdio: 'inherit',
+      cwd: PROJECT_ROOT,
+    });
+  } catch (e: unknown) {
+    log(`db reset attempt 1 failed: ${(e as Error).message.slice(0, 200)}`);
+    log('re-aligning supabase + retrying db reset…');
+    execSync('supabase start', { stdio: 'inherit', cwd: PROJECT_ROOT });
+    execSync('supabase db reset --local --no-seed --yes', {
+      stdio: 'inherit',
+      cwd: PROJECT_ROOT,
+    });
+  }
 
   // Belt-and-suspenders: in some CLI versions `db reset` itself stops
   // services that were running but flagged disabled in config.toml,
