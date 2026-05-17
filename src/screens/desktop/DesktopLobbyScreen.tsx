@@ -14,7 +14,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { Radius, Spacing } from '../../constants';
+import { Radius } from '../../constants';
 import { LobbyScreen, type LobbyScreenProps } from '../LobbyScreen';
 import { SettingsBody } from '../../components/SettingsBody';
 import { DesktopShell } from '../../components/DesktopShell';
@@ -33,6 +33,10 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
   return (
     <DesktopShell>
       <View style={styles.row}>
+        {/* Lobby pane is fixed at 600px so the form has a stable
+            width across all desktop sizes. The Profile pane flexes
+            to fill the rest, so together the two forms span the
+            full active page width without an awkward gap. */}
         <View
           style={[
             styles.pane,
@@ -40,13 +44,7 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          {/* Cap the lobby form at 600px on ultra-wide desktops —
-              same pattern as the embedded lobby in DesktopWelcomeAuth.
-              The outer pane still flexes to its ~65% column; only the
-              inner column is capped. */}
-          <View style={styles.lobbyInner}>
-            <LobbyScreen {...lobbyProps} hideAuthCta />
-          </View>
+          <LobbyScreen {...lobbyProps} hideAuthCta hideLogoHeader />
         </View>
         <View
           style={[
@@ -66,7 +64,6 @@ const styles = StyleSheet.create({
   row: {
     flex: 1,
     flexDirection: 'row',
-    gap: Spacing.lg,
     minHeight: 720,
   },
   pane: {
@@ -75,17 +72,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   lobbyPane: {
-    flexGrow: 13,
-    flexShrink: 1,
-    flexBasis: 0, // ~65%
-    alignItems: 'center', // center the capped inner column
+    width: 600,
+    flexShrink: 0,
   },
-  lobbyInner: {
+  profilePane: {
     flex: 1,
-    width: '100%',
-    maxWidth: 600,
   },
-  profilePane: { flexGrow: 7, flexShrink: 1, flexBasis: 0 }, // ~35%
 });
 
 export default DesktopLobbyScreen;
