@@ -260,6 +260,60 @@ MacBook — `memory-guard.sh` denies new spawns at <2 GB free.
 mid-game host exit, reconnect after disconnect, spectator mode,
 chat assertions, mixed player-count games.
 
+## Multiplayer DEMO (`tests/e2e/multiplayer-demo.spec.ts`)
+
+A **demo, not a regression test** — a fixed 6-player playthrough
+that touches as many MVP features as one run can hold. Result of
+a run is the per-context `video.webm` and a console summary, not
+pass/fail. Disabled in the registry so `test:all` skips it.
+
+**Roster (immutable):**
+
+| # | Player | Lang | Theme | Deck | Auth | Viewport | Entry |
+|---|---|---|---|---|---|---|---|
+| P1 | alice@nigels.test | EN | light | 4-color | registered | mobile | login, **HOST** |
+| P2 | bob@nigels.test | RU | dark | 4-color | registered | mobile | login → code |
+| P3 | guest "Carol" | ES | light | 2-color | guest | mobile | guest → **deep-link** |
+| P4 | dave@nigels.test | EN | dark | 4-color | registered | mobile | login → code |
+| P5 | eve@nigels.test | RU | light | 4-color | registered | desktop | login → code |
+| P6 | guest "Frank" | ES | dark | 2-color | guest | desktop | guest → **deep-link** |
+
+Languages cycle every player; every 2nd is dark theme; every 3rd
+is 2-color deck + guest + deep-link join.
+
+**Per-hand interactions (best-effort):**
+
+- Mobile players: send chat ≥1, view last trick, open scoreboard
+- Desktop players: chat send (panel toggles TODO Phase 6.2)
+
+Counters are tallied per player and printed in the final summary.
+A missing interaction does NOT fail the run.
+
+**Pre-seeded accounts:** the four registered accounts live in
+`supabase/migrations/<ts>_seed_demo_accounts.sql`. Password is
+`demo-pass-1234` (override via `DEMO_LOGIN_PASS` env). Their
+`user_metadata` carries `display_name / lang / theme / deck /
+avatar` so they boot already-configured.
+
+**Run modes:**
+
+```bash
+npm run demo:full:local:headed   # canonical: isolated :8082, headed, slowMo=120
+npm run demo:full:local          # same backend, headless (~60-75 min)
+npm run demo:full                # against manual :8081 (debug only)
+```
+
+Wall-clock budget: 2 hours. A typical headed run takes 60-90 min.
+
+**Artifacts:** after a run, look in
+`test-results/multiplayer-demo-*/`:
+
+- `video.webm` — one per player context, can be concatenated for a
+  demo reel
+- `trace.zip` — `npx playwright show-trace` for interactive review
+- Console output above the summary contains every chat send /
+  last-trick view / scoreboard open with the player label
+
 ## Cross-tier orchestrator (`npm run test:all`)
 
 Reads `tests/tests.config.json` and runs each tier in order:
