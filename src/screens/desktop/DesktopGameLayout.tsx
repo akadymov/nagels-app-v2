@@ -23,6 +23,8 @@ import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
 import { PlayingCard } from '../../components/cards';
+import { ScoreboardModal, type PlayerScore } from '../ScoreboardModal';
+import { gameClient } from '../../lib/gameClient';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
 
 type Props = GameTableScreenProps;
@@ -103,6 +105,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     leftPanel,
     toggleLeftPanel: (next: LeftPanel) =>
       setLeftPanel((current) => (current === next ? null : next)),
+    showScoreboard: () => setLeftPanel('scoreboard'),
     chatVisible,
     toggleChat: () => setChatVisible((v) => !v),
   }), [leftPanel, chatVisible]);
@@ -113,44 +116,100 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     </View>
   );
 
+  // Build PlayerScore[] for the embedded ScoreboardModal. Mirrors
+  // the construction in GameTableScreen so the same renderer can be
+  // reused without an intermediate adapter.
+  const playerScores: PlayerScore[] = isMultiplayer
+    ? (() => {
+        const players = snapshot?.players ?? [];
+        const handScores = snapshot?.hand_scores ?? [];
+        const history = snapshot?.score_history ?? [];
+        const totals: Record<string, number> = {};
+        for (const h of history) {
+          for (const row of h.scores ?? []) {
+            totals[row.session_id] = (totals[row.session_id] ?? 0) + (row.hand_score ?? 0);
+          }
+        }
+        return players
+          .map((p: any) => {
+            const score = handScores.find((s: any) => s.session_id === p.session_id);
+            const bet = score?.bet ?? null;
+            const won = score?.taken_tricks ?? 0;
+            const madeBet = bet !== null && bet === won;
+            const bonus = madeBet ? 10 : 0;
+            return {
+              id: p.session_id,
+              name: p.display_name,
+              rank: 0,
+              totalScore: totals[p.session_id] ?? 0,
+              lastBet: bet ?? 0,
+              lastTricks: won,
+              lastBonus: bonus,
+              lastPoints: won + bonus,
+              madeBet,
+              avatar: p.avatar ?? null,
+              avatarColor: p.avatar_color ?? null,
+            };
+          })
+          .sort((a: PlayerScore, b: PlayerScore) => b.totalScore - a.totalScore)
+          .map((p: PlayerScore, i: number) => ({ ...p, rank: i + 1 }));
+      })()
+    : sp.players
+        .map((p) => {
+          const bet = p.bet;
+          const won = p.tricksWon ?? 0;
+          const madeBet = bet != null && bet === won;
+          const bonus = madeBet ? 10 : 0;
+          return {
+            id: p.id,
+            name: p.name,
+            rank: 0,
+            totalScore: (p.score ?? 0) + (p.bonus ?? 0),
+            lastBet: bet ?? 0,
+            lastTricks: won,
+            lastBonus: bonus,
+            lastPoints: won + bonus,
+            madeBet,
+            avatar: (p as any).avatar ?? null,
+            avatarColor: (p as any).avatarColor ?? null,
+          };
+        })
+        .sort((a, b) => b.totalScore - a.totalScore)
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+
+  const isHost = isMultiplayer && !!snapshot?.room && snapshot.room.host_session_id === mpMyPlayerId;
+  const isGameOver = isMultiplayer
+    ? snapshot?.room?.phase === 'finished'
+    : sp.phase === 'finished';
+
+  const handlePlayAgain = () => {
+    if (!isMultiplayer) {
+      try { sp.reset(); } catch {}
+      return;
+    }
+    const roomId = snapshot?.room?.id;
+    if (!roomId) return;
+    gameClient.restartGame(roomId).catch((err) => {
+      console.error('[DesktopGameLayout] restartGame failed:', err);
+    });
+  };
+
   const renderScoreboard = () => (
-    <>
-      <View style={styles.scoreHeader}>
-        <Text style={[styles.scoreTitle, { color: colors.textPrimary }]}>Scoreboard</Text>
-        {handInfo && (
-          <Text style={[styles.scoreMeta, { color: colors.textMuted }]}>
-            Hand {handInfo.handNumber} / {handInfo.totalHands}
-          </Text>
-        )}
-      </View>
-      {handInfo && (
-        <Text style={[styles.scoreSub, { color: colors.textMuted }]}>
-          {handInfo.cardsPerPlayer} card{handInfo.cardsPerPlayer === 1 ? '' : 's'} · {handInfo.trump} trump
-        </Text>
-      )}
-      <ScrollView style={styles.scoreList} showsVerticalScrollIndicator={false}>
-        {rows.map((r) => (
-          <View
-            key={r.id}
-            style={[
-              styles.scoreRow,
-              {
-                backgroundColor: r.isMe ? colors.surfaceSecondary : 'transparent',
-                borderColor: colors.glassLight,
-              },
-            ]}
-          >
-            <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
-              {r.name}{r.isMe ? ' (you)' : ''}
-            </Text>
-            <Text style={[styles.scoreCell, { color: colors.textMuted }]}>
-              Bet {r.bet ?? '–'} · Won {r.won}
-            </Text>
-            <Text style={[styles.scoreTotal, { color: colors.textPrimary }]}>{r.total}</Text>
-          </View>
-        ))}
-      </ScrollView>
-    </>
+    <View style={{ flex: 1 }}>
+      <ScoreboardModal
+        embedded
+        visible
+        handNumber={handInfo?.handNumber ?? 0}
+        totalHands={handInfo?.totalHands ?? 0}
+        players={playerScores}
+        scoreHistory={isMultiplayer ? undefined : sp.scoreHistory}
+        isGameOver={isGameOver}
+        isHost={isHost}
+        isMidGame
+        onContinue={() => { /* no-op — embedded mode has no Continue */ }}
+        onPlayAgain={handlePlayAgain}
+      />
+    </View>
   );
 
   const renderLastTrick = () => (

@@ -133,6 +133,8 @@
     "waitingForHost": "Waiting for host…",
     "showHistory": "Show History",
     "hideHistory": "Hide History",
+    "brief": "Brief",
+    "detailed": "Detailed",
     "leading": "leading",
     "wins": "wins!",
     "rank": "Rank",

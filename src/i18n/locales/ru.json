@@ -133,6 +133,8 @@
     "waitingForHost": "Ждём хоста…",
     "showHistory": "Показать историю",
     "hideHistory": "Скрыть историю",
+    "brief": "Кратко",
+    "detailed": "Подробно",
     "leading": "лидирует",
     "wins": "побеждает!",
     "rank": "Место",

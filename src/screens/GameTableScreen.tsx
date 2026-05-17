@@ -596,16 +596,20 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       // same 1500 ms TRICK_HOLD_MS so the trick-hold visual and the
       // scoreboard delay stay in lockstep.
       const t = setTimeout(() => {
-        // Game-over and mid-game scoring both open the same scoreboard;
-        // when phase==='finished' the modal renders the winner banner
-        // at the top (see ScoreboardModal renderWinnerBanner), so there
-        // is no longer a separate fanfare step.
-        setShowScoreboard(true);
-        setIsViewingScores(false);
+        // On desktop the scoreboard already lives in the left pane —
+        // popping a modal on top of it would just duplicate. Force the
+        // pane to 'scoreboard' so it's visible if the player had a
+        // different panel open. Mobile (no desktopUI) keeps the modal.
+        if (desktopUI) {
+          desktopUI.showScoreboard();
+        } else {
+          setShowScoreboard(true);
+          setIsViewingScores(false);
+        }
       }, TRICK_HOLD_MS);
       return () => clearTimeout(t);
     }
-  }, [vm.phase]);
+  }, [vm.phase, desktopUI]);
 
   // Compute playable cards
   const playableCards = useMemo(() => {

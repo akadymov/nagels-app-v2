@@ -18,6 +18,9 @@ export interface DesktopGameUI {
   /** Click a button: if it's already the active panel, hide it;
    *  otherwise switch to it. */
   toggleLeftPanel: (next: LeftPanel) => void;
+  /** Force-show the scoreboard panel. Used by GameTableScreen on
+   *  hand-end so the player sees the updated score without a popup. */
+  showScoreboard: () => void;
   /** Whether the right-pane chat is visible. */
   chatVisible: boolean;
   toggleChat: () => void;
