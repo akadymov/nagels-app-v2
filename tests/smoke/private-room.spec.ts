@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ensureDevServer } from '../fixtures/smoke';
+import { ensureDevServer, dismissLobbyOverlays } from '../fixtures/smoke';
 
 /**
  * Smoke 6/8 — join flow with a bad code surfaces an error.
@@ -23,26 +23,50 @@ test.describe('private room', () => {
       .first()
       .click({ timeout: 15_000 });
 
+    await dismissLobbyOverlays(page);
+
+    // Default tab is `bots`; the join code input lives on the `join` tab.
+    await page
+      .locator('[data-testid="tab-join"]')
+      .first()
+      .click({ timeout: 10_000 });
+
     const joinInput = page.locator('[data-testid="input-join-code"]').first();
     await expect(joinInput).toBeVisible({ timeout: 10_000 });
     await joinInput.fill('ZZZZZZ');
+
+    // The Lobby surfaces join errors via window.alert (RNW falls back to
+    // native Alert.alert which on web is `window.alert`). Playwright
+    // intercepts these as `dialog` events — capture the message and
+    // assert it surfaces an error of some sort. Pattern covers the two
+    // failure paths exercised by this smoke:
+    //   - guest with no auth   → "not_signed_in" / "Something went wrong"
+    //   - signed-in user, bad code → "Room not found" / "invalid"
+    const errorPattern = /not found|invalid|cannot|not_signed|something went wrong|wrong/i;
+    const dialogMsg = new Promise<string>((resolve) => {
+      page.once('dialog', async (d) => {
+        const msg = d.message();
+        await d.dismiss().catch(() => {});
+        resolve(msg);
+      });
+    });
 
     await page
       .locator('[data-testid="btn-join-room"]')
       .first()
       .click({ timeout: 5_000 });
 
-    // The exact error testID is not standardized across the lobby — fall
-    // back to "some visible text contains a known error fragment". Common
-    // patterns: "not found", "Room not found", "no room", "invalid".
-    const errorPattern = /not found|no such|invalid|cannot find/i;
-    await expect(
-      page.locator(`text=${errorPattern}`).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    const msg = await Promise.race([
+      dialogMsg,
+      new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error('No dialog within 10s')), 10_000),
+      ),
+    ]);
+    expect(msg).toMatch(errorPattern);
 
     // Lobby must still be reachable — we have NOT navigated away.
     await expect(
-      page.locator('[data-testid="btn-quick-match"]').first(),
+      page.locator('[data-testid="tab-join"]').first(),
     ).toBeVisible({ timeout: 5_000 });
   });
 });

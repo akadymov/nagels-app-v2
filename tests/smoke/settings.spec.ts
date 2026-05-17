@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ensureDevServer } from '../fixtures/smoke';
+import { ensureDevServer, dismissLobbyOverlays } from '../fixtures/smoke';
 
 /**
  * Smoke 4/8 — open Settings from Lobby, flip theme (light↔dark),
@@ -20,6 +20,8 @@ test.describe('settings', () => {
       .first()
       .click({ timeout: 15_000 });
 
+    await dismissLobbyOverlays(page);
+
     await page
       .locator('[data-testid="btn-open-settings"]')
       .first()
@@ -32,28 +34,28 @@ test.describe('settings', () => {
     await expect(themeDark).toBeVisible({ timeout: 5_000 });
 
     // Click dark, then light. The selected pill should have a measurable
-    // background-color change — we don't lock to a specific color, just
-    // assert that clicking changes the pair.
+    // background-color change — we compare the same pill's bg in
+    // selected vs. deselected states (both pills cycle through the
+    // accent color, so cross-pill comparison reads two equal values).
     await themeDark.click();
     await page.waitForTimeout(150);
-    const darkBg = await themeDark.evaluate(
+    const lightBgWhenDark = await themeLight.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
     await themeLight.click();
     await page.waitForTimeout(150);
-    const lightBg = await themeLight.evaluate(
+    const lightBgWhenLight = await themeLight.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    expect(darkBg).not.toBe(lightBg);
+    expect(lightBgWhenDark).not.toBe(lightBgWhenLight);
 
-    // Language cycle. Capture some visible text after each switch and
-    // assert at least one node changed.
-    const grabFirstHeader = async () =>
-      (await page
-        .locator('text=/.{3,}/')
-        .first()
-        .textContent()
-        .catch(() => null)) || '';
+    // Language cycle. Grab the full visible text of the document body
+    // after each switch and assert it changes — Latin/Cyrillic alphabets
+    // make this a robust signal even when individual nodes haven't been
+    // localised. (The first-text-node heuristic from the original plan
+    // collapsed to the same value for all three locales.)
+    const grabBodyText = async () =>
+      page.evaluate(() => document.body.innerText || '');
     const langEn = page.locator('[data-testid="lang-en"]').first();
     const langRu = page.locator('[data-testid="lang-ru"]').first();
     const langEs = page.locator('[data-testid="lang-es"]').first();
@@ -62,20 +64,20 @@ test.describe('settings', () => {
     await expect(langEs).toBeVisible({ timeout: 5_000 });
 
     await langEn.click();
-    await page.waitForTimeout(200);
-    const sampleEn = await grabFirstHeader();
+    await page.waitForTimeout(300);
+    const sampleEn = await grabBodyText();
     await langRu.click();
-    await page.waitForTimeout(200);
-    const sampleRu = await grabFirstHeader();
+    await page.waitForTimeout(300);
+    const sampleRu = await grabBodyText();
     await langEs.click();
-    await page.waitForTimeout(200);
-    const sampleEs = await grabFirstHeader();
+    await page.waitForTimeout(300);
+    const sampleEs = await grabBodyText();
 
-    expect(sampleEn).not.toBe('');
-    // At least one of RU/ES must differ from EN — if all three match,
-    // the language switch is a no-op.
-    const someChanged = sampleRu !== sampleEn || sampleEs !== sampleEn;
-    expect(someChanged).toBe(true);
+    expect(sampleEn.length).toBeGreaterThan(0);
+    // RU must differ from EN (Cyrillic vs Latin). ES vs EN may overlap
+    // for short labels, so we require at least RU to diverge.
+    expect(sampleRu).not.toBe(sampleEn);
+    expect(sampleEs).not.toBe(sampleEn);
 
     // Reset to EN to leave the dev server in a clean state.
     await langEn.click();

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ensureDevServer } from '../fixtures/smoke';
+import { ensureDevServer, dismissLobbyOverlays } from '../fixtures/smoke';
 
 /**
  * Smoke 2/8 — Lobby tabs switch; the three primary CTAs render and
@@ -18,27 +18,28 @@ test.describe('lobby', () => {
       .first()
       .click({ timeout: 15_000 });
 
-    // Tab discovery: tab-${tab}. We don't know all keys up front, but
-    // there are at least three. Assert the first is selectable.
+    await dismissLobbyOverlays(page);
+
+    // Lobby exposes three tabs: bots (default), join, create. Each tab
+    // mounts its own CTA conditionally on activeTab. Visit each one and
+    // assert its CTA renders.
     const tabs = page.locator('[data-testid^="tab-"]');
     await expect(tabs.first()).toBeVisible({ timeout: 15_000 });
-    const tabCount = await tabs.count();
-    expect(tabCount).toBeGreaterThanOrEqual(2);
+    expect(await tabs.count()).toBeGreaterThanOrEqual(3);
 
-    // Click each visible tab once.
-    for (let i = 0; i < tabCount; i++) {
-      await tabs.nth(i).click({ timeout: 5_000 });
-    }
-
-    // Three primary CTAs must all exist in the DOM after tab cycling.
+    // Default tab is `bots` → btn-quick-match is already mounted.
     await expect(
       page.locator('[data-testid="btn-quick-match"]').first(),
     ).toBeVisible({ timeout: 10_000 });
-    await expect(
-      page.locator('[data-testid="btn-create-room"]').first(),
-    ).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('[data-testid="tab-join"]').first().click();
     await expect(
       page.locator('[data-testid="btn-join-room"]').first(),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('[data-testid="tab-create"]').first().click();
+    await expect(
+      page.locator('[data-testid="btn-create-room"]').first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 });
