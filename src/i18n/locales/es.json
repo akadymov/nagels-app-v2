@@ -282,7 +282,11 @@
     "leaveAnyway": "Salir igualmente",
     "leftMidGame": "🚪 {{name}} ha abandonado la partida",
     "endGameConfirmTitle": "¿Terminar la partida?",
-    "endGameConfirmBody": "Esto cierra la sala para todos. Todos vuelven al lobby y la sala desaparece.\n\nSi sólo necesitas alejarte — cierra la pestaña. Volverás a la misma sala."
+    "endGameConfirmBody": "Esto cierra la sala para todos. Todos vuelven al lobby y la sala desaparece.\n\nSi sólo necesitas alejarte — cierra la pestaña. Volverás a la misma sala.",
+    "leaveRoomConfirmTitle": "¿Abandonar la sala?",
+    "leaveRoomConfirmBody": "Volverás al lobby. La sala sigue abierta — puedes volver a entrar con el enlace de invitación si aún está activo.",
+    "leaveRoomHostConfirmTitle": "¿Cerrar la sala?",
+    "leaveRoomHostConfirmBody": "Eres el anfitrión. Si te vas, la sala se cierra para todos: los jugadores vuelven al lobby y la sala desaparece."
   },
   "pwa": {
     "title": "Añade Nägels a la pantalla de inicio",

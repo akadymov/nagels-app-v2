@@ -27,6 +27,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from '../lib/gameClient';
+import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useHeartbeat } from '../lib/heartbeat';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
@@ -223,6 +224,31 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     onLeave();
   }, [room?.id, onLeave]);
 
+  // Logo-tap leave: confirm for participants (player or host), no
+  // confirm for spectators. On a successful exit we always navigate
+  // back to the lobby via onLeave.
+  const handleLogoLeave = useCallback(async () => {
+    const roomId = room?.id;
+    if (!roomId) {
+      onLeave();
+      return;
+    }
+    const isSpectator = useRoomStore.getState().isSpectator;
+    if (isSpectator) {
+      try {
+        await gameClient.leaveRoomAsSpectator(roomId);
+      } catch (err) {
+        console.error('[WaitingRoom] leaveRoomAsSpectator failed:', err);
+      }
+    } else {
+      const ok = await leaveWithConfirm(roomId, t, { isHost, context: 'room' });
+      if (!ok) return;
+    }
+    unsubscribeRoom();
+    useRoomStore.getState().reset();
+    onLeave();
+  }, [room?.id, t, isHost, onLeave]);
+
   const handleShare = useCallback(async () => {
     if (!room) return;
     const link = buildInviteLink(room.code);
@@ -268,7 +294,12 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         >
           <Text style={{ fontSize: 18 }}>🔄</Text>
         </Pressable>
-        <GameLogo size="sm" />
+        <GameLogo
+          size="sm"
+          onPress={handleLogoLeave}
+          testID="app-logo-button"
+          accessibilityLabel={t('multiplayer.leaveRoomConfirmTitle')}
+        />
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <Pressable
             onPress={() => setShowChat(true)}
