@@ -78,6 +78,15 @@ export async function loginAsRegistered(
     .locator('[data-testid="input-player-name"]')
     .first()
     .waitFor({ state: 'visible', timeout: 20_000 });
+
+  // Same PWA-modal poll as enterLobbyAsGuest. The modal pops up
+  // ~600ms after the lobby renders and otherwise intercepts the
+  // very next click (e.g. player-count-6 from createRoomAsHost).
+  for (let i = 0; i < 8; i += 1) {
+    if (await dismissPwaModalIfAny(page)) break;
+    await sleep(250);
+  }
+
   // eslint-disable-next-line no-console
   console.log(`[demo:${label}] ✓ logged in as ${email}`);
 }
