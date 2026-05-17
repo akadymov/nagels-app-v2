@@ -150,15 +150,21 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
           <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
         </Pressable>
 
-        <Pressable
-          onPress={onAlreadyPlay}
-          style={styles.secondaryBtn}
-          testID="desktop-welcome-continue"
-        >
-          <Text style={styles.secondaryBtnText}>
-            {isLoggedIn ? t('lobby.continueToLobby') : t('welcome.alreadyPlay')}
-          </Text>
-        </Pressable>
+        {/* "Continue to Lobby" / "Skip to Menu" CTA — only shown
+            for guests. On desktop logged-in users see the Lobby
+            mounted directly in the right pane (DesktopWelcomeAuth),
+            so this button would be a no-op. */}
+        {!isLoggedIn && (
+          <Pressable
+            onPress={onAlreadyPlay}
+            style={styles.secondaryBtn}
+            testID="desktop-welcome-continue"
+          >
+            <Text style={styles.secondaryBtnText}>
+              {t('welcome.alreadyPlay')}
+            </Text>
+          </Pressable>
+        )}
 
         <View style={styles.langRow}>
           {(Object.keys(languages) as LanguageCode[]).map((code, i) => {

@@ -290,20 +290,24 @@ function LobbyRoute(props: LobbyScreenProps) {
   return isDesktop ? <DesktopLobbyScreen {...props} /> : <LobbyScreen {...props} />;
 }
 
-function WelcomeRoute(props: WelcomeScreenProps & { authProps: AuthScreenProps }) {
+function WelcomeRoute(
+  props: WelcomeScreenProps & { authProps: AuthScreenProps; lobbyProps: LobbyScreenProps },
+) {
   const isDesktop = useIsDesktop();
-  const { authProps, ...welcomeProps } = props;
+  const { authProps, lobbyProps, ...welcomeProps } = props;
   if (isDesktop) {
-    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} />;
+    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} lobby={lobbyProps} />;
   }
   return <WelcomeScreen {...welcomeProps} />;
 }
 
-function AuthRoute(props: AuthScreenProps & { welcomeProps: WelcomeScreenProps }) {
+function AuthRoute(
+  props: AuthScreenProps & { welcomeProps: WelcomeScreenProps; lobbyProps: LobbyScreenProps },
+) {
   const isDesktop = useIsDesktop();
-  const { welcomeProps, ...authProps } = props;
+  const { welcomeProps, lobbyProps, ...authProps } = props;
   if (isDesktop) {
-    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} />;
+    return <DesktopWelcomeAuth welcome={welcomeProps} auth={authProps} lobby={lobbyProps} />;
   }
   return <AuthScreen {...authProps} />;
 }
@@ -493,6 +497,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                       onBack: () => (props.navigation as any).goBack(),
                       onSuccess: () => (props.navigation as any).navigate('Lobby'),
                     }}
+                    lobbyProps={{
+                      onQuickMatch: (difficulty, botCount, playerName) => {
+                        (props.navigation as any).navigate('GameTable', {
+                          isMultiplayer: false,
+                          botDifficulty: difficulty,
+                          botCount,
+                          playerName,
+                        });
+                      },
+                      onRoomCreated: () => (props.navigation as any).navigate('WaitingRoom'),
+                      onRoomJoined: () => (props.navigation as any).navigate('WaitingRoom'),
+                      onSettings: () => useSettingsUIStore.getState().open(),
+                    }}
                   />
                 )}
               </>
@@ -560,6 +577,19 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                     onQuickStart: () => (props.navigation as any).navigate('Primer'),
                     onAlreadyPlay: () => (props.navigation as any).navigate('Lobby'),
                     onSignIn: () => {},
+                  }}
+                  lobbyProps={{
+                    onQuickMatch: (difficulty, botCount, playerName) => {
+                      (props.navigation as any).navigate('GameTable', {
+                        isMultiplayer: false,
+                        botDifficulty: difficulty,
+                        botCount,
+                        playerName,
+                      });
+                    },
+                    onRoomCreated: () => (props.navigation as any).navigate('WaitingRoom'),
+                    onRoomJoined: () => (props.navigation as any).navigate('WaitingRoom'),
+                    onSettings: () => useSettingsUIStore.getState().open(),
                   }}
                 />
               )}
