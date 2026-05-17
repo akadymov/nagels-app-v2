@@ -86,6 +86,11 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
   return (
     <View style={[styles.root, { backgroundColor: colors.accent }]}>
       <View style={styles.inner}>
+        {/* Content cluster — centered horizontally + vertically in
+            the pane. Primer sits below the cluster (outside) so it
+            can grow without pushing the cluster off-screen; per
+            Akula it's fine for primer to land slightly below center. */}
+        <View style={styles.cluster}>
         {/* Brand cluster — coloured, larger than the auth-form copy */}
         <View style={styles.brandRow}>
           {SUITS.map((s) => (
@@ -157,6 +162,7 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
             );
           })}
         </View>
+        </View>{/* /cluster */}
 
         {showPrimer && (
           <View style={styles.primerCard}>
@@ -242,7 +248,21 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  inner: { flex: 1, paddingHorizontal: 80, paddingTop: 80, paddingBottom: 56 },
+  inner: {
+    flex: 1,
+    paddingHorizontal: 80,
+    paddingTop: 80,
+    paddingBottom: 56,
+    // Vertically + horizontally center the cluster. Primer (when
+    // open) stacks below the cluster and may sit a touch below
+    // center; Akula confirmed that's the desired feel.
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cluster: {
+    // Hugs its children's natural max width; left-alignment inside
+    // (default) is preserved, only the cluster as a whole moves.
+  },
 
   // Brand
   // flexWrap on the row so on narrow desktop windows (~1024px,
