@@ -127,11 +127,14 @@ test('6p mixed (4 mobile + 2 desktop) full game to scoreboard', async ({
     console.log(`[mp] room code: ${code}`);
 
     // ── Step 3: other five join via the code ─────────────────────
-    await Promise.all(
-      ROSTER.map((slot, i) =>
-        i === HOST_IDX ? Promise.resolve() : joinRoomByCode(pages[i], code, slot.label),
-      ),
-    );
+    // Joins are SERIAL on purpose: parallel anonymous joins race
+    // against the edge function's seat-allocation and one player
+    // gets "Seat already taken — try again." from join_room. Five
+    // sequential joins add ~10s wall-clock — cheap insurance.
+    for (let i = 0; i < ROSTER.length; i += 1) {
+      if (i === HOST_IDX) continue;
+      await joinRoomByCode(pages[i], code, ROSTER[i].label);
+    }
 
     // Give the realtime store a beat to propagate the new roster
     // to all six clients before everyone hits Ready.
