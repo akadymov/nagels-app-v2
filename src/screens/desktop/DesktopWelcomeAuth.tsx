@@ -58,7 +58,7 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) =>
       >
         {isLoggedIn ? (
           <View style={styles.lobbyContainer}>
-            <LobbyScreen {...lobby} hideAuthCta hideLogoHeader />
+            <LobbyScreen {...lobby} hideAuthCta hideLogoHeader transparentBackground />
           </View>
         ) : (
           <View style={styles.authInner}>
