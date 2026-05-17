@@ -165,6 +165,14 @@ npm run test:all -- --only boot,lobby
 npm run test:all -- --tag '!flaky'
 ```
 
+**Where to find spec names** for `--only` / `--skip`: open
+`tests/tests.config.json` — the `name` field of each entry is exactly
+what the CLI flags expect. Quick listing:
+
+```bash
+node -e "require('./tests/tests.config.json').specs.forEach(s => console.log(s.tier.padEnd(15), s.name))"
+```
+
 **Registry semantics:**
 
 `tests/tests.config.json` is a single committed JSON file. Each entry:
