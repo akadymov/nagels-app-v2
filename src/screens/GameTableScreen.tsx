@@ -993,8 +993,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 else useSettingsUIStore.getState().open();
               }}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 desktopUI?.leftPanel === 'settings' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1006,7 +1005,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 size={20}
               />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'settings' ? '#ffffff' : colors.iconButtonText }]}>
                   {t('settings.title')}
                 </Text>
               )}
@@ -1018,8 +1017,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               <Pressable
                 onPress={handleEndGame}
                 style={({ pressed }) => [
-                  styles.iconBtn,
-                  isDesktop && styles.iconBtnLabeled,
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderColor: colors.glassLight,
@@ -1031,7 +1029,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               >
                 <Icon name="door" color={colors.iconButtonText} size={20} />
                 {isDesktop && (
-                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.exit')}
                   </Text>
                 )}
@@ -1042,8 +1040,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 onPress={handlePullRefresh}
                 disabled={isRefreshing}
                 style={[
-                  styles.iconBtn,
-                  isDesktop && styles.iconBtnLabeled,
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderColor: colors.glassLight,
@@ -1058,7 +1055,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   size={20}
                 />
                 {isDesktop && (
-                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.sync')}
                   </Text>
                 )}
@@ -1072,8 +1069,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               }}
               disabled={vm.tricks.length === 0}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight, opacity: vm.tricks.length === 0 ? 0.3 : 1 },
                 desktopUI?.leftPanel === 'lastTrick' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1085,7 +1081,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 size={20}
               />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'lastTrick' ? '#ffffff' : colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'lastTrick' ? '#ffffff' : colors.iconButtonText }]}>
                   {t('game.lastTrick')}
                 </Text>
               )}
@@ -1100,8 +1096,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 }
               }}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 desktopUI?.leftPanel === 'scoreboard' && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
@@ -1113,7 +1108,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 size={20}
               />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.leftPanel === 'scoreboard' ? '#ffffff' : colors.iconButtonText }]}>
                   {t('game.score')}
                 </Text>
               )}
@@ -1126,8 +1121,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               }}
               disabled={!isMultiplayer}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
                 !isMultiplayer && { opacity: 0.3 },
                 desktopUI?.chatVisible && isMultiplayer && { backgroundColor: colors.accent, borderColor: colors.accent },
@@ -1140,7 +1134,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 size={20}
               />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText }]}>
                   {t('game.chat')}
                 </Text>
               )}
@@ -1634,18 +1628,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Desktop variant — pill with icon + text label.
+  // Desktop variant — pill with icon + text label. Self-contained
+  // (alignItems / justifyContent / borderWidth) so it can be used
+  // INSTEAD OF iconBtn via a ternary — array-merging the two left
+  // width:30 from iconBtn winning over width:undefined here, which
+  // squished the label letter-under-letter.
   iconBtnLabeled: {
-    width: undefined,
     height: 36,
+    minWidth: 120, // fits the longest localized label (e.g. RU "Настройки")
     borderRadius: 18,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
   iconBtnLabel: {
     fontSize: 13,
     fontWeight: '500',
+    flexShrink: 1,
   },
   iconBtnText: {
     fontSize: 16,

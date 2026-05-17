@@ -565,8 +565,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable
               onPress={() => useSettingsUIStore.getState().open()}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
               ]}
               hitSlop={8}
@@ -574,7 +573,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             >
               <Icon name="settings" color={colors.iconButtonText} size={20} />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                   {t('settings.title')}
                 </Text>
               )}
@@ -584,8 +583,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 onPress={handleRefresh}
                 disabled={isRefreshing}
                 style={[
-                  styles.iconBtn,
-                  isDesktop && styles.iconBtnLabeled,
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderWidth: 1,
@@ -602,7 +600,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   size={20}
                 />
                 {isDesktop && (
-                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.sync')}
                   </Text>
                 )}
@@ -616,8 +614,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               <Pressable
                 onPress={handleLogoLeave}
                 style={({ pressed }) => [
-                  styles.iconBtn,
-                  isDesktop && styles.iconBtnLabeled,
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   {
                     backgroundColor: colors.iconButtonBg,
                     borderWidth: 1,
@@ -631,7 +628,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               >
                 <Icon name="door" color={colors.iconButtonText} size={20} />
                 {isDesktop && (
-                  <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.exit')}
                   </Text>
                 )}
@@ -640,8 +637,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <Pressable
               onPress={onShowScore}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
               ]}
               hitSlop={8}
@@ -649,7 +645,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             >
               <Icon name="trophy" color={colors.iconButtonText} size={20} />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                   {t('game.score')}
                 </Text>
               )}
@@ -658,8 +654,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               onPress={() => setShowChat(true)}
               disabled={!isMultiplayer}
               style={[
-                styles.iconBtn,
-                isDesktop && styles.iconBtnLabeled,
+                isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 {
                   backgroundColor: colors.iconButtonBg,
                   borderWidth: 1,
@@ -672,7 +667,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             >
               <Icon name="chat" color={colors.iconButtonText} size={20} />
               {isDesktop && (
-                <Text style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                   {t('game.chat')}
                 </Text>
               )}
@@ -965,16 +960,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconBtnLabeled: {
-    width: undefined,
     height: 36,
+    minWidth: 120,
     borderRadius: 18,
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
   },
   iconBtnLabel: {
     fontSize: 13,
     fontWeight: '500',
+    flexShrink: 1,
   },
   iconBtnText: {
     fontSize: 18,
