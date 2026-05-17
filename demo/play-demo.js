@@ -360,6 +360,21 @@ async function tryBet(p, w) {
       await enabled.first().click({ timeout: 5000, force: true }).catch(() => {});
     }
     await sleep(400);
+
+    // After the chip tap the bet is *selected* (highlighted), not
+    // placed — `bet-confirm` is the canonical commit button. If it
+    // is visible, click it. Same logic as tests/fixtures/actions.ts
+    // tryBet (kept in sync with the production UX added 2026-05-17).
+    const confirm = p.locator('[data-testid="bet-confirm"]').first();
+    if (await confirm.isVisible({ timeout: 1000 }).catch(() => false)) {
+      try {
+        await confirm.click({ timeout: 3000 });
+      } catch (_) {
+        await confirm.click({ timeout: 3000, force: true }).catch(() => {});
+      }
+      await sleep(400);
+    }
+
     if (!(await enabled.first().isVisible().catch(() => false))) {
       log(w, `✓ bet=${v}`);
       return true;

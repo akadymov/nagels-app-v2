@@ -183,6 +183,14 @@ async function main() {
                 await enabled.first().click({ timeout: 3000, force: true }).catch(() => {});
               }
               await sleep(400);
+              // Click the explicit confirm button — bet selection
+              // alone no longer commits since 2026-05-17.
+              const confirm = p.locator('[data-testid="bet-confirm"]').first();
+              if (await confirm.isVisible({ timeout: 1000 }).catch(() => false)) {
+                try { await confirm.click({ timeout: 3000 }); }
+                catch (_) { await confirm.click({ timeout: 3000, force: true }).catch(() => {}); }
+                await sleep(400);
+              }
               // After a successful placeBet the bet panel hides — chips
               // disappear. If they're still visible we count it as no-op
               // and fall through to the watchdog.
