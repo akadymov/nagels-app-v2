@@ -141,30 +141,36 @@ export const DesktopWelcomePane: React.FC<DesktopWelcomePaneProps> = ({
 
         <View style={styles.spacer} />
 
-        <Pressable
-          onPress={openPrimer}
-          style={[styles.primaryBtn, showPrimer && styles.primaryBtnHidden]}
-          testID="desktop-welcome-learn"
-          disabled={showPrimer}
-        >
-          <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
-        </Pressable>
-
-        {/* "Continue to Lobby" / "Skip to Menu" CTA — only shown
-            for guests. On desktop logged-in users see the Lobby
-            mounted directly in the right pane (DesktopWelcomeAuth),
-            so this button would be a no-op. */}
-        {!isLoggedIn && (
+        {/* CTA group hugs the widest child (primary "▶ Learn to Play" /
+            "▶ Научиться играть" / "▶ Aprender a Jugar") and stretches
+            the secondary to match. Equal-width buttons across all
+            languages without per-locale measurement. */}
+        <View style={styles.ctaGroup}>
           <Pressable
-            onPress={onAlreadyPlay}
-            style={styles.secondaryBtn}
-            testID="desktop-welcome-continue"
+            onPress={openPrimer}
+            style={[styles.primaryBtn, showPrimer && styles.primaryBtnHidden]}
+            testID="desktop-welcome-learn"
+            disabled={showPrimer}
           >
-            <Text style={styles.secondaryBtnText}>
-              {t('welcome.alreadyPlay')}
-            </Text>
+            <Text style={styles.primaryBtnText}>▶  {t('welcome.quickStart')}</Text>
           </Pressable>
-        )}
+
+          {/* "Continue to Lobby" / "Skip to Menu" CTA — only shown
+              for guests. On desktop logged-in users see the Lobby
+              mounted directly in the right pane (DesktopWelcomeAuth),
+              so this button would be a no-op. */}
+          {!isLoggedIn && (
+            <Pressable
+              onPress={onAlreadyPlay}
+              style={styles.secondaryBtn}
+              testID="desktop-welcome-continue"
+            >
+              <Text style={styles.secondaryBtnText}>
+                {t('welcome.alreadyPlay')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
 
         <View style={styles.langRow}>
           {(Object.keys(languages) as LanguageCode[]).map((code, i) => {
@@ -289,9 +295,12 @@ const styles = StyleSheet.create({
 
   spacer: { flex: 1, minHeight: 24 },
 
-  // CTAs
-  primaryBtn: {
+  // CTAs — wrapped in ctaGroup so primary and secondary share width.
+  ctaGroup: {
     alignSelf: 'flex-start',
+    alignItems: 'stretch',
+  },
+  primaryBtn: {
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 9999,
@@ -299,16 +308,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   primaryBtnHidden: { opacity: 0 },
-  primaryBtnText: { color: '#13428f', fontSize: 16, fontWeight: '700' },
+  primaryBtnText: {
+    color: '#13428f',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   secondaryBtn: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 9999,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.6)',
   },
-  secondaryBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+  secondaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 
   // Language switcher
   langRow: {
