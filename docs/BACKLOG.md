@@ -1,5 +1,18 @@
 ## Backlog
 
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
+### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
+
+
+### Spectator count indicator on desktop — broken layout, tiny tap target (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    Индикатор количества зрителей на десктопном GameTable отображается криво: иконка на одной строке, цифра — на другой. Сама кнопка слишком маленькая. Починить вёрстку и увеличить touch target.
+    ```
+
 ### Post-game scoreboard + "Play again" on host exit (Akhmed, 2026-05-16)
 
 
@@ -44,18 +57,40 @@
 
 ## Next Up
 
-### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
-
-
-### Сообщения в чате рядом с аватаром на столе
+### сохранять курсор в чате
 
   - defaultExpanded: false
     ```md
-    Отображается сообщение, отправленное в чате прямо на столе.
+    После ввода включения в чате сктопия и нажатия клавиши Enter, курсор должен сохраняться в чате.
     ```
 
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+### Mobile Safari (iPhone) — GameTable layout breaks after opening chat and going back (Ol via Akula, 2026-05-19)
 
+  - defaultExpanded: false
+    ```md
+    На iPhone Safari открытие чата с экрана стола и возврат назад в игру ломает вёрстку GameTable — починить можно только обновлением страницы. Подозрение на iOS Safari viewport/visualViewport reflow при показе/скрытии модалки чата или на оставшийся inert/overflow state на корневом контейнере после закрытия ChatPanel.
+    ```
+
+### Share spectator link from in-game GameTable (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас поделиться ссылкой для зрителей можно только из WaitingRoom (btn-share-spectator). Добавить ту же возможность прямо из GameTable, чтобы хост мог пригласить зрителя в любой момент партии.
+    ```
+
+### Detailed scoreboard headers — initials/avatar instead of rotated nickname (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в детальной части счёта никнеймы показаны вертикально (rotated headers) и плохо читаются. Заменить на инициалы / аватар / простой цветной кружок.
+    ```
+
+### Host leaves WaitingRoom → kick everyone to lobby (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    Когда хост выходит из комнаты до старта игры (WaitingRoom), остальные игроки остаются на экране ожидания. Должны автоматически выкидываться в Lobby с уведомлением "комната закрыта". Отличается от «Post-game scoreboard + Play again on host exit» — там сценарий пост-игровой, а тут pre-game.
+    ```
 
 ## In Progress
 
@@ -64,6 +99,13 @@
 
 ### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
 
+
+### Сообщения в чате рядом с аватаром на столе
+
+  - defaultExpanded: false
+    ```md
+    Отображается сообщение, отправленное в чате прямо на столе.
+    ```
 
 ## Done
 
