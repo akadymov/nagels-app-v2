@@ -296,24 +296,31 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           <View style={[styles.tableCell, { width: roundColW }]}>
             <Text style={[styles.headerText, { color: colors.textMuted }]}>#</Text>
           </View>
-          {sortedPlayers.map((p) => (
-            <View key={p.id} style={[styles.tableCell, { width: playerColW, height: embedded ? headerMinHeight : undefined }]}>
-              {embedded ? (
-                <View style={styles.rotatedHeaderWrap}>
-                  <Text
-                    style={[styles.headerText, styles.rotatedHeaderText, { color: colors.textPrimary }]}
-                    numberOfLines={1}
+          {sortedPlayers.map((p) => {
+            const avatarBg = p.avatarColor || avatarColorFor(p.id);
+            const initial = (p.avatar || (p.name?.[0] ?? '?').toUpperCase());
+            return (
+              <View key={p.id} style={[styles.tableCell, { width: playerColW, height: embedded ? headerMinHeight : undefined }]}>
+                {embedded ? (
+                  // Avatar circle instead of a rotated nickname — rotated text
+                  // was hard to read on desktop. Initial / emoji fallback keeps
+                  // it readable even without a per-user avatar.
+                  <View
+                    style={[styles.headerAvatar, { backgroundColor: avatarBg }]}
+                    accessibilityLabel={p.name}
                   >
+                    <Text style={styles.headerAvatarText} numberOfLines={1}>
+                      {initial}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
                     {p.name}
                   </Text>
-                </View>
-              ) : (
-                <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
-                  {p.name}
-                </Text>
-              )}
-            </View>
-          ))}
+                )}
+              </View>
+            );
+          })}
         </View>
         <View style={[styles.divider, { backgroundColor: colors.glassLight }]} />
 
@@ -704,6 +711,21 @@ const styles = StyleSheet.create({
     width: 80,
     textAlign: 'center',
     transform: [{ rotate: '-90deg' }],
+  },
+  // Replaces the rotated nickname in embedded mode — round chip with
+  // avatar emoji or initial. Keeps the column narrow without forcing
+  // the user to read text sideways.
+  headerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatarText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   divider: {
     height: 1,
