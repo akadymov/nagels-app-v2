@@ -28,6 +28,9 @@ import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { ChatPanel } from '../ChatPanel';
+import { PlayerChatTooltip } from '../PlayerChatTooltip';
+import { useChatTooltipListener } from '../../hooks/useChatTooltipListener';
+import { useChatTooltipStore } from '../../store/chatTooltipStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useSettingsUIStore } from '../../store/settingsUIStore';
 import { useTranslation } from 'react-i18next';
@@ -210,6 +213,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Action bar modals / toggles
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  useChatTooltipListener({
+    selfSessionId: myPlayer?.session_id ?? null,
+    isChatOpen: showChat,
+  });
   // Two-tap bet placement: first tap previews the number, second tap on
   // "Confirm" actually places it. Prevents accidental commits.
   const [pendingBet, setPendingBet] = useState<number | null>(null);
@@ -674,7 +681,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               )}
             </Pressable>
             <Pressable
-              onPress={() => setShowChat(true)}
+              onPress={() => {
+                setShowChat(true);
+                useChatTooltipStore.getState().dismissAll();
+              }}
               disabled={!isMultiplayer}
               style={[
                 isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
@@ -764,6 +774,15 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 >
                   {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') + '...' : '...'}
                 </Text>
+                {!isMe && (
+                  <PlayerChatTooltip
+                    sessionId={player.session_id}
+                    onPress={() => {
+                      setShowChat(true);
+                      useChatTooltipStore.getState().dismissAll();
+                    }}
+                  />
+                )}
               </View>
             );
           })}
@@ -1112,6 +1131,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   playerCardName: {
     fontSize: 14,
