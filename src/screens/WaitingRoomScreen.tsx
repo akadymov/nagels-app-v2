@@ -149,6 +149,32 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   // out of WaitingRoom on 'finished' would yank the host out before
   // they could click "Play again" and disorient guests who landed here
   // through a natural goBack.
+  //
+  // EXCEPTION: pre-game host abandonment. If we're still in WaitingRoom
+  // and the room flipped to 'finished' AND the host is no longer in the
+  // player list, the host left before the game started — there is no
+  // scoreboard to wait for, no "Play again" possible. Eject everyone
+  // remaining (players + spectators) to the lobby with a notice.
+  const ejectedRef = useRef(false);
+  useEffect(() => {
+    if (ejectedRef.current) return;
+    if (!room || !myPlayerId) return;
+    if (room.phase !== 'finished') return;
+    if (room.host_session_id === myPlayerId) return;
+    const hostStillIn = players.some((p) => p.session_id === room.host_session_id);
+    if (hostStillIn) return;
+    ejectedRef.current = true;
+    const title = t('multiplayer.roomClosedTitle', 'Room closed');
+    const body = t('multiplayer.hostLeftBody', 'The host left the room before the game started.');
+    if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
+      (window as any).alert(`${title}\n\n${body}`);
+    } else {
+      Alert.alert(title, body);
+    }
+    unsubscribeRoom();
+    useRoomStore.getState().reset();
+    onLeave();
+  }, [room?.phase, room?.host_session_id, myPlayerId, players, onLeave, t]);
 
   const handleForceReady = useCallback(async (sessionId: string, value: boolean) => {
     if (!room?.id) return;

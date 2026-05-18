@@ -233,6 +233,8 @@
     "skipOnesHint": "El centro de la escalera se queda en 2 cartas"
   },
   "multiplayer": {
+    "roomClosedTitle": "Sala cerrada",
+    "hostLeftBody": "El anfitrión salió de la sala antes de empezar la partida.",
     "quickMatch": "Partida Rápida",
     "createRoom": "Crear Sala Privada",
     "tooManyRooms": "Has creado demasiadas salas en la última hora. Inténtalo más tarde.",
