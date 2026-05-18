@@ -8,6 +8,14 @@ const PREVIEW_LIMIT = 60;
 interface Args {
   selfSessionId: string | null;
   isChatOpen: boolean;
+  /**
+   * When false, the listener does not subscribe and produces no side
+   * effects. Use this when two screens with their own chat state would
+   * otherwise mount the hook simultaneously (e.g. GameTable + BettingPhase
+   * during the betting overlay) — exactly one should be active at a time.
+   * Defaults to true.
+   */
+  active?: boolean;
 }
 
 /**
@@ -19,8 +27,10 @@ interface Args {
  * On unmount, clears every tooltip so timers from a previous room
  * don't fire on a new screen.
  */
-export function useChatTooltipListener({ selfSessionId, isChatOpen }: Args): void {
+export function useChatTooltipListener({ selfSessionId, isChatOpen, active = true }: Args): void {
   useEffect(() => {
+    if (!active) return;
+
     let lastSeenId: string | null = useChatStore.getState().messages.at(-1)?.id ?? null;
 
     const unsub = useChatStore.subscribe((state) => {
@@ -47,5 +57,5 @@ export function useChatTooltipListener({ selfSessionId, isChatOpen }: Args): voi
       unsub();
       useChatTooltipStore.getState().dismissAll();
     };
-  }, [selfSessionId, isChatOpen]);
+  }, [selfSessionId, isChatOpen, active]);
 }

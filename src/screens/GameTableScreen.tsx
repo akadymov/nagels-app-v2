@@ -540,6 +540,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   useChatTooltipListener({
     selfSessionId: vm.myPlayer?.id ?? null,
     isChatOpen: desktopUI ? !!desktopUI.chatVisible : showChat,
+    // BettingPhase owns its own chat state during the betting overlay;
+    // it mounts the listener itself, so this one steps aside.
+    active: vm.phase !== 'betting',
   });
   const chatUnread = useChatStore((s) => s.unread);
   const [isViewingScores, setIsViewingScores] = useState(false);
