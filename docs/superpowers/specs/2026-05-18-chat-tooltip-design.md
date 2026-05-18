@@ -51,12 +51,12 @@ Timers live in a **module-scope** `Map<string, ReturnType<typeof setTimeout>>` (
 
 Constant: `TOOLTIP_DURATION_MS = 5000`.
 
-### New hook: `src/hooks/useChatToastListener.ts`
+### New hook: `src/hooks/useChatTooltipListener.ts`
 
 Mounted once per host screen (WaitingRoom, BettingPhase, GameTable, desktop counterparts). Signature:
 
 ```ts
-useChatToastListener({
+useChatTooltipListener({
   selfSessionId: string | null,
   isChatOpen: boolean,
 });
@@ -89,7 +89,7 @@ interface Props {
 ### Host-screen integration
 
 Each screen that renders a player container gains:
-1. Mount `useChatToastListener` once at top-level of the screen.
+1. Mount `useChatTooltipListener` once at top-level of the screen.
 2. For every opponent `profileCard`, render `<PlayerChatTooltip sessionId={player.id} onPress={openChat} />` as a sibling inside the card's container (so `position: absolute` is relative to the card).
 3. Do **not** wrap the user's own `profileCard`.
 4. `openChat` resolution:
@@ -102,7 +102,7 @@ A small helper `useOpenChat()` may centralize the "open + dismiss tooltips" idio
 
 New:
 - `src/store/chatTooltipStore.ts`
-- `src/hooks/useChatToastListener.ts`
+- `src/hooks/useChatTooltipListener.ts`
 - `src/components/PlayerChatTooltip.tsx`
 - `src/store/__tests__/chatTooltipStore.test.ts`
 - `tests/smoke/chat-tooltip.spec.ts`
