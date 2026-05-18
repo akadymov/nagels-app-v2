@@ -24,6 +24,9 @@ import { BettingPhase } from '../components/betting';
 import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
 import { ChatPanel } from '../components/ChatPanel';
+import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
+import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
+import { useChatTooltipStore } from '../store/chatTooltipStore';
 import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
@@ -534,6 +537,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  useChatTooltipListener({
+    selfSessionId: vm.myPlayer?.id ?? null,
+    isChatOpen: desktopUI ? !!desktopUI.chatVisible : showChat,
+  });
   const chatUnread = useChatStore((s) => s.unread);
   const [isViewingScores, setIsViewingScores] = useState(false);
   const [showLastTrick, setShowLastTrick] = useState(false);
@@ -1148,7 +1155,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               onPress={() => {
                 if (!isMultiplayer) return;
                 if (desktopUI) desktopUI.toggleChat();
-                else setShowChat(true);
+                else {
+                  setShowChat(true);
+                  useChatTooltipStore.getState().dismissAll();
+                }
               }}
               disabled={!isMultiplayer}
               style={[
@@ -1319,6 +1329,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
                   <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
                 </View>
+                <PlayerChatTooltip
+                  sessionId={player.id}
+                  onPress={() => {
+                    if (desktopUI) {
+                      if (!desktopUI.chatVisible) desktopUI.toggleChat();
+                    } else {
+                      setShowChat(true);
+                    }
+                    useChatTooltipStore.getState().dismissAll();
+                  }}
+                />
               </View>
             );
           })}
