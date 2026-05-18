@@ -233,6 +233,8 @@
     "skipOnesHint": "Middle of the ladder stays at 2 cards"
   },
   "multiplayer": {
+    "roomClosedTitle": "Room closed",
+    "hostLeftBody": "The host left the room before the game started.",
     "quickMatch": "Quick Match",
     "createRoom": "Create Private Room",
     "tooManyRooms": "You've created too many rooms in the past hour. Try again later.",
