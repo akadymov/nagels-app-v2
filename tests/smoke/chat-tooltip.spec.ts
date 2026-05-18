@@ -6,6 +6,22 @@ import {
   joinRoomByCode,
 } from '../fixtures/multiplayer';
 
+// `browser.newContext()` does not fully inherit the project's `use.*`
+// flags — `viewport` carries over but `isMobile` / `hasTouch` / the
+// mobile user-agent do not, and `enterLobbyAsGuest` branches on those
+// to pick `btn-skip-to-lobby` vs `desktop-welcome-continue`. Pass the
+// full mobile profile explicitly, mirroring tests/e2e/multiplayer-6p-mixed.
+const MOBILE_VP = {
+  viewport: { width: 430, height: 932 },
+  deviceScaleFactor: 3,
+  isMobile: true,
+  hasTouch: true,
+  userAgent:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) ' +
+    'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 ' +
+    'Mobile/15E148 Safari/604.1',
+} as const;
+
 /**
  * Smoke — chat tooltip surfaces above the sender's player chip when
  * the receiver's chat panel is closed, tap opens chat + dismisses, and
@@ -27,8 +43,8 @@ test.beforeAll(async () => {
 
 test.describe('chat tooltip', () => {
   test('surfaces above sender chip, opens chat on tap', async ({ browser }) => {
-    const ctxA = await browser.newContext();
-    const ctxB = await browser.newContext();
+    const ctxA = await browser.newContext({ ...MOBILE_VP });
+    const ctxB = await browser.newContext({ ...MOBILE_VP });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
@@ -69,8 +85,8 @@ test.describe('chat tooltip', () => {
   });
 
   test('auto-dismisses after 5 seconds', async ({ browser }) => {
-    const ctxA = await browser.newContext();
-    const ctxB = await browser.newContext();
+    const ctxA = await browser.newContext({ ...MOBILE_VP });
+    const ctxB = await browser.newContext({ ...MOBILE_VP });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
 
