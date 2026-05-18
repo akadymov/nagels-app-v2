@@ -37,6 +37,9 @@ import { avatarColorFor } from '../utils/avatarColor';
 import { useChatStore } from '../store/chatStore';
 import { useSystemEventStore } from '../store/systemEventStore';
 import { ChatPanel } from '../components/ChatPanel';
+import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
+import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
+import { useChatTooltipStore } from '../store/chatTooltipStore';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -78,6 +81,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
   const amIReady = myPlayer?.is_ready ?? false;
   const [showChat, setShowChat] = useState(false);
+  useChatTooltipListener({
+    selfSessionId: myPlayerId,
+    isChatOpen: !!hideChat || showChat,
+  });
   const chatUnread = useChatStore((s) => s.unread);
   const lastLeft = useSystemEventStore((s) => s.lastLeftMidGame);
   const clearLastLeft = useSystemEventStore((s) => s.clearLeftMidGame);
@@ -302,7 +309,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         />
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <Pressable
-            onPress={() => setShowChat(true)}
+            onPress={() => {
+              setShowChat(true);
+              useChatTooltipStore.getState().dismissAll();
+            }}
             hitSlop={8}
             style={styles.settingsBtn}
             testID="waiting-btn-chat"
@@ -407,76 +417,86 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             const avatarBg = (player as any).avatar_color || avatarColorFor(player.session_id);
             const avatarEmoji = (player as any).avatar as string | null | undefined;
             return (
-              <GlassCard
-                key={player.session_id}
-                style={[
-                  styles.playerCard,
-                  { backgroundColor: colors.surface },
-                  isMe && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
-                  isOffline && { opacity: 0.5 },
-                ]}
-              >
-                <View style={[styles.seatBadge, { backgroundColor: avatarBg }]}>
-                  <Text style={[styles.seatNumber, { color: '#ffffff' }]}>
-                    {avatarEmoji || (player.display_name?.[0] ?? '?').toUpperCase()}
-                  </Text>
-                </View>
-                <View style={styles.playerInfo}>
-                  <Text style={[styles.playerName, { color: colors.textPrimary }]}>
-                    {player.display_name}
-                    {isDuplicate && (
-                      <Text style={styles.seatSuffix}> #{index + 1}</Text>
-                    )}
-                    {isMe && (
-                      <Text style={styles.youBadge}> ({t('multiplayer.you')})</Text>
-                    )}
-                    {isOffline && (
-                      <Text style={styles.seatSuffix}> · 📡</Text>
-                    )}
-                  </Text>
-                  {isHostPlayer && (
-                    <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
-                  )}
-                </View>
-                <Pressable
-                  onPress={() => {
-                    if (isHost || isMe) {
-                      handleForceReady(player.session_id, !player.is_ready);
-                    }
-                  }}
+              <View key={player.session_id} style={styles.playerCardWrap}>
+                <GlassCard
                   style={[
-                    styles.readyIndicator,
-                    { backgroundColor: colors.surfaceSecondary },
-                    player.is_ready && styles.readyIndicatorReady,
+                    styles.playerCard,
+                    { backgroundColor: colors.surface },
+                    isMe && [styles.myPlayerCard, { backgroundColor: colors.accent + '18' }],
+                    isOffline && { opacity: 0.5 },
                   ]}
-                  hitSlop={8}
-                  testID={`btn-ready-${player.seat_index}`}
                 >
-                  <Text style={[
-                    styles.readyText,
-                    { color: colors.textMuted },
-                    player.is_ready && styles.readyTextReady,
-                  ]}>
-                    {player.is_ready ? '✓' : '○'}
-                  </Text>
-                </Pressable>
-                {isHost && !isMe && !isHostPlayer && room?.id && (
+                  <View style={[styles.seatBadge, { backgroundColor: avatarBg }]}>
+                    <Text style={[styles.seatNumber, { color: '#ffffff' }]}>
+                      {avatarEmoji || (player.display_name?.[0] ?? '?').toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.playerInfo}>
+                    <Text style={[styles.playerName, { color: colors.textPrimary }]}>
+                      {player.display_name}
+                      {isDuplicate && (
+                        <Text style={styles.seatSuffix}> #{index + 1}</Text>
+                      )}
+                      {isMe && (
+                        <Text style={styles.youBadge}> ({t('multiplayer.you')})</Text>
+                      )}
+                      {isOffline && (
+                        <Text style={styles.seatSuffix}> · 📡</Text>
+                      )}
+                    </Text>
+                    {isHostPlayer && (
+                      <Text style={styles.hostBadge}> {t('multiplayer.host')}</Text>
+                    )}
+                  </View>
                   <Pressable
-                    onPress={async () => {
-                      if (typeof window !== 'undefined' &&
-                          !(window as any).confirm(`Kick ${player.display_name}?`)) {
-                        return;
+                    onPress={() => {
+                      if (isHost || isMe) {
+                        handleForceReady(player.session_id, !player.is_ready);
                       }
-                      await gameClient.leaveRoom(room.id, player.session_id);
                     }}
+                    style={[
+                      styles.readyIndicator,
+                      { backgroundColor: colors.surfaceSecondary },
+                      player.is_ready && styles.readyIndicatorReady,
+                    ]}
                     hitSlop={8}
-                    style={{ marginLeft: 8, padding: 8 }}
-                    testID={`btn-kick-${player.seat_index}`}
+                    testID={`btn-ready-${player.seat_index}`}
                   >
-                    <Text style={{ color: '#e74c3c', fontSize: 18, fontWeight: '700' }}>✕</Text>
+                    <Text style={[
+                      styles.readyText,
+                      { color: colors.textMuted },
+                      player.is_ready && styles.readyTextReady,
+                    ]}>
+                      {player.is_ready ? '✓' : '○'}
+                    </Text>
                   </Pressable>
+                  {isHost && !isMe && !isHostPlayer && room?.id && (
+                    <Pressable
+                      onPress={async () => {
+                        if (typeof window !== 'undefined' &&
+                            !(window as any).confirm(`Kick ${player.display_name}?`)) {
+                          return;
+                        }
+                        await gameClient.leaveRoom(room.id, player.session_id);
+                      }}
+                      hitSlop={8}
+                      style={{ marginLeft: 8, padding: 8 }}
+                      testID={`btn-kick-${player.seat_index}`}
+                    >
+                      <Text style={{ color: '#e74c3c', fontSize: 18, fontWeight: '700' }}>✕</Text>
+                    </Pressable>
+                  )}
+                </GlassCard>
+                {!isMe && (
+                  <PlayerChatTooltip
+                    sessionId={player.session_id}
+                    onPress={() => {
+                      setShowChat(true);
+                      useChatTooltipStore.getState().dismissAll();
+                    }}
+                  />
                 )}
-              </GlassCard>
+              </View>
             );
           })}
         </View>
@@ -689,6 +709,9 @@ const styles = StyleSheet.create({
   playersList: {
     gap: Spacing.sm,
     marginBottom: Spacing.xl,
+  },
+  playerCardWrap: {
+    position: 'relative',
   },
   playerCard: {
     flexDirection: 'row',
