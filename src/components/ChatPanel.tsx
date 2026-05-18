@@ -54,6 +54,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const markRead = useChatStore((s) => s.markRead);
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList | null>(null);
+  const inputRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -69,6 +70,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const body = input.trim();
     if (!body) return;
     setInput('');
+    // Keep focus on the input so the user can keep typing without
+    // re-tapping. blurOnSubmit={false} below covers Enter-key submit;
+    // this covers the explicit Send-button path.
+    inputRef.current?.focus();
     await sendChatMessage({
       id: `${sender.sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sessionId: sender.sessionId,
@@ -159,6 +164,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           />
           <View style={[styles.inputRow, { borderTopColor: colors.glassLight }]}>
             <TextInput
+              ref={(r) => { inputRef.current = r; }}
               style={[styles.input, { color: colors.textPrimary, borderColor: colors.glassLight, backgroundColor: colors.background }]}
               value={input}
               onChangeText={setInput}
@@ -166,6 +172,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               placeholderTextColor={colors.textMuted}
               maxLength={500}
               onSubmitEditing={send}
+              blurOnSubmit={false}
               returnKeyType="send"
               testID={`${testIdPrefix}-input`}
             />
