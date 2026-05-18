@@ -65,3 +65,9 @@ docs/BACKLOG.pdf
 
 # Worktrees
 .worktrees/
+
+# Supabase CLI runtime
+supabase/.temp/
+
+# Deno
+deno.lock
