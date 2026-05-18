@@ -25,6 +25,7 @@ import { SettingsBody } from '../../components/SettingsBody';
 import { PlayingCard } from '../../components/cards';
 import { ScoreboardModal, type PlayerScore } from '../ScoreboardModal';
 import { gameClient } from '../../lib/gameClient';
+import { useChatTooltipStore } from '../../store/chatTooltipStore';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
 
 type Props = GameTableScreenProps;
@@ -107,7 +108,12 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
       setLeftPanel((current) => (current === next ? null : next)),
     showScoreboard: () => setLeftPanel('scoreboard'),
     chatVisible,
-    toggleChat: () => setChatVisible((v) => !v),
+    toggleChat: () =>
+      setChatVisible((v) => {
+        const next = !v;
+        if (next) useChatTooltipStore.getState().dismissAll();
+        return next;
+      }),
   }), [leftPanel, chatVisible]);
 
   const renderPaneHeader = (title: string) => (
