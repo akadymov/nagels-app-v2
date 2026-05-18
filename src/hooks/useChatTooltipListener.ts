@@ -19,7 +19,7 @@ interface Args {
  * On unmount, clears every tooltip so timers from a previous room
  * don't fire on a new screen.
  */
-export function useChatToastListener({ selfSessionId, isChatOpen }: Args): void {
+export function useChatTooltipListener({ selfSessionId, isChatOpen }: Args): void {
   useEffect(() => {
     let lastSeenId: string | null = useChatStore.getState().messages.at(-1)?.id ?? null;
 

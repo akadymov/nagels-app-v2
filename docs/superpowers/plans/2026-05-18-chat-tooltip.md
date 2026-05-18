@@ -4,7 +4,7 @@
 
 **Goal:** Show a transient tooltip with a message preview above the sender's player card whenever a chat message arrives from another player while the chat panel is closed. Tap opens chat.
 
-**Architecture:** A standalone Zustand store (`chatTooltipStore`) holds `Record<sessionId, Tooltip>`. Module-scope timers auto-dismiss after 5s. A hook (`useChatToastListener`) mounted per host screen subscribes to the chat-message stream, filters self/spectator/out-of-room/chat-open, and calls `show()`. A presentational `<PlayerChatTooltip>` reads its own slot from the store and renders an absolutely-positioned `Animated.View` above its anchor. Each opponent's `profileCard` gets the tooltip wrapper. Opening the chat calls `dismissAll()`.
+**Architecture:** A standalone Zustand store (`chatTooltipStore`) holds `Record<sessionId, Tooltip>`. Module-scope timers auto-dismiss after 5s. A hook (`useChatTooltipListener`) mounted per host screen subscribes to the chat-message stream, filters self/spectator/out-of-room/chat-open, and calls `show()`. A presentational `<PlayerChatTooltip>` reads its own slot from the store and renders an absolutely-positioned `Animated.View` above its anchor. Each opponent's `profileCard` gets the tooltip wrapper. Opening the chat calls `dismissAll()`.
 
 **Tech Stack:** React Native + react-native-web (Expo SDK 51), TypeScript, Zustand, jest (unit) + Playwright (smoke).
 
@@ -324,14 +324,14 @@ Animated bubble above anchor; reads its sessionId slot from chatTooltipStore."
 
 ---
 
-## Task 3: useChatToastListener hook
+## Task 3: useChatTooltipListener hook
 
 **Files:**
-- Create: `src/hooks/useChatToastListener.ts`
+- Create: `src/hooks/useChatTooltipListener.ts`
 
 - [ ] **Step 1: Create the hook**
 
-Create `src/hooks/useChatToastListener.ts`:
+Create `src/hooks/useChatTooltipListener.ts`:
 
 ```ts
 import { useEffect } from 'react';
@@ -355,7 +355,7 @@ interface Args {
  * On unmount, clears every tooltip so timers from a previous room
  * don't fire on a new screen.
  */
-export function useChatToastListener({ selfSessionId, isChatOpen }: Args): void {
+export function useChatTooltipListener({ selfSessionId, isChatOpen }: Args): void {
   useEffect(() => {
     let lastSeenId: string | null = useChatStore.getState().messages.at(-1)?.id ?? null;
 
@@ -395,8 +395,8 @@ Expected: no errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/hooks/useChatToastListener.ts
-git commit -m "feat(chat): useChatToastListener subscribes chatStore → tooltipStore
+git add src/hooks/useChatTooltipListener.ts
+git commit -m "feat(chat): useChatTooltipListener subscribes chatStore → tooltipStore
 
 Filters self/spectator/out-of-room senders; suppressed when chat open;
 dismisses all on unmount so stale timers cannot leak across rooms."
@@ -417,7 +417,7 @@ Locate the existing `import { ChatPanel }` line. Add **immediately after the exi
 
 ```tsx
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
-import { useChatToastListener } from '../hooks/useChatToastListener';
+import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
 ```
 
@@ -426,7 +426,7 @@ import { useChatTooltipStore } from '../store/chatTooltipStore';
 Add:
 
 ```tsx
-useChatToastListener({
+useChatTooltipListener({
   selfSessionId: vm.myPlayer?.id ?? null,
   isChatOpen: desktopUI ? !!desktopUI.chatVisible : showChat,
 });
@@ -523,7 +523,7 @@ Add:
 
 ```tsx
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
-import { useChatToastListener } from '../hooks/useChatToastListener';
+import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
 ```
 
@@ -532,7 +532,7 @@ import { useChatTooltipStore } from '../store/chatTooltipStore';
 Locate the props destructure: `hideChat` is already an existing prop on `WaitingRoomScreen`. If not yet destructured, ensure it is (search file for `hideChat`). Then add:
 
 ```tsx
-useChatToastListener({
+useChatTooltipListener({
   selfSessionId: myPlayerId,
   isChatOpen: !!hideChat || showChat,
 });
@@ -606,14 +606,14 @@ chat-open to suppress tooltips when the right-pane chat is showing."
 
 ```tsx
 import { PlayerChatTooltip } from '../PlayerChatTooltip';
-import { useChatToastListener } from '../../hooks/useChatToastListener';
+import { useChatTooltipListener } from '../../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../../store/chatTooltipStore';
 ```
 
 - [ ] **Step 2: Mount listener after the `const [showChat, setShowChat] = useState(false);` line (`:212`)**
 
 ```tsx
-useChatToastListener({
+useChatTooltipListener({
   selfSessionId: myPlayer?.session_id ?? null,
   isChatOpen: showChat,
 });
@@ -846,4 +846,4 @@ git commit -m "test(smoke): chat tooltip — appears, opens chat on tap, auto-di
   - Unit tests — Task 1.
   - Smoke tests — Task 8 (visible + tap + auto-dismiss).
 - **Placeholder scan:** none found; every step shows code or exact commands.
-- **Type consistency:** `tooltips`, `show`, `dismiss`, `dismissAll`, `TOOLTIP_DURATION_MS`, `PlayerChatTooltipProps`, `useChatToastListener` are used consistently between definition (Task 1-3) and consumers (Tasks 4-8).
+- **Type consistency:** `tooltips`, `show`, `dismiss`, `dismissAll`, `TOOLTIP_DURATION_MS`, `PlayerChatTooltipProps`, `useChatTooltipListener` are used consistently between definition (Task 1-3) and consumers (Tasks 4-8).
