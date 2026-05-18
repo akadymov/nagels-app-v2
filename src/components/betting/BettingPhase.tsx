@@ -216,6 +216,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   useChatTooltipListener({
     selfSessionId: myPlayer?.session_id ?? null,
     isChatOpen: showChat,
+    // Hook runs unconditionally before the `if (!visible) return null`
+    // guard below; gate it so the GameTable listener owns the stream
+    // when the betting overlay isn't on screen.
+    active: visible,
   });
   // Two-tap bet placement: first tap previews the number, second tap on
   // "Confirm" actually places it. Prevents accidental commits.
