@@ -65,6 +65,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     return () => clearTimeout(t);
   }, [visible, markRead, messages.length]);
 
+  // iOS Safari leaves the page scrolled when the on-screen keyboard
+  // pushes a focused input into view inside a fixed-position Modal.
+  // After we close the chat modal, the GameTable can render shifted
+  // until a hard reload — restore window/document scroll explicitly.
+  // No-op outside web; cheap on every close.
+  const handleClose = () => {
+    try { inputRef.current?.blur(); } catch {}
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // Two passes — once now (keyboard begins to retract), once after
+      // ~250ms to catch iOS' delayed viewport restore.
+      const restore = () => {
+        try {
+          window.scrollTo(0, 0);
+          if (typeof document !== 'undefined') {
+            document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+          }
+        } catch {}
+      };
+      restore();
+      setTimeout(restore, 250);
+    }
+    onClose();
+  };
+
   const send = async () => {
     if (!sender) return;
     const body = input.trim();
@@ -106,7 +131,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Text style={[styles.title, { color: colors.textPrimary }]}>
               {t('chat.title', 'Chat')}
             </Text>
-            <Pressable onPress={onClose} hitSlop={12} testID={`${testIdPrefix}-close`}>
+            <Pressable onPress={handleClose} hitSlop={12} testID={`${testIdPrefix}-close`}>
               <Text style={[styles.closeX, { color: colors.textMuted }]}>✕</Text>
             </Pressable>
           </View>
@@ -196,9 +221,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} />
+        <Pressable style={styles.backdropTap} onPress={handleClose} />
         {body}
       </View>
     </Modal>
