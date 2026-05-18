@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
 import { useTheme } from '../hooks/useTheme';
@@ -19,9 +19,20 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
   const translateY = useRef(new Animated.Value(8)).current;
   const visible = !!tooltip;
 
+  // Keep the view mounted during the 200ms exit animation so the fade-out
+  // has frames to play. setKeepMounted(false) is called only after the
+  // animation finishes.
+  const [keepMounted, setKeepMounted] = useState<boolean>(visible);
+
+  // Preserve the last non-null body so the text stays visible during
+  // the exit animation after the store has already cleared the slot.
+  const lastBodyRef = useRef<string>('');
+  if (tooltip) lastBodyRef.current = tooltip.body;
+
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
+      setKeepMounted(true);
+      const anim = Animated.parallel([
         Animated.timing(opacity, {
           toValue: 1,
           duration: 150,
@@ -32,9 +43,11 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
           duration: 150,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]);
+      anim.start();
+      return () => anim.stop();
     } else {
-      Animated.parallel([
+      const anim = Animated.parallel([
         Animated.timing(opacity, {
           toValue: 0,
           duration: 200,
@@ -45,11 +58,15 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]);
+      anim.start(({ finished }) => {
+        if (finished) setKeepMounted(false);
+      });
+      return () => anim.stop();
     }
   }, [visible, opacity, translateY]);
 
-  if (!tooltip) return null;
+  if (!keepMounted) return null;
 
   return (
     <Animated.View
@@ -58,7 +75,7 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
         styles.wrap,
         {
           opacity,
-          transform: [{ translateX: -50 }, { translateY }],
+          transform: [{ translateY }],
         },
       ]}
     >
@@ -77,7 +94,7 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
           numberOfLines={1}
           style={[styles.body, { color: colors.textPrimary }]}
         >
-          {tooltip.body}
+          {tooltip?.body ?? lastBodyRef.current}
         </Text>
       </Pressable>
       <View
@@ -94,11 +111,11 @@ const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
     bottom: '100%',
-    left: '50%',
+    left: 0,
+    right: 0,
     marginBottom: 4,
-    width: 100, // anchor width — translateX:-50 centers it; actual bubble width below
     alignItems: 'center',
-    zIndex: 50,
+    zIndex: 100,
   },
   bubble: {
     paddingHorizontal: Spacing.sm,
