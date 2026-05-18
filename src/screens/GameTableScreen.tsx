@@ -15,9 +15,13 @@ import {
   ScrollView,
   RefreshControl,
   useWindowDimensions,
+  Share,
+  Alert,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { buildInviteLink } from '../utils/inviteLink';
 import { GlassCard } from '../components/glass';
 import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
@@ -546,6 +550,21 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   });
   const chatUnread = useChatStore((s) => s.unread);
   const [isViewingScores, setIsViewingScores] = useState(false);
+
+  const handleShareSpectator = useCallback(async () => {
+    if (!isMultiplayer || !room) return;
+    const link = `${buildInviteLink(room.code)}?as=spectator`;
+    const message = `${t('spectator.shareMessage')}\n${link}`;
+    try {
+      await Share.share(
+        { message, title: 'Nägels Online' },
+        { dialogTitle: t('spectator.shareLink') },
+      );
+    } catch {
+      await Clipboard.setStringAsync(link);
+      Alert.alert(t('multiplayer.codeCopied'), link);
+    }
+  }, [isMultiplayer, room, t]);
   const [showLastTrick, setShowLastTrick] = useState(false);
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
   const [showBetBanner, setShowBetBanner] = useState(false);
@@ -1195,6 +1214,24 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               )}
             </Pressable>
+            {isMultiplayer && !isSpectator && !!room && (
+              <Pressable
+                testID="game-btn-share-spectator"
+                onPress={handleShareSpectator}
+                accessibilityLabel={t('spectator.shareLink')}
+                style={[
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
+                  { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                ]}
+              >
+                <Text style={{ fontSize: 18, color: colors.iconButtonText }}>👁</Text>
+                {isDesktop && (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('spectator.shareLink')}
+                  </Text>
+                )}
+              </Pressable>
+            )}
             {spectators.length > 0 && (
               <Pressable
                 testID="spectator-count"
