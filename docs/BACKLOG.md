@@ -1,30 +1,6 @@
 ## Backlog
 
-### Quick Match without login broken — guest "Играть" CTA is dead (Akula, 2026-05-17)
-
-
-### SP betting screen has no exit button — only logo→leave works there (Akula, 2026-05-17)
-
-
-### Desktop in-game icon buttons get text labels (settings/scores/chat/last-tricks/exit) — mobile stays icon-only (Akula, 2026-05-17)
-
-
-### SP scoreboard opens in left sidebar on desktop, button highlights when open — same as multiplayer (Akula, 2026-05-17)
-
-
-### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
-
-
 ### Post-game scoreboard + "Play again" on host exit (Akhmed, 2026-05-16)
-
-
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
-
-
-### Score icon is unclear (Akula, 2026-05-16)
-
-
-### Betting screen — cards span the full width (Akula, 2026-05-16)
 
 
 ### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
@@ -68,21 +44,94 @@
 
 ## Next Up
 
+### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
+
+
+### Сообщения в чате рядом с аватаром на столе
+
+  - defaultExpanded: false
+    ```md
+    Отображается сообщение, отправленное в чате прямо на столе.
+    ```
+
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
 ## In Progress
 
-### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
+### Per-game seat shuffle in private rooms (Akula, 2026-05-08)
+
+
+### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+
+
+## Done
+
+### Detailed scoreboard on desktop — embedded in left pane, brief↔detailed toggle, rotated name headers, auto-advance to next hand, cap winner modal at 600px (Akula, 2026-05-18)
+
+
+### Real card images in Last Trick pane on desktop (Akula, 2026-05-18)
+
+
+### Chat survives page refresh — localStorage per-room (Akula, 2026-05-18)
+
+
+### Card double-tap on desktop confirms cleanly — no text-selection (Akula, 2026-05-18)
+
+
+### Hand-1 starting seat randomized; rotation now relative to previous hand (Akula, 2026-05-17)
+
+
+### Cup-style score icon — clearer trophy SVG (Akula, 2026-05-17)
+
+
+### Desktop in-game icon buttons get text labels (settings/scores/chat/last-tricks/exit) — mobile stays icon-only (Akula, 2026-05-17)
+
+
+### Cards huge + 5-per-row grid on true desktop, small on touch / iPad (Akula, 2026-05-17)
 
 
 ### Cards centred on desktop (PopovIsNit, 2026-05-08)
 
 
-### Per-game seat shuffle in private rooms (Akula, 2026-05-08)
-
-
-## Done
-
 ### Logo tap → leave with confirm — WaitingRoom / GameTable / BettingPhase (Akula, 2026-05-17)
 
+
+### размещение карт на экране ставок Desktop
+
+  - defaultExpanded: false
+    ```md
+    На экране ставок на десктопе необходимо отображать все карты в ширину экрана, даже если для этого придется делать вторую строку. Нельзя заставлять пользователей догадываться о том, что можно проскроить горизонтально список карт.
+    ```
+
+### SP scoreboard opens in left sidebar on desktop, button highlights when open — same as multiplayer (Akula, 2026-05-17)
+
+
+### Контейнер онбординга на месте. Кнопок и описание игры на десктопе.
+
+  - defaultExpanded: false
+    ```md
+    Гораздо лучше будет, если при нажатии на кнопку научиться играть или learn to play контейнер с обучающими материалами а-ля onboarding будет появляться вместо описания игры преимуществ игры кнопок. При этом селектор языка должен быть видимо даже в этом случае. В пользователе в таком случае будет возможность переключиться на другой язык уже в процессе онбординга, и нажатие понятно просто вернет старый экран с кнопками и описанием игры.
+    ```
+
+### Betting screen — cards span the full width (Akula, 2026-05-16)
+
+
+### Quick Match without login broken — guest "Играть" CTA is dead (Akula, 2026-05-17)
+
+
+### SP betting screen has no exit button — only logo→leave works there (Akula, 2026-05-17)
+
+
+### Score icon is unclear (Akula, 2026-05-16)
+
+
+### Пропала кнопка сохранения прогресса в профиле на Desktop
+
+  - defaultExpanded: false
+    ```md
+    Нет кнопки сохранить прогресс в профиле на десктопе для не залогиненного пользователя.
+    ```
 
 ### Hide auth form for logged-in users — desktop right pane mounts Lobby; mobile shows compact profile card (Akula, 2026-05-17)
 
