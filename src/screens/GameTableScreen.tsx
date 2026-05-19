@@ -1248,12 +1248,28 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               <Pressable
                 testID="spectator-count"
                 onPress={() => setShowSpectators(true)}
+                hitSlop={8}
                 accessibilityLabel={t('spectator.count', { count: spectators.length })}
-                style={[styles.iconBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+                style={[
+                  isDesktop ? styles.iconBtnLabeled : styles.spectatorCountBtn,
+                  { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                ]}
               >
-                <Text style={[styles.spectatorIndicator, { color: colors.textSecondary }]}>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.spectatorIndicator, { color: colors.iconButtonText }]}
+                >
                   👁 {spectators.length}
                 </Text>
+                {isDesktop && (
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}
+                  >
+                    {t('spectator.count', { count: spectators.length })}
+                  </Text>
+                )}
               </Pressable>
             )}
           </View>
@@ -2116,7 +2132,20 @@ const styles = StyleSheet.create({
   spectatorIndicator: {
     fontSize: 13,
     fontWeight: '600',
-    paddingHorizontal: 8,
+  },
+  // Mobile spectator-count chip. Auto-width row with min 44pt touch
+  // target per the mobile-first rule — the original `iconBtn` (30x30)
+  // squashed "👁 N" onto two lines once N was a digit.
+  spectatorCountBtn: {
+    minWidth: 44,
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
   spectatorSheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
