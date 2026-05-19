@@ -63,6 +63,7 @@
     "continueToLobby": "Ir al lobby"
   },
   "game": {
+    "dealerButton": "Primero en jugar",
     "hand": "Mano",
     "of": "de",
     "you": "Tú",

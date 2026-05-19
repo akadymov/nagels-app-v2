@@ -63,6 +63,7 @@
     "continueToLobby": "Continue to Lobby"
   },
   "game": {
+    "dealerButton": "First to act",
     "hand": "Hand",
     "of": "of",
     "you": "You",

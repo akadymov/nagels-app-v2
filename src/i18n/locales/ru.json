@@ -63,6 +63,7 @@
     "continueToLobby": "Перейти в лобби"
   },
   "game": {
+    "dealerButton": "Ходит первым",
     "hand": "Раздача",
     "outOf": "из",
     "you": "Вы",

@@ -1341,7 +1341,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     !isMyTurnNow && { borderColor: colors.accent, borderWidth: 1.5 },
                   ]}
                 >
-                  {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                  {isFirstPlayer && (
+                    <Text
+                      style={styles.firstPlayerBadge}
+                      accessibilityLabel={t('game.dealerButton', 'First to act')}
+                      testID="dealer-button"
+                    >D</Text>
+                  )}
                   <View style={[
                     styles.profileAvatar,
                     { backgroundColor: vm.myPlayer.avatarColor || avatarColorFor(vm.myPlayer.id) },
@@ -1387,7 +1393,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     isOffline && { opacity: 0.45 },
                   ]}
                 >
-                  {isFirstPlayer && <Text style={styles.firstPlayerBadge}>▶</Text>}
+                  {isFirstPlayer && (
+                    <Text
+                      style={styles.firstPlayerBadge}
+                      accessibilityLabel={t('game.dealerButton', 'First to act')}
+                      testID="dealer-button"
+                    >D</Text>
+                  )}
                   {isOffline && <Text style={styles.offlineBadge}>📡</Text>}
                   <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
                     <Text style={styles.profileAvatarText}>
@@ -1938,12 +1950,33 @@ const styles = StyleSheet.create({
     color: '#C0C0C7',
     textAlign: 'center',
   },
+  // Poker-style dealer button next to the player who acts first in
+  // the hand. Sits half-overlapping the right edge of the player card
+  // (the "right of the first-to-act" placement from the backlog).
   firstPlayerBadge: {
     position: 'absolute',
-    top: 3,
-    left: 3,
+    top: '50%',
+    right: -14,
+    marginTop: -12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#1a1a1a',
+    color: '#1a1a1a',
     fontSize: 12,
-    color: '#308552',
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+    overflow: 'hidden',
+    // Soft shadow so the chip pops off the player card.
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 2,
+    elevation: 3,
+    zIndex: 10,
   },
   offlineBadge: {
     position: 'absolute',
