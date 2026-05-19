@@ -29,6 +29,7 @@ import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
 import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
+import { TurnTimer } from '../components/TurnTimer';
 import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
 import { useChatStore } from '../store/chatStore';
@@ -1024,6 +1025,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
               {t('game.hand')} {vm.handNumber}/{vm.totalHands}
             </Text>
+            {isMultiplayer && (
+              <TurnTimer
+                label={
+                  vm.currentPlayer
+                    ? (vm.currentPlayer.id === vm.myPlayer?.id
+                        ? t('game.yourTurn')
+                        : vm.currentPlayer.name)
+                    : null
+                }
+              />
+            )}
             <View
               style={[
                 styles.trumpBadgeGame,
