@@ -15,9 +15,6 @@
 ### Push notifications — follow-ups
 
 
-### Offline scorekeeper — record real-life game results without card dealing, manual score entry
-
-
 ### Conditional stakes — agree on stake before game, winners earn rating points, losers pay difference
 
 
@@ -65,16 +62,58 @@
 
 ## Next Up
 
-## In Progress
-
-### Spectator count indicator on desktop — broken layout, tiny tap target (Akula via feedback, 2026-05-19)
+### Offline scorekeeper — record real-life game results without card dealing, manual score entry
 
   - defaultExpanded: false
     ```md
-    Индикатор количества зрителей на десктопном GameTable отображается криво: иконка на одной строке, цифра — на другой. Сама кнопка слишком маленькая. Починить вёрстку и увеличить touch target.
+    Новый room mode для оффлайн-партий — комната работает как электронный «арбитр», карты не раздаются.
+
+    **Flow**
+    - Хост при создании приватной комнаты выбирает Mode: Standard / Scorekeeper (фиксируется после создания).
+    - Игра стартует, но dealt_cards не пишется. Сразу идёт фаза `betting` в обычном порядке (десцендент по карт-капу, host pick для 1/2-карточных раздач — как сейчас).
+    - После закрытия всех ставок hand переходит в новую фазу `tricks_recording` (вместо `playing`).
+    - Каждый игрок сам видит ±-стейппер для своей заявки. Сервер пишет hand_trick_claims(hand_id, session_id, n).
+    - Когда у всех есть claim И sum == cards_dealt → авто-переход в `closed`, hand_scores инсертится как обычно, дальше существующий cycle.
+    - При sum ≠ cards_dealt: broadcast `tricks_mismatch` всем, баннер на столе, заявки НЕ сбрасываются, каждый правит свою.
+
+    **DB (1 миграция)**
+    - rooms.mode TEXT NOT NULL DEFAULT 'standard' CHECK ('standard'|'scorekeeper')
+    - hands.phase допускает 'tricks_recording'
+    - CREATE TABLE hand_trick_claims (hand_id UUID, session_id UUID, tricks_claimed INT, PRIMARY KEY (hand_id, session_id))
+    - RPC claim_tricks(p_hand_id, p_tricks) — upsert + sum-check + автопереход в closed
+    - create_room принимает p_mode
+
+    **Engine**
+    - start_hand в scorekeeper-режиме skip dealt_cards INSERT
+    - place_bet_action на последней ставке — в scorekeeper-режиме phase=tricks_recording, иначе playing (как сейчас)
+
+    **UI**
+    - PrivateRoom create form: toggle Standard / Scorekeeper
+    - GameTableScreen: hide hand row + trick area когда rooms.mode='scorekeeper' && phase=='tricks_recording', смонтировать TricksRecorder
+    - TricksRecorder: ±-стейппер для своей заявки + сводка кто сколько заявил
+    - Mismatch banner сверху стола: «Сумма не сходится — кто-то ошибся»
+    - i18n: ~15 строк × EN/RU/ES
+
+    **UX-решения**
+    - Каждый вводит сам (не один хост за всех).
+    - Mismatch → баннер всем, claims остаются (минимум кликов когда ошибся один).
+    - Mode toggle при создании, потом фикс.
+
+    SP-режим пока не трогаем — фича только для multiplayer комнат.
     ```
 
+
+## In Progress
+
 ### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
+### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+
+
+## Done
+
+### Detailed scoreboard on desktop — embedded in left pane, brief↔detailed toggle, rotated name headers, auto-advance to next hand, cap winner modal at 600px (Akula, 2026-05-18)
 
 
 ### Host leaves WaitingRoom → kick everyone to lobby (Akula via feedback, 2026-05-19)
@@ -91,8 +130,12 @@
     На iPhone Safari открытие чата с экрана стола и возврат назад в игру ломает вёрстку GameTable — починить можно только обновлением страницы. Подозрение на iOS Safari viewport/visualViewport reflow при показе/скрытии модалки чата или на оставшийся inert/overflow state на корневом контейнере после закрытия ChatPanel.
     ```
 
-### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+### Spectator count indicator on desktop — broken layout, tiny tap target (Akula via feedback, 2026-05-19)
 
+  - defaultExpanded: false
+    ```md
+    Индикатор количества зрителей на десктопном GameTable отображается криво: иконка на одной строке, цифра — на другой. Сама кнопка слишком маленькая. Починить вёрстку и увеличить touch target.
+    ```
 
 ### Сообщения в чате рядом с аватаром на столе
 
@@ -100,11 +143,6 @@
     ```md
     Отображается сообщение, отправленное в чате прямо на столе.
     ```
-
-## Done
-
-### Detailed scoreboard on desktop — embedded in left pane, brief↔detailed toggle, rotated name headers, auto-advance to next hand, cap winner modal at 600px (Akula, 2026-05-18)
-
 
 ### Видимый "баттон"
 
