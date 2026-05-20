@@ -24,16 +24,25 @@ import {
 /**
  * Host flow: pick player-count chip, open Create tab, click Create,
  * wait for the WaitingRoom screen, return the 6-char room code.
+ *
+ * Pass `mode: 'scorekeeper'` to flip the Create tab toggle before
+ * pressing Create — the resulting room runs the offline-arbitrator
+ * flow (no cards dealt, manual tricks recording after betting).
  */
 export async function createRoomAsHost(
   page: Page,
   playerCount: number,
   label = 'host',
+  opts: { mode?: 'standard' | 'scorekeeper' } = {},
 ): Promise<string> {
   await tap(page, `player-count-${playerCount}`, 10_000);
   await sleep(200);
   await tap(page, 'tab-create', 5_000);
   await sleep(300);
+  if (opts.mode === 'scorekeeper') {
+    await tap(page, 'room-mode-scorekeeper', 5_000);
+    await sleep(200);
+  }
   await tap(page, 'btn-create-room', 5_000);
   // WaitingRoom mounts once the server returns the room — room-code
   // testID is the canonical "we're in" signal.
@@ -87,6 +96,50 @@ export async function markReady(page: Page): Promise<void> {
 /** Host-only: click start-game. WaitingRoom auto-validates everyone ready. */
 export async function startGame(page: Page): Promise<void> {
   await tap(page, 'btn-start-game', 8_000);
+}
+
+/**
+ * Set the TricksRecorder stepper to `target`, then press submit.
+ * The stepper starts at the current taken_tricks value (0 on first
+ * entry of a hand); we tap +/− until the displayed integer matches
+ * before confirming. Best-effort — returns true if the submit click
+ * left the input idle (no exception).
+ */
+export async function tryRecordTricks(
+  page: Page,
+  target: number,
+  label = 'player',
+): Promise<boolean> {
+  const valueEl = page.locator('[data-testid="tricks-recorder-value"]').first();
+  if (!(await valueEl.isVisible({ timeout: 500 }).catch(() => false))) return false;
+
+  const readValue = async (): Promise<number> => {
+    const txt = ((await valueEl.textContent().catch(() => '')) || '').trim();
+    const n = parseInt(txt, 10);
+    return Number.isNaN(n) ? 0 : n;
+  };
+
+  let safety = 30;
+  while (safety-- > 0) {
+    const v = await readValue();
+    if (v === target) break;
+    const id = v < target ? 'tricks-recorder-inc' : 'tricks-recorder-dec';
+    try {
+      await tap(page, id, 2_000);
+    } catch {
+      break;
+    }
+    await sleep(80);
+  }
+
+  try {
+    await tap(page, 'tricks-recorder-submit', 4_000);
+    // eslint-disable-next-line no-console
+    console.log(`[mp:${label}] 🎯 recorded ${target} tricks`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export interface GameLoopOptions {

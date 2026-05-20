@@ -367,5 +367,21 @@
     "errorOffline": "No se puede conectar al servidor. Inténtalo más tarde.",
     "errorGeneric": "No se pudo enviar. Inténtalo de nuevo.",
     "successMessage": "¡Gracias! Tus comentarios se han enviado."
+  },
+  "scorekeeper": {
+    "modeStandard": "Estándar",
+    "modeScorekeeper": "Árbitro",
+    "modeStandardDesc": "Cartas repartidas y jugadas en la app",
+    "modeScorekeeperDesc": "Partida offline — se registran los resultados a mano",
+    "gameMode": "Modo de juego",
+    "title": "Registra tus bazas",
+    "subtitle": "Mano {{handNumber}} · {{cards}} cartas · tu apuesta: {{bet}}",
+    "yourTricks": "Bazas que has ganado",
+    "summaryTitle": "Todos los jugadores",
+    "notClaimedYet": "—",
+    "waitingForOthers": "Esperando a que los demás ingresen sus bazas…",
+    "mismatchTitle": "La suma no coincide",
+    "mismatchBody": "Bazas registradas ({{actual}}) ≠ cartas repartidas ({{expected}}). Alguien se equivocó — corrige tu entrada.",
+    "submit": "Confirmar"
   }
 }

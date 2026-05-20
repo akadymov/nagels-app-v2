@@ -2,11 +2,14 @@ export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room'
   | 'ready' | 'start_game'
   | 'place_bet' | 'play_card' | 'continue_hand'
+  | 'record_tricks'
   | 'request_timeout'
   | 'restart_game';
 
+export type RoomMode = 'standard' | 'scorekeeper';
+
 export type Action =
-  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string; silent?: boolean }
+  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string; mode?: RoomMode; silent?: boolean }
   | { kind: 'join_room';   code: string; display_name: string }
   | { kind: 'leave_room';  room_id: string; target_session_id?: string }
   | { kind: 'ready';       room_id: string; is_ready: boolean; target_session_id?: string }
@@ -14,6 +17,7 @@ export type Action =
   | { kind: 'place_bet';   room_id: string; hand_id: string; bet: number }
   | { kind: 'play_card';   room_id: string; hand_id: string; card: string }
   | { kind: 'continue_hand'; room_id: string; hand_id: string }
+  | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string };
 
@@ -43,6 +47,11 @@ export interface RoomSnapshot {
      *  the centre of the ladder stays at 2 cards. Optional for
      *  backwards-compat with older snapshots that pre-date 029. */
     min_cards_per_hand?: number;
+    /** Room game mode. 'standard' (default) deals cards through the app.
+     *  'scorekeeper' is an offline-arbitrator mode: no cards are dealt,
+     *  players record trick results manually after betting. Fixed at
+     *  room creation. Optional for backwards-compat with old snapshots. */
+    mode?: RoomMode;
     phase: 'waiting' | 'playing' | 'finished';
     current_hand_id: string | null;
     version: number;
@@ -69,7 +78,7 @@ export interface RoomSnapshot {
     trump_suit: string;
     starting_seat: number;
     current_seat: number;
-    phase: 'betting' | 'playing' | 'scoring' | 'closed';
+    phase: 'betting' | 'playing' | 'tricks_recording' | 'scoring' | 'closed';
     deck_seed: string;
     started_at: string;
     closed_at: string | null;
@@ -107,6 +116,11 @@ export interface RoomSnapshot {
     }>;
   }>;
   my_hand?: string[];
+  /** Scorekeeper mode: session_ids that have submitted a claim
+   *  (record_tricks_action) for the current hand. Used by the client to
+   *  distinguish "claimed 0" from "not claimed yet" without adding a
+   *  column to hand_scores. Empty in standard mode. */
+  claim_sessions?: string[];
 }
 
 export type ActionResult =

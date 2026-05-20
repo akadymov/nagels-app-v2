@@ -23,6 +23,7 @@
     { "name": "notrump-deal",        "tier": "scenario",      "enabled": true  },
     { "name": "sp-game",             "tier": "end-to-end",    "enabled": true  },
     { "name": "multiplayer-6p-mixed", "tier": "end-to-end",   "enabled": true  },
+    { "name": "scorekeeper-demo",     "tier": "end-to-end",   "enabled": true  },
     { "name": "multiplayer-demo",     "tier": "end-to-end",   "enabled": false, "note": "Demo — run via npm run demo:full:local:headed" }
   ]
 }
