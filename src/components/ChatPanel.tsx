@@ -59,6 +59,30 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList | null>(null);
   const inputRef = useRef<TextInput | null>(null);
+  // iOS Safari does not shrink window.innerHeight when the on-screen
+  // keyboard appears, so a bottom-anchored Modal sheet stays UNDER the
+  // keyboard and the input becomes invisible. Track the keyboard
+  // height (= layoutViewport - visualViewport) and lift the sheet by
+  // that amount. visualViewport is the only reliable signal on iOS
+  // Safari for this — there's no `keyboardWillShow` on web.
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !visible) return;
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const recompute = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
+    };
+    recompute();
+    vv.addEventListener('resize', recompute);
+    vv.addEventListener('scroll', recompute);
+    return () => {
+      vv.removeEventListener('resize', recompute);
+      vv.removeEventListener('scroll', recompute);
+      setKeyboardOffset(0);
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -168,6 +192,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       style={[
         mode === 'inline' ? styles.inlineSheet : styles.sheet,
         { backgroundColor: colors.surface, borderColor: colors.glassLight },
+        // Modal mode on web: lift the sheet by the keyboard height so
+        // the input row stays visible above the on-screen keyboard.
+        mode === 'modal' && keyboardOffset > 0 ? { marginBottom: keyboardOffset } : null,
       ]}
     >
           <View style={styles.header}>
