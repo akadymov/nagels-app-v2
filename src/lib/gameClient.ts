@@ -67,12 +67,18 @@ async function postAction(
 }
 
 export const gameClient = {
-  createRoom: (displayName: string, player_count: number, max_cards = 10) =>
+  createRoom: (
+    displayName: string,
+    player_count: number,
+    max_cards = 10,
+    mode: 'standard' | 'scorekeeper' = 'standard',
+  ) =>
     postAction(displayName, {
       kind: 'create_room',
       display_name: displayName,
       player_count,
       max_cards,
+      mode,
     }),
 
   joinRoom: (displayName: string, code: string) =>
@@ -138,6 +144,9 @@ export const gameClient = {
 
   continueHand: (room_id: string, hand_id: string) =>
     postAction(null, { kind: 'continue_hand', room_id, hand_id }),
+
+  recordTricks: (room_id: string, hand_id: string, tricks: number) =>
+    postAction(null, { kind: 'record_tricks', room_id, hand_id, tricks }),
 
   requestTimeout: (room_id: string, hand_id: string, expected_seat: number) =>
     postAction(null, { kind: 'request_timeout', room_id, hand_id, expected_seat }),

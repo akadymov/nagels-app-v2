@@ -146,6 +146,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [roomMode, setRoomMode] = useState<'standard' | 'scorekeeper'>('standard');
   const [showCreateSavePrompt, setShowCreateSavePrompt] = useState(false);
   const pendingCreateRef = useRef(false);
   const navigation = useNavigation<any>();
@@ -227,7 +228,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     setIsCreating(true);
     try {
       const displayName = (nameInput.trim() || playerName) ?? 'Guest';
-      const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10);
+      const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10, roomMode);
       if (!result.ok) {
         const code = result.error || 'Failed to create room';
         const friendly = code === 'too_many_rooms'
@@ -257,7 +258,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     } finally {
       setIsCreating(false);
     }
-  }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t]);
+  }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t, roomMode]);
 
   const handleCreateRoom = useCallback(async () => {
     // Soft prompt — only the first create per anonymous device sees it.
@@ -535,6 +536,37 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
         {activeTab === 'create' && (
           <View style={styles.tabContent}>
+            <Text style={[styles.sectionLabel, { color: colors.textPrimary }]}>
+              {t('scorekeeper.gameMode')}
+            </Text>
+            <View style={styles.chipRow}>
+              {(['standard', 'scorekeeper'] as const).map((m) => {
+                const active = roomMode === m;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => setRoomMode(m)}
+                    testID={`room-mode-${m}`}
+                    style={[
+                      styles.diffChip,
+                      { backgroundColor: colors.surface, borderColor: colors.glassLight },
+                      active && { backgroundColor: colors.accent, borderColor: colors.accent },
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      { color: colors.textSecondary },
+                      active && { color: '#ffffff' },
+                    ]}>
+                      {t(`scorekeeper.mode${m === 'standard' ? 'Standard' : 'Scorekeeper'}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.modeHint, { color: colors.textMuted }]}>
+              {t(`scorekeeper.mode${roomMode === 'standard' ? 'Standard' : 'Scorekeeper'}Desc`)}
+            </Text>
             <Pressable
               style={[styles.actionBtn, { backgroundColor: colors.accent }]}
               onPress={handleCreateRoom}
@@ -733,6 +765,11 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  modeHint: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -Spacing.sm,
   },
   // Code input
   codeInput: {

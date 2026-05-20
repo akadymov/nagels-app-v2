@@ -265,6 +265,7 @@ export type Database = {
           host_session_id: string
           id: string
           max_cards: number
+          mode: string
           phase: string
           player_count: number
           updated_at: string
@@ -277,6 +278,7 @@ export type Database = {
           host_session_id: string
           id?: string
           max_cards?: number
+          mode?: string
           phase?: string
           player_count: number
           updated_at?: string
@@ -289,6 +291,7 @@ export type Database = {
           host_session_id?: string
           id?: string
           max_cards?: number
+          mode?: string
           phase?: string
           player_count?: number
           updated_at?: string

@@ -72,6 +72,7 @@ export async function createRoom(
         host_session_id: actor.session_id,
         player_count: action.player_count,
         max_cards: action.max_cards ?? 10,
+        mode: action.mode ?? 'standard',
         phase: 'waiting',
       })
       .select('id, version, code')
@@ -96,7 +97,11 @@ export async function createRoom(
     room_id: inserted.id,
     session_id: actor.session_id,
     kind: 'create_room',
-    payload: { player_count: action.player_count, max_cards: action.max_cards ?? 10 },
+    payload: {
+      player_count: action.player_count,
+      max_cards: action.max_cards ?? 10,
+      mode: action.mode ?? 'standard',
+    },
   });
 
   await svc.from('rooms').update({ version: inserted.version + 1 }).eq('id', inserted.id);

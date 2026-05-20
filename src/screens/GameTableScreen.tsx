@@ -25,6 +25,7 @@ import { buildInviteLink } from '../utils/inviteLink';
 import { GlassCard } from '../components/glass';
 import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
+import { TricksRecorder } from '../components/scorekeeper';
 import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
 import { ChatPanel } from '../components/ChatPanel';
@@ -389,9 +390,16 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         if (!hand) return 'lobby';
         if (room?.phase === 'finished') return 'finished';
         if (hand.phase === 'closed' || hand.phase === 'scoring') return 'scoring';
-        if (hand.phase === 'playing') return 'playing';
+        // Scorekeeper-mode 'tricks_recording' shares the same outer-table
+        // chrome as 'playing' (no betting modal, scoreboard available);
+        // the TricksRecorder overlay renders on top instead of cards.
+        if (hand.phase === 'playing' || hand.phase === 'tricks_recording') return 'playing';
         return 'betting';
       })();
+
+      const isTricksRecording =
+        (room as { mode?: string } | null)?.mode === 'scorekeeper' &&
+        hand?.phase === 'tricks_recording';
 
       const currentPlayer = hand
         ? players.find((p) => p.seatIndex === hand.current_seat) ?? null
@@ -471,6 +479,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
       return {
         phase,
+        isTricksRecording,
         handNumber,
         totalHands,
         cardsPerPlayer,
@@ -509,6 +518,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     }));
     return {
       phase: sp.phase,
+      isTricksRecording: false,
       handNumber: sp.handNumber,
       totalHands: sp.totalHands,
       cardsPerPlayer: sp.cardsPerPlayer,
@@ -1550,6 +1560,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
               setShowScoreboard(true);
             }}
           />
+        )}
+
+        {/* Scorekeeper-mode tricks recorder — replaces the cards/trick area
+            while the hand sits in 'tricks_recording' after betting. */}
+        {!isSpectator && (
+          <TricksRecorder visible={vm.isTricksRecording === true} />
         )}
 
         {/* Scoreboard Modal — also handles the game-over celebration

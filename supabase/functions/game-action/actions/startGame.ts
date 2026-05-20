@@ -19,7 +19,7 @@ export async function startGame(
 ): Promise<ActionResult> {
   const { data: room } = await svc
     .from('rooms')
-    .select('id, host_session_id, phase, player_count, max_cards, min_cards_per_hand, version')
+    .select('id, host_session_id, phase, player_count, max_cards, min_cards_per_hand, mode, version')
     .eq('id', action.room_id)
     .maybeSingle();
   if (!room) return { ok: false, error: 'unknown_room', state: emptySnapshot(), version: 0 };
@@ -98,21 +98,27 @@ export async function startGame(
     .single();
   if (hErr) throw hErr;
 
-  const dealtRows: { hand_id: string; session_id: string; card: string }[] = [];
-  for (let s = 0; s < actualPlayerCount; s++) {
-    const player = players[s];
-    for (let c = 0; c < cardsPerPlayer; c++) {
-      const card = deck[s * cardsPerPlayer + c];
-      dealtRows.push({
-        hand_id: hand.id,
-        session_id: player.session_id,
-        card: `${card.suit}-${card.rank}`,
-      });
+  // Scorekeeper mode: no cards are dealt — the room is an offline arbitrator,
+  // players just record trick results manually. Skip the dealt_cards INSERT
+  // entirely; standard mode keeps the original deal.
+  const isScorekeeper = (room as { mode?: string }).mode === 'scorekeeper';
+  if (!isScorekeeper) {
+    const dealtRows: { hand_id: string; session_id: string; card: string }[] = [];
+    for (let s = 0; s < actualPlayerCount; s++) {
+      const player = players[s];
+      for (let c = 0; c < cardsPerPlayer; c++) {
+        const card = deck[s * cardsPerPlayer + c];
+        dealtRows.push({
+          hand_id: hand.id,
+          session_id: player.session_id,
+          card: `${card.suit}-${card.rank}`,
+        });
+      }
     }
-  }
-  if (dealtRows.length) {
-    const { error: dErr } = await svc.from('dealt_cards').insert(dealtRows);
-    if (dErr) throw dErr;
+    if (dealtRows.length) {
+      const { error: dErr } = await svc.from('dealt_cards').insert(dealtRows);
+      if (dErr) throw dErr;
+    }
   }
 
   await svc.from('rooms').update({

@@ -369,5 +369,21 @@
     "errorOffline": "Сервер недоступен. Попробуйте позже.",
     "errorGeneric": "Не удалось отправить. Попробуйте ещё раз.",
     "successMessage": "Спасибо! Ваш отзыв отправлен."
+  },
+  "scorekeeper": {
+    "modeStandard": "Обычный",
+    "modeScorekeeper": "Арбитр",
+    "modeStandardDesc": "Карты раздаются и разыгрываются в приложении",
+    "modeScorekeeperDesc": "Оффлайн-игра — результаты вводятся вручную",
+    "gameMode": "Режим игры",
+    "title": "Введите свои взятки",
+    "subtitle": "Раздача {{handNumber}} · {{cards}} карт · ваша заявка: {{bet}}",
+    "yourTricks": "Сколько взяток вы взяли",
+    "summaryTitle": "Все игроки",
+    "notClaimedYet": "—",
+    "waitingForOthers": "Ждём, пока остальные введут свои взятки…",
+    "mismatchTitle": "Сумма не сходится",
+    "mismatchBody": "Сумма взяток ({{actual}}) ≠ количеству карт ({{expected}}). Кто-то ошибся — поправьте свой ввод.",
+    "submit": "Готово"
   }
 }

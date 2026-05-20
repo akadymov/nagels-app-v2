@@ -367,5 +367,21 @@
     "errorOffline": "Can't reach the server right now. Try again later.",
     "errorGeneric": "Couldn't send feedback. Please try again.",
     "successMessage": "Thanks! Your feedback has been sent."
+  },
+  "scorekeeper": {
+    "modeStandard": "Standard",
+    "modeScorekeeper": "Scorekeeper",
+    "modeStandardDesc": "Cards dealt and played in-app",
+    "modeScorekeeperDesc": "Offline game — record results manually",
+    "gameMode": "Game Mode",
+    "title": "Record your tricks",
+    "subtitle": "Hand {{handNumber}} · {{cards}} cards · your bet: {{bet}}",
+    "yourTricks": "Tricks you took",
+    "summaryTitle": "All players",
+    "notClaimedYet": "—",
+    "waitingForOthers": "Waiting for other players to enter their tricks…",
+    "mismatchTitle": "Sum doesn't match",
+    "mismatchBody": "Tricks recorded ({{actual}}) ≠ cards dealt ({{expected}}). Someone made a mistake — please fix your entry.",
+    "submit": "Confirm"
   }
 }

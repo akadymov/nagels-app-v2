@@ -26,7 +26,7 @@ export async function continueHand(
   }
 
   const { data: room } = await svc.from('rooms')
-    .select('id, max_cards, min_cards_per_hand, player_count, version').eq('id', action.room_id).single();
+    .select('id, max_cards, min_cards_per_hand, player_count, mode, version').eq('id', action.room_id).single();
 
   await svc.from('hands').update({ phase: 'closed' }).eq('id', hand.id);
 
@@ -82,22 +82,28 @@ export async function continueHand(
     throw hErr;
   }
 
-  const { data: players } = await svc.from('room_players')
-    .select('session_id, seat_index')
-    .eq('room_id', room.id)
-    .order('seat_index', { ascending: true });
-  const dealtRows: { hand_id: string; session_id: string; card: string }[] = [];
-  for (let s = 0; s < room.player_count; s++) {
-    for (let c = 0; c < cardsPerPlayer; c++) {
-      const card = deck[s * cardsPerPlayer + c];
-      dealtRows.push({
-        hand_id: nextHand.id,
-        session_id: players![s].session_id,
-        card: `${card.suit}-${card.rank}`,
-      });
+  // Scorekeeper mode: no cards are dealt — see startGame for the rationale.
+  // The deck/seed is still generated above so other engine helpers that
+  // expect `deck_seed` on hands have a value; nothing is dealt out.
+  const isScorekeeper = (room as { mode?: string }).mode === 'scorekeeper';
+  if (!isScorekeeper) {
+    const { data: players } = await svc.from('room_players')
+      .select('session_id, seat_index')
+      .eq('room_id', room.id)
+      .order('seat_index', { ascending: true });
+    const dealtRows: { hand_id: string; session_id: string; card: string }[] = [];
+    for (let s = 0; s < room.player_count; s++) {
+      for (let c = 0; c < cardsPerPlayer; c++) {
+        const card = deck[s * cardsPerPlayer + c];
+        dealtRows.push({
+          hand_id: nextHand.id,
+          session_id: players![s].session_id,
+          card: `${card.suit}-${card.rank}`,
+        });
+      }
     }
+    await svc.from('dealt_cards').insert(dealtRows);
   }
-  await svc.from('dealt_cards').insert(dealtRows);
 
   await svc.from('rooms').update({
     current_hand_id: nextHand.id,
