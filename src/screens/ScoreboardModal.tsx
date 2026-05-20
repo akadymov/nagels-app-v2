@@ -73,6 +73,10 @@ export interface ScoreboardModalProps {
   onContinue: () => void;
   onPlayAgain?: () => void;
   onClose?: () => void;
+  /** Game-over only: lets every player (host included) exit to lobby
+   *  without waiting for the host's "Play Again" decision. Caller is
+   *  expected to surface its own confirm and detach the room. */
+  onLeaveRoom?: () => void;
   /** When true, render the scoreboard contents inline (no Modal /
    *  overlay / close button) so it can live inside the desktop
    *  left pane. The brief / detailed toggle remains visible so the
@@ -94,6 +98,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   onContinue,
   onPlayAgain,
   onClose,
+  onLeaveRoom,
   embedded = false,
 }) => {
   const { t } = useTranslation();
@@ -452,6 +457,17 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 </Text>
               </View>
             )}
+            {onLeaveRoom && (
+              <Pressable
+                style={[styles.continueBtn, { marginTop: Spacing.sm, backgroundColor: 'transparent', borderColor: colors.glassLight, borderWidth: 1 }]}
+                onPress={onLeaveRoom}
+                testID="btn-leave-scoreboard"
+              >
+                <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                  {t('multiplayer.leaveRoom')}
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -518,6 +534,17 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 >
                   <Text style={styles.continueBtnText}>
                     {t('scoreboard.continue')}
+                  </Text>
+                </Pressable>
+              )}
+              {isGameOver && onLeaveRoom && (
+                <Pressable
+                  style={[styles.continueBtn, { marginTop: Spacing.sm, backgroundColor: 'transparent', borderColor: colors.glassLight, borderWidth: 1 }]}
+                  onPress={onLeaveRoom}
+                  testID="btn-leave-scoreboard"
+                >
+                  <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                    {t('multiplayer.leaveRoom')}
                   </Text>
                 </Pressable>
               )}

@@ -1579,6 +1579,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           onContinue={handleScoreboardContinue}
           onPlayAgain={handleScoreboardPlayAgain}
           onClose={isViewingScores ? handleScoreboardClose : handleScoreboardContinue}
+          // Game-over Leave button — reuses the existing logo-leave flow
+          // (confirm dialog + leaveRoom + onExit) so each player can
+          // bail to the lobby without waiting for the host's decision.
+          onLeaveRoom={isMultiplayer ? handleLogoLeave : undefined}
         />
 
         {/* Save Progress auto-prompt (anonymous, after first finished game) */}
