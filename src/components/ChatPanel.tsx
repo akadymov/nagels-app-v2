@@ -125,6 +125,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         try { inputRef.current?.focus(); } catch {}
       });
     }
+    // iOS Safari: after each send the page picks up a stray horizontal
+    // scroll (autocomplete/focus reflow), shifting the chat sheet right
+    // and clipping bubbles + the Send button. Snap scrollLeft back now
+    // and once more after the autocomplete bar settles.
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const snapX = () => {
+        try {
+          window.scrollTo(window.scrollX > 0 ? 0 : window.scrollX, window.scrollY);
+          if (typeof document !== 'undefined') {
+            if (document.documentElement) document.documentElement.scrollLeft = 0;
+            if (document.body) document.body.scrollLeft = 0;
+          }
+        } catch {}
+      };
+      snapX();
+      setTimeout(snapX, 100);
+    }
     await sendChatMessage({
       id: `${sender.sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sessionId: sender.sessionId,
