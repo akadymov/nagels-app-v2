@@ -71,7 +71,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const vv = window.visualViewport;
     const recompute = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      const raw = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // iOS Safari renders its autofill accessory bar (↑ ↓ ✓) OVER our
+      // HTML content, ABOVE the keyboard. visualViewport.height does
+      // not subtract it, so add ~56px of headroom when the keyboard is
+      // up — otherwise the bar covers the chat input.
+      const offset = raw > 0 ? raw + 56 : 0;
       setKeyboardOffset(offset);
     };
     recompute();
