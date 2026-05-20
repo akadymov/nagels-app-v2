@@ -295,7 +295,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
             <ChatPanel
               mode="inline"
               visible
-              onClose={() => {}}
+              onClose={() => setChatVisible(false)}
               sender={sender}
               testIdPrefix="chat"
             />

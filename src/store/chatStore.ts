@@ -19,12 +19,18 @@ interface ChatStore {
   roomId: string | null;
   messages: ChatMessage[];
   unread: number;
+  /** True while a ChatPanel is mounted-and-visible. addMessage uses this
+   *  to skip the unread counter when the user is already looking at the
+   *  chat — otherwise a single Modal-remount race would leave a stale
+   *  badge after every incoming message. */
+  chatOpen: boolean;
   /** Idempotently bind the store to a room: if the persisted roomId
    *  matches, keep the messages (refresh case). Otherwise rehydrate
    *  from localStorage (per-room key) or start empty. */
   setRoom: (roomId: string) => void;
   addMessage: (m: ChatMessage) => void;
   markRead: () => void;
+  setChatOpen: (open: boolean) => void;
   reset: () => void;
 }
 
@@ -65,6 +71,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   roomId: null,
   messages: [],
   unread: 0,
+  chatOpen: false,
   setRoom: (roomId) => {
     const current = get();
     if (current.roomId === roomId) return; // already bound
@@ -78,12 +85,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const next = st.messages.concat(m);
       if (next.length > MAX_MESSAGES) next.splice(0, next.length - MAX_MESSAGES);
       writeStored(st.roomId, next);
-      return { messages: next, unread: st.unread + 1 };
+      return { messages: next, unread: st.chatOpen ? 0 : st.unread + 1 };
     });
   },
   markRead: () => set({ unread: 0 }),
+  setChatOpen: (open) => set(open ? { chatOpen: true, unread: 0 } : { chatOpen: false }),
   reset: () => {
     clearStored(get().roomId);
-    set({ roomId: null, messages: [], unread: 0 });
+    set({ roomId: null, messages: [], unread: 0, chatOpen: false });
   },
 }));
