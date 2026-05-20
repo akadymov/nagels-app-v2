@@ -91,7 +91,7 @@ export const PlayerChatTooltip: React.FC<PlayerChatTooltipProps> = ({
         ]}
       >
         <Text
-          numberOfLines={1}
+          numberOfLines={2}
           style={[styles.body, { color: colors.textPrimary }]}
         >
           {tooltip?.body ?? lastBodyRef.current}
@@ -122,7 +122,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.md,
     borderWidth: 1,
-    maxWidth: 200,
+    // 160 keeps the bubble inside the viewport when an avatar sits near
+    // the left/right edge of the table — was 200, which centered around
+    // the avatar and clipped on small phones. Together with
+    // numberOfLines={2} below this lets longer messages wrap instead of
+    // being cut with an ellipsis.
+    maxWidth: 160,
     minWidth: 80,
   },
   body: {
