@@ -1259,7 +1259,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   numberOfLines={1}
                   style={[styles.spectatorIndicator, { color: colors.iconButtonText }]}
                 >
-                  👁 {spectators.length}
+                  {/* On desktop the labeled text below already includes
+                      the count ("2 watching") — show just the eye to
+                      avoid the "👁 2  2 watching" dupe. */}
+                  {isDesktop ? '👁' : `👁 ${spectators.length}`}
                 </Text>
                 {isDesktop && (
                   <Text

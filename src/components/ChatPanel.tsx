@@ -43,27 +43,41 @@ export interface ChatPanelProps {
    *  used on mobile. `inline` renders the body directly so a desktop
    *  layout can mount the chat as a permanent side panel. */
   mode?: 'modal' | 'inline';
+  /** Inline hosts without an external re-open path (e.g. DesktopWaitingRoom)
+   *  can hide the ✕ button so the user doesn't dead-end the chat. */
+  hideCloseButton?: boolean;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  visible, onClose, sender, testIdPrefix = 'chat', mode = 'modal',
+  visible, onClose, sender, testIdPrefix = 'chat', mode = 'modal', hideCloseButton = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const messages = useChatStore((s) => s.messages);
   const markRead = useChatStore((s) => s.markRead);
+  const setChatOpen = useChatStore((s) => s.setChatOpen);
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList | null>(null);
   const inputRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      setChatOpen(false);
+      return;
+    }
+    // setChatOpen also zeroes `unread` so the badge clears the instant
+    // the chat becomes visible — independent of the messages-length
+    // dependency that previously did the reset.
+    setChatOpen(true);
     markRead();
     const t = setTimeout(() => {
       try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
     }, 50);
-    return () => clearTimeout(t);
-  }, [visible, markRead, messages.length]);
+    return () => {
+      clearTimeout(t);
+      setChatOpen(false);
+    };
+  }, [visible, markRead, setChatOpen, messages.length]);
 
   // iOS Safari leaves the page scrolled when the on-screen keyboard
   // pushes a focused input into view inside a fixed-position Modal.
@@ -73,8 +87,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const handleClose = () => {
     try { inputRef.current?.blur(); } catch {}
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      // Two passes — once now (keyboard begins to retract), once after
-      // ~250ms to catch iOS' delayed viewport restore.
+      // iOS Safari: closing the chat after the keyboard pushed the
+      // viewport leaves the underlying GameTable rendered against stale
+      // dimensions — "fixable only by reload" until we force a relayout.
+      // Three passes — now, mid-keyboard-retract, post-retract — restore
+      // scroll AND dispatch resize so Dimensions listeners recompute.
       const restore = () => {
         try {
           window.scrollTo(0, 0);
@@ -82,10 +99,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             document.documentElement.scrollTop = 0;
             if (document.body) document.body.scrollTop = 0;
           }
+          window.dispatchEvent(new Event('resize'));
         } catch {}
       };
       restore();
       setTimeout(restore, 250);
+      setTimeout(restore, 500);
     }
     onClose();
   };
@@ -96,9 +115,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     if (!body) return;
     setInput('');
     // Keep focus on the input so the user can keep typing without
-    // re-tapping. blurOnSubmit={false} below covers Enter-key submit;
-    // this covers the explicit Send-button path.
+    // re-tapping. blurOnSubmit={false} below should cover Enter-key
+    // submit, but on RN-Web some versions still fire blur AFTER our
+    // sync focus() call. A deferred second focus (next frame) wins that
+    // race — without it, desktop users lose the caret after every Enter.
     inputRef.current?.focus();
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        try { inputRef.current?.focus(); } catch {}
+      });
+    }
     await sendChatMessage({
       id: `${sender.sessionId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       sessionId: sender.sessionId,
@@ -131,9 +157,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Text style={[styles.title, { color: colors.textPrimary }]}>
               {t('chat.title', 'Chat')}
             </Text>
-            <Pressable onPress={handleClose} hitSlop={12} testID={`${testIdPrefix}-close`}>
-              <Text style={[styles.closeX, { color: colors.textMuted }]}>✕</Text>
-            </Pressable>
+            {!hideCloseButton && (
+              <Pressable onPress={handleClose} hitSlop={12} testID={`${testIdPrefix}-close`}>
+                <Text style={[styles.closeX, { color: colors.textMuted }]}>✕</Text>
+              </Pressable>
+            )}
           </View>
           <FlatList
             ref={(r) => { listRef.current = r; }}
@@ -141,6 +169,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             keyExtractor={(m) => m.id}
             style={styles.list}
             contentContainerStyle={styles.listContent}
+            // Stick to the bottom whenever new content lands while the
+            // panel is visible. Without this the mobile Modal animation
+            // outruns the 50ms scrollToEnd in the visibility effect and
+            // the chat opens pinned to the top.
+            onContentSizeChange={() => {
+              if (!visible) return;
+              try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
+            }}
+            onLayout={() => {
+              if (!visible) return;
+              try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
+            }}
             renderItem={({ item }) => {
               const bg = item.avatarColor || avatarColorFor(item.sessionId);
               const isMe = sender?.sessionId === item.sessionId;
@@ -204,6 +244,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Pressable
               onPress={send}
               disabled={!input.trim() || !sender}
+              // iOS Safari: tapping the button while the input is focused
+              // fires mousedown first, which blurs the input and eats the
+              // subsequent click — so the second message never sends until
+              // you tap elsewhere. preventDefault on mousedown keeps focus
+              // on the input and lets onPress fire on the first tap.
+              {...(Platform.OS === 'web'
+                ? { onMouseDown: (e: any) => e.preventDefault?.() }
+                : {})}
               style={[
                 styles.sendBtn,
                 { backgroundColor: colors.accent, opacity: (input.trim() && sender) ? 1 : 0.4 },
@@ -287,7 +335,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
-    fontSize: 14,
+    // 16px minimum — iOS Safari auto-zooms the viewport on focus when
+    // input font-size is <16px, which pushes the Send button off-screen.
+    fontSize: 16,
   },
   sendBtn: {
     paddingHorizontal: Spacing.lg,

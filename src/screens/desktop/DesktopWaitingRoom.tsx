@@ -67,6 +67,9 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
         <ChatPanel
           mode="inline"
           visible
+          // WaitingRoom desktop has no toggle to re-open the chat,
+          // so hide the ✕ instead of wiring a one-way close.
+          hideCloseButton
           onClose={() => {}}
           sender={sender}
           testIdPrefix="chat"
