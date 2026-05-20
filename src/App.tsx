@@ -135,6 +135,29 @@ export default function App() {
       window.visualViewport?.addEventListener('resize', setAppHeight);
       window.visualViewport?.addEventListener('scroll', setAppHeight);
 
+      // iOS Safari ignores `maximum-scale=1` and `user-scalable=no` in
+      // the viewport meta for accessibility, so the user (or an
+      // accidental two-finger touch) can pinch-zoom the page. Once
+      // zoomed, the visual viewport stays shifted right after every
+      // focus/input change and the game/chat gets clipped on the right
+      // edge until full page reload. Cancelling the WebKit-only
+      // `gesturestart`/`gesturechange` events fully suppresses pinch
+      // zoom — and double-tap zoom is killed by touch-action below.
+      const blockGesture = (e: Event) => { e.preventDefault(); };
+      document.addEventListener('gesturestart', blockGesture, { passive: false });
+      document.addEventListener('gesturechange', blockGesture, { passive: false });
+      document.addEventListener('gestureend', blockGesture, { passive: false });
+      // If the page somehow ended up scaled (e.g. native iOS Accessibility
+      // zoom feature), snap visualViewport offsets back to 0 on every
+      // tick so the chat sheet and the game table never render shifted.
+      const snapViewport = () => {
+        if (window.visualViewport && (window.visualViewport.offsetLeft !== 0 || window.visualViewport.offsetTop !== 0)) {
+          window.scrollTo(0, 0);
+        }
+      };
+      window.visualViewport?.addEventListener('scroll', snapViewport);
+      window.visualViewport?.addEventListener('resize', snapViewport);
+
       // PWA install support — manifest link, theme color, apple-touch
       // hints, and service worker registration. The default Expo web
       // template ships none of these, so Chrome won't surface the

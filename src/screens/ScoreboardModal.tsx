@@ -14,6 +14,7 @@ import {
   Modal,
   Dimensions,
   Animated,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
@@ -304,10 +305,12 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 {embedded ? (
                   // Avatar circle instead of a rotated nickname — rotated text
                   // was hard to read on desktop. Initial / emoji fallback keeps
-                  // it readable even without a per-user avatar.
+                  // it readable even without a per-user avatar. On web the
+                  // native browser tooltip surfaces the full nickname on hover.
                   <View
                     style={[styles.headerAvatar, { backgroundColor: avatarBg }]}
                     accessibilityLabel={p.name}
+                    {...(Platform.OS === 'web' ? ({ title: p.name } as any) : {})}
                   >
                     <Text style={styles.headerAvatarText} numberOfLines={1}>
                       {initial}

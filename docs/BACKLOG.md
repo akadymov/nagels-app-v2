@@ -1,17 +1,7 @@
 ## Backlog
 
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
-
-
 ### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
 
-
-### Spectator count indicator on desktop — broken layout, tiny tap target (Akula via feedback, 2026-05-19)
-
-  - defaultExpanded: false
-    ```md
-    Индикатор количества зрителей на десктопном GameTable отображается криво: иконка на одной строке, цифра — на другой. Сама кнопка слишком маленькая. Починить вёрстку и увеличить touch target.
-    ```
 
 ### Post-game scoreboard + "Play again" on host exit (Akhmed, 2026-05-16)
 
@@ -22,9 +12,6 @@
 ### Screenshots in feedback form (PopovIsNit, 2026-05-08)
 
 
-### Bet button reachable from the felt (PopovIsNit, 2026-05-08)
-
-
 ### Push notifications — follow-ups
 
 
@@ -33,6 +20,13 @@
 
 ### Conditional stakes — agree on stake before game, winners earn rating points, losers pay difference
 
+
+### Cross-device user sessions
+
+  - defaultExpanded: false
+    ```md
+    Надо сделать так, чтобы пользователь зайдя с другого устройства при логине попадал в ту игру или комнату, в которой он был, будучи залогиненным на другом устройстве. То есть чтобы полноценно поддерживалась кросс-девайс игра.
+    ```
 
 ### Player stats — game history, win rate, exact bid percentage
 
@@ -46,6 +40,20 @@
 ### Sound effects — card played, bonus earned, turn notification
 
 
+### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
+
+  - defaultExpanded: false
+    ```md
+    Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
+    ```
+
+### In-game messages over avatars even when chat is open (Akula via feedback, 2026-05-20)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас на десктопе с открытым чатом пузырь сообщения над аватаром игрока скрывается — текст идёт только в чат-панель. Хочется чтобы пузырь над аватаром показывался всегда, даже при открытом чате, чтобы видеть кто что сказал прямо за столом.
+    ```
+
 ### Lobby chat — general chat for finding players and socializing
 
 
@@ -57,33 +65,17 @@
 
 ## Next Up
 
-### сохранять курсор в чате
+## In Progress
+
+### Spectator count indicator on desktop — broken layout, tiny tap target (Akula via feedback, 2026-05-19)
 
   - defaultExpanded: false
     ```md
-    После ввода включения в чате сктопия и нажатия клавиши Enter, курсор должен сохраняться в чате.
+    Индикатор количества зрителей на десктопном GameTable отображается криво: иконка на одной строке, цифра — на другой. Сама кнопка слишком маленькая. Починить вёрстку и увеличить touch target.
     ```
 
-### Mobile Safari (iPhone) — GameTable layout breaks after opening chat and going back (Ol via Akula, 2026-05-19)
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
 
-  - defaultExpanded: false
-    ```md
-    На iPhone Safari открытие чата с экрана стола и возврат назад в игру ломает вёрстку GameTable — починить можно только обновлением страницы. Подозрение на iOS Safari viewport/visualViewport reflow при показе/скрытии модалки чата или на оставшийся inert/overflow state на корневом контейнере после закрытия ChatPanel.
-    ```
-
-### Share spectator link from in-game GameTable (Akula via feedback, 2026-05-19)
-
-  - defaultExpanded: false
-    ```md
-    Сейчас поделиться ссылкой для зрителей можно только из WaitingRoom (btn-share-spectator). Добавить ту же возможность прямо из GameTable, чтобы хост мог пригласить зрителя в любой момент партии.
-    ```
-
-### Detailed scoreboard headers — initials/avatar instead of rotated nickname (Akula via feedback, 2026-05-19)
-
-  - defaultExpanded: false
-    ```md
-    На десктопе в детальной части счёта никнеймы показаны вертикально (rotated headers) и плохо читаются. Заменить на инициалы / аватар / простой цветной кружок.
-    ```
 
 ### Host leaves WaitingRoom → kick everyone to lobby (Akula via feedback, 2026-05-19)
 
@@ -92,10 +84,12 @@
     Когда хост выходит из комнаты до старта игры (WaitingRoom), остальные игроки остаются на экране ожидания. Должны автоматически выкидываться в Lobby с уведомлением "комната закрыта". Отличается от «Post-game scoreboard + Play again on host exit» — там сценарий пост-игровой, а тут pre-game.
     ```
 
-## In Progress
+### Mobile Safari (iPhone) — GameTable layout breaks after opening chat and going back (Ol via Akula, 2026-05-19)
 
-### Per-game seat shuffle in private rooms (Akula, 2026-05-08)
-
+  - defaultExpanded: false
+    ```md
+    На iPhone Safari открытие чата с экрана стола и возврат назад в игру ломает вёрстку GameTable — починить можно только обновлением страницы. Подозрение на iOS Safari viewport/visualViewport reflow при показе/скрытии модалки чата или на оставшийся inert/overflow state на корневом контейнере после закрытия ChatPanel.
+    ```
 
 ### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
 
@@ -111,6 +105,37 @@
 
 ### Detailed scoreboard on desktop — embedded in left pane, brief↔detailed toggle, rotated name headers, auto-advance to next hand, cap winner modal at 600px (Akula, 2026-05-18)
 
+
+### Видимый "баттон"
+
+  - defaultExpanded: false
+    ```md
+    Отображать заметную фишку-баттон, которая говорит о том, кто первый начинал ходить в раздаче. Аналогия из покера. Баттон справа от того, кто первый начинает ходить.
+    ```
+
+### Per-game seat shuffle in private rooms (Akula, 2026-05-08)
+
+
+### Share spectator link from in-game GameTable (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас поделиться ссылкой для зрителей можно только из WaitingRoom (btn-share-spectator). Добавить ту же возможность прямо из GameTable, чтобы хост мог пригласить зрителя в любой момент партии.
+    ```
+
+### сохранять курсор в чате
+
+  - defaultExpanded: false
+    ```md
+    После ввода включения в чате сктопия и нажатия клавиши Enter, курсор должен сохраняться в чате.
+    ```
+
+### Detailed scoreboard headers — initials/avatar instead of rotated nickname (Akula via feedback, 2026-05-19)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в детальной части счёта никнеймы показаны вертикально (rotated headers) и плохо читаются. Заменить на инициалы / аватар / простой цветной кружок.
+    ```
 
 ### Real card images in Last Trick pane on desktop (Akula, 2026-05-18)
 
