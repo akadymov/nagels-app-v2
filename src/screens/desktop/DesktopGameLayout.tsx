@@ -15,7 +15,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
+import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
 import { useGameStore, type GameStore } from '../../store/gameStore';
@@ -68,6 +70,7 @@ interface LeftLastTrick {
 
 export const DesktopGameLayout: React.FC<Props> = (props) => {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const isMultiplayer = props.isMultiplayer ?? false;
 
   // ── Multiplayer data sources ──
@@ -200,6 +203,17 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     });
   };
 
+  // Game-over Leave button — confirm + leaveRoom + onExit. Lets every
+  // player drop out to the lobby without waiting for the host's "Play
+  // Again" decision. SP games don't surface this button (no room).
+  const handleLeaveRoom = async () => {
+    const roomId = snapshot?.room?.id;
+    if (!isMultiplayer || !roomId) return;
+    const ok = await leaveWithConfirm(roomId, t, { isHost, context: 'room' });
+    if (!ok) return;
+    props.onExit?.();
+  };
+
   const renderScoreboard = () => (
     <View style={{ flex: 1 }}>
       <ScoreboardModal
@@ -214,6 +228,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
         isMidGame
         onContinue={() => { /* no-op — embedded mode has no Continue */ }}
         onPlayAgain={handlePlayAgain}
+        onLeaveRoom={isMultiplayer ? handleLeaveRoom : undefined}
       />
     </View>
   );
