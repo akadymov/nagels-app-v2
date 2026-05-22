@@ -137,6 +137,30 @@ task hasn't started.
   change together with their tests.
 * **Documentation**: walk through the §2 triggers — are they all closed?
 
+### Test side-effect hygiene
+
+Tests (Playwright smoke / scenario / e2e + the `demo/` Node scripts)
+must not fire user-visible side effects on shared external systems —
+Telegram channel, Web Push, email, analytics. Every new external
+integration added to an edge function MUST either:
+
+1. Be gated on a per-action flag the test can toggle off (the
+   `silent: true` convention on `create_room` is the reference
+   implementation), AND
+2. Auto-detect automated contexts in the client wrapper (`navigator
+   .webdriver === true`) so the gate flips automatically without
+   every spec needing to remember.
+
+When adding a new edge action that produces a side effect: extend the
+action with a `silent?: boolean` flag, branch on it server-side, and
+flip it on automatically in the corresponding `gameClient.*` method
+via `isAutomatedContext()`. When modifying an existing action's
+side-effect surface: re-verify the gate still triggers in tests —
+`grep silent supabase/functions/.../actions/<name>.ts`. **Smoke
+tests run against the author's manual `:8081` dev server pointed at
+prod Supabase**, so a missing gate fires real Telegram messages and
+real push notifications to real recipients.
+
 ## 9. Self-improvement and memory
 
 Two memory layers, no duplication:
