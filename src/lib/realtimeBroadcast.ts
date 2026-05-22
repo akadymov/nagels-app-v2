@@ -49,6 +49,7 @@ export function subscribeRoom(room_id: string) {
       body: String(m.body),
       ts: typeof m.ts === 'number' ? m.ts : Date.now(),
       avatar: m.avatar ?? null,
+      avatarUrl: m.avatarUrl ?? null,
       avatarColor: m.avatarColor ?? null,
       fromSpectator: m.fromSpectator === true,
     });

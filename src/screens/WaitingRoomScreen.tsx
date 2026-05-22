@@ -655,6 +655,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             sessionId: myPlayer.session_id,
             displayName: myPlayer.display_name,
             avatar: (myPlayer as any).avatar ?? null,
+            avatarUrl: (myPlayer as any).avatar_url ?? null,
             avatarColor: (myPlayer as any).avatar_color ?? null,
           };
           if (isSpectator && myPlayerId) {
@@ -663,6 +664,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               sessionId: sp.session_id,
               displayName: sp.display_name,
               avatar: (sp as any).avatar ?? null,
+              avatarUrl: (sp as any).avatar_url ?? null,
               avatarColor: (sp as any).avatar_color ?? null,
             };
           }

@@ -323,27 +323,34 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
               </View>
             )}
 
-            <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>
-              {t('profile.chooseAvatar', 'Choose Avatar')}
-            </Text>
-            <View style={styles.avatarGrid}>
-              <Pressable
-                style={[styles.avatarOption, { backgroundColor: avatarColor }, !selectedAvatar && styles.avatarOptionSelected]}
-                onPress={() => setSelectedAvatar(null)}
-              >
-                <Text style={styles.avatarOptionInitial}>{initial}</Text>
-              </Pressable>
-              {AVATAR_PRESETS.map((emoji) => (
-                <Pressable
-                  key={emoji}
-                  style={[styles.avatarOption, { backgroundColor: colors.surfaceSecondary }, selectedAvatar === emoji && styles.avatarOptionSelected]}
-                  onPress={() => setSelectedAvatar(emoji)}
-                  testID={`avatar-${emoji}`}
-                >
-                  <Text style={styles.avatarOptionEmoji}>{emoji}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* Hide the emoji picker for Google-linked accounts — their
+             *  avatar comes from the Google profile picture, so an
+             *  emoji selection would never win against avatar_url. */}
+            {!hasGoogleIdentity(user) && (
+              <>
+                <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>
+                  {t('profile.chooseAvatar', 'Choose Avatar')}
+                </Text>
+                <View style={styles.avatarGrid}>
+                  <Pressable
+                    style={[styles.avatarOption, { backgroundColor: avatarColor }, !selectedAvatar && styles.avatarOptionSelected]}
+                    onPress={() => setSelectedAvatar(null)}
+                  >
+                    <Text style={styles.avatarOptionInitial}>{initial}</Text>
+                  </Pressable>
+                  {AVATAR_PRESETS.map((emoji) => (
+                    <Pressable
+                      key={emoji}
+                      style={[styles.avatarOption, { backgroundColor: colors.surfaceSecondary }, selectedAvatar === emoji && styles.avatarOptionSelected]}
+                      onPress={() => setSelectedAvatar(emoji)}
+                      testID={`avatar-${emoji}`}
+                    >
+                      <Text style={styles.avatarOptionEmoji}>{emoji}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             {isLoggedIn && (
               <>

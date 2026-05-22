@@ -980,6 +980,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           lastPoints: lastHandPoints,
           madeBet: p.bet !== null && p.tricksWon === p.bet,
           avatar: p.avatar ?? null,
+          avatarUrl: p.avatarUrl ?? null,
           avatarColor: p.avatarColor ?? null,
         };
       })
@@ -1551,6 +1552,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 sessionId: senderSrc.session_id,
                 displayName: senderSrc.display_name,
                 avatar: senderSrc.avatar ?? null,
+                avatarUrl: senderSrc.avatar_url ?? null,
                 avatarColor: senderSrc.avatar_color ?? null,
               } : null}
               testIdPrefix="chat"

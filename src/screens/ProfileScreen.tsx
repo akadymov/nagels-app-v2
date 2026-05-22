@@ -156,41 +156,44 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
           </View>
         </View>
 
-        {/* Avatar picker */}
-        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t('profile.chooseAvatar', 'Choose Avatar')}
-          </Text>
-          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
-            {t('profile.avatarOptional', 'Optional — default shows your initial')}
-          </Text>
-          <View style={styles.avatarGrid}>
-            {/* Default (initial) option */}
-            <Pressable
-              style={[
-                styles.avatarOption,
-                { backgroundColor: avatarColor },
-                !selectedAvatar && styles.avatarOptionSelected,
-              ]}
-              onPress={() => setSelectedAvatar(null)}
-            >
-              <Text style={styles.avatarOptionInitial}>{initial}</Text>
-            </Pressable>
-            {AVATAR_PRESETS.map((emoji) => (
+        {/* Avatar picker — Google-linked users get their avatar from
+         *  user_metadata.avatar_url, so the emoji picker is hidden. */}
+        {!isGoogleLinked && (
+          <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {t('profile.chooseAvatar', 'Choose Avatar')}
+            </Text>
+            <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
+              {t('profile.avatarOptional', 'Optional — default shows your initial')}
+            </Text>
+            <View style={styles.avatarGrid}>
+              {/* Default (initial) option */}
               <Pressable
-                key={emoji}
                 style={[
                   styles.avatarOption,
-                  { backgroundColor: colors.surfaceSecondary },
-                  selectedAvatar === emoji && styles.avatarOptionSelected,
+                  { backgroundColor: avatarColor },
+                  !selectedAvatar && styles.avatarOptionSelected,
                 ]}
-                onPress={() => setSelectedAvatar(emoji)}
+                onPress={() => setSelectedAvatar(null)}
               >
-                <Text style={styles.avatarOptionEmoji}>{emoji}</Text>
+                <Text style={styles.avatarOptionInitial}>{initial}</Text>
               </Pressable>
-            ))}
+              {AVATAR_PRESETS.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  style={[
+                    styles.avatarOption,
+                    { backgroundColor: colors.surfaceSecondary },
+                    selectedAvatar === emoji && styles.avatarOptionSelected,
+                  ]}
+                  onPress={() => setSelectedAvatar(emoji)}
+                >
+                  <Text style={styles.avatarOptionEmoji}>{emoji}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Link Google — official brand-styled button */}
         <GoogleButton

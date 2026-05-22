@@ -23,6 +23,7 @@ import { avatarColorFor } from '../utils/avatarColor';
 import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { OnboardingTip } from '../components/OnboardingTip';
+import { UserAvatar } from '../components/UserAvatar';
 
 // Compact result row for one player in a closed hand.
 export interface HandResultRow {
@@ -53,6 +54,8 @@ export interface PlayerScore {
   madeBet: boolean;
   /** Avatar emoji from auth metadata. Null/undefined → render initial. */
   avatar?: string | null;
+  /** Profile picture URL (Google `avatar_url`). Wins over the emoji. */
+  avatarUrl?: string | null;
   /** Avatar color hex; falls back to a deterministic seat-based color. */
   avatarColor?: string | null;
 }
@@ -184,11 +187,15 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         <Animated.Text style={[styles.winnerConfetti, { transform: [{ scale: confettiScale }] }]}>
           🎉🏆🎉
         </Animated.Text>
-        <View style={[styles.winnerAvatar, { backgroundColor: avatarBg }]}>
-          <Text style={styles.winnerAvatarText}>
-            {winner.avatar || (winner.name?.[0] ?? '?').toUpperCase()}
-          </Text>
-        </View>
+        <UserAvatar
+          avatarUrl={winner.avatarUrl}
+          emoji={winner.avatar}
+          fallback={(winner.name?.[0] ?? '?').toUpperCase()}
+          backgroundColor={avatarBg}
+          size={64}
+          textSize={30}
+          style={{ marginVertical: 4 }}
+        />
         <Text style={[styles.winnerGameOverLabel, { color: colors.textMuted }]} numberOfLines={1}>
           {t('scoreboard.gameOver')}
         </Text>
@@ -237,11 +244,15 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             <Text style={[styles.compactRank, { color: isWinner ? colors.success : colors.textMuted, fontWeight: isWinner ? '800' : '600' }]}>
               {isWinner ? '🏆' : i + 1}
             </Text>
-            <View style={[styles.scoreboardAvatar, { backgroundColor: avatarBg }]}>
-              <Text style={styles.scoreboardAvatarText}>
-                {p.avatar || (p.name?.[0] ?? '?').toUpperCase()}
-              </Text>
-            </View>
+            <UserAvatar
+              avatarUrl={p.avatarUrl}
+              emoji={p.avatar}
+              fallback={(p.name?.[0] ?? '?').toUpperCase()}
+              backgroundColor={avatarBg}
+              size={26}
+              textSize={12}
+              style={{ marginHorizontal: 6 }}
+            />
             <Text style={[styles.compactName, { color: colors.textPrimary, fontWeight: isWinner ? '700' : '500' }]} numberOfLines={1}>{p.name}</Text>
             <Text style={[styles.compactScore, { color: isWinner ? colors.success : colors.accent, fontWeight: isWinner ? '800' : '700' }]}>{p.totalScore}</Text>
             <View style={[styles.compactLastHand, { backgroundColor: p.madeBet ? 'rgba(48,133,82,0.15)' : 'rgba(177,0,0,0.1)' }]}>
@@ -320,12 +331,16 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                         try { (node as HTMLElement).title = p.name; } catch {}
                       }
                     }}
-                    style={[styles.headerAvatar, { backgroundColor: avatarBg }]}
                     accessibilityLabel={p.name}
                   >
-                    <Text style={styles.headerAvatarText} numberOfLines={1}>
-                      {initial}
-                    </Text>
+                    <UserAvatar
+                      avatarUrl={p.avatarUrl}
+                      emoji={p.avatar}
+                      fallback={initial}
+                      backgroundColor={avatarBg}
+                      size={32}
+                      textSize={14}
+                    />
                   </View>
                 ) : (
                   <Text style={[styles.headerText, { color: colors.textPrimary }]} numberOfLines={2}>
