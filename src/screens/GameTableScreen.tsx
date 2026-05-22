@@ -60,6 +60,7 @@ import {
 } from '../../supabase/functions/_shared/engine/rules';
 import type { PlayerScore } from './ScoreboardModal';
 import { avatarColorFor } from '../utils/avatarColor';
+import { UserAvatar } from '../components/UserAvatar';
 import { bonusEarnedHaptic, gameWonHaptic } from '../utils/haptics';
 
 
@@ -352,6 +353,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     msSinceSeen: number | null;
     /** Avatar emoji chosen by the player; null/undefined → use initial. */
     avatar?: string | null;
+    /** Profile picture URL (Google `avatar_url`/`picture`); wins over emoji. */
+    avatarUrl?: string | null;
     /** Avatar background color hex; null/undefined → seat-based default. */
     avatarColor?: string | null;
   };
@@ -381,6 +384,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           hand: p.session_id === myPlayerId ? myHandStrings.map(parseCard) : [],
           msSinceSeen,
           avatar: (p as any).avatar ?? null,
+          avatarUrl: (p as any).avatar_url ?? null,
           avatarColor: (p as any).avatar_color ?? null,
         };
       });
@@ -1361,14 +1365,15 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                       testID="dealer-button"
                     >D</Text>
                   )}
-                  <View style={[
-                    styles.profileAvatar,
-                    { backgroundColor: vm.myPlayer.avatarColor || avatarColorFor(vm.myPlayer.id) },
-                  ]}>
-                    <Text style={styles.profileAvatarText}>
-                      {vm.myPlayer.avatar || vm.myPlayer.name[0]}
-                    </Text>
-                  </View>
+                  <UserAvatar
+                    avatarUrl={vm.myPlayer.avatarUrl}
+                    emoji={vm.myPlayer.avatar}
+                    fallback={vm.myPlayer.name[0]}
+                    backgroundColor={vm.myPlayer.avatarColor || avatarColorFor(vm.myPlayer.id)}
+                    size={36}
+                    textSize={16}
+                    style={{ marginBottom: 3 }}
+                  />
                   <Text style={styles.profileName} numberOfLines={1}>{vm.myPlayer.name}</Text>
                   <Text style={styles.profileStats}>Bet:{vm.myPlayer.bet ?? '-'} Won:{vm.myPlayer.tricksWon}</Text>
                 </View>
@@ -1414,11 +1419,15 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     >D</Text>
                   )}
                   {isOffline && <Text style={styles.offlineBadge}>📡</Text>}
-                  <View style={[styles.profileAvatar, { backgroundColor: avatarBg }]}>
-                    <Text style={styles.profileAvatarText}>
-                      {player.avatar || player.name[0]}
-                    </Text>
-                  </View>
+                  <UserAvatar
+                    avatarUrl={player.avatarUrl}
+                    emoji={player.avatar}
+                    fallback={player.name[0]}
+                    backgroundColor={avatarBg}
+                    size={36}
+                    textSize={16}
+                    style={{ marginBottom: 3 }}
+                  />
                   <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
                   <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
                 </View>

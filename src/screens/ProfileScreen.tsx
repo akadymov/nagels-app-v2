@@ -21,6 +21,7 @@ import { useAuthStore } from '../store/authStore';
 import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from '../components/GoogleButton';
+import { UserAvatar } from '../components/UserAvatar';
 
 export interface ProfileScreenProps {
   onBack: () => void;
@@ -101,13 +102,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <View style={[styles.avatarCircle, { backgroundColor: avatarColor }]}>
-            {selectedAvatar ? (
-              <Text style={styles.avatarEmoji}>{selectedAvatar}</Text>
-            ) : (
-              <Text style={styles.avatarInitial}>{initial}</Text>
-            )}
-          </View>
+          <UserAvatar
+            avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
+            emoji={selectedAvatar}
+            fallback={initial}
+            backgroundColor={avatarColor}
+            size={80}
+            textSize={40}
+          />
           {!isGuest && user?.email && (
             <>
               <Text style={[styles.emailText, { color: colors.textMuted }]}>

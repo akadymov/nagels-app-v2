@@ -34,6 +34,7 @@ import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { buildInviteLink } from '../utils/inviteLink';
 import { avatarColorFor } from '../utils/avatarColor';
+import { UserAvatar } from '../components/UserAvatar';
 import { useChatStore } from '../store/chatStore';
 import { useSystemEventStore } from '../store/systemEventStore';
 import { ChatPanel } from '../components/ChatPanel';
@@ -442,6 +443,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             // fall back to a session-id-hashed color (random-looking, stable).
             const avatarBg = (player as any).avatar_color || avatarColorFor(player.session_id);
             const avatarEmoji = (player as any).avatar as string | null | undefined;
+            const avatarUrl = (player as any).avatar_url as string | null | undefined;
             return (
               <View key={player.session_id} style={styles.playerCardWrap}>
                 <GlassCard
@@ -452,11 +454,14 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                     isOffline && { opacity: 0.5 },
                   ]}
                 >
-                  <View style={[styles.seatBadge, { backgroundColor: avatarBg }]}>
-                    <Text style={[styles.seatNumber, { color: '#ffffff' }]}>
-                      {avatarEmoji || (player.display_name?.[0] ?? '?').toUpperCase()}
-                    </Text>
-                  </View>
+                  <UserAvatar
+                    avatarUrl={avatarUrl}
+                    emoji={avatarEmoji}
+                    fallback={(player.display_name?.[0] ?? '?').toUpperCase()}
+                    backgroundColor={avatarBg}
+                    size={24}
+                    textSize={12}
+                  />
                   <View style={styles.playerInfo}>
                     <Text style={[styles.playerName, { color: colors.textPrimary }]}>
                       {player.display_name}

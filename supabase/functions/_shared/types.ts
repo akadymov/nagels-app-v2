@@ -33,6 +33,7 @@ export interface Spectator {
   session_id: string;
   display_name: string;
   avatar?: string | null;
+  avatar_url?: string | null;
   avatar_color?: string | null;
   joined_at: string;
 }
@@ -68,6 +69,9 @@ export interface RoomSnapshot {
     /** User-chosen avatar emoji from auth.users.raw_user_meta_data.avatar.
      *  Null/undefined → render initial+color fallback (default avatar). */
     avatar?: string | null;
+    /** Profile picture URL (Google `avatar_url` / `picture`). Wins over
+     *  the emoji when both are set. */
+    avatar_url?: string | null;
     /** User-chosen avatar color hex (#RRGGBB). Null → seat-based default. */
     avatar_color?: string | null;
   }>;
