@@ -19,6 +19,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n/config';
 import { signOut } from '../lib/supabase/authService';
+import { UserAvatar } from '../components/UserAvatar';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -135,9 +136,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
             случае, если игрок уже залогинен". */}
         {isLoggedIn && (
           <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.accent }]} testID="welcome-profile">
-            <Text style={[styles.profileAvatar, { color: colors.accent }]}>
-              {(user?.user_metadata?.avatar as string | undefined) || '🦈'}
-            </Text>
+            <UserAvatar
+              avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
+              emoji={(user?.user_metadata?.avatar as string | undefined) ?? '🦈'}
+              fallback={((user?.user_metadata?.display_name as string | undefined) || user?.email || 'P')[0].toUpperCase()}
+              backgroundColor={colors.accent}
+              size={40}
+              textSize={28}
+            />
             <View style={styles.profileText}>
               <Text style={[styles.profileName, { color: colors.textPrimary }]} numberOfLines={1}>
                 {(user?.user_metadata?.display_name as string | undefined) || user?.email?.split('@')[0] || 'Player'}

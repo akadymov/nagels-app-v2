@@ -36,6 +36,7 @@ import { isMobileWeb, isStandalone } from '../lib/pwaInstall';
 import { SaveProgressModal } from '../components/SaveProgressModal';
 import { shouldShowBeforeCreateRoom } from '../lib/auth/promptGate';
 import { useNavigation } from '@react-navigation/native';
+import { UserAvatar } from '../components/UserAvatar';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -377,9 +378,16 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       >
         {/* Nickname */}
         <View style={[styles.nicknameRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.nicknameIcon, { color: colors.textMuted }]}>
-            {(user?.user_metadata?.avatar as string | undefined) || '🦈'}
-          </Text>
+          <View style={{ marginRight: Spacing.sm }}>
+            <UserAvatar
+              avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
+              emoji={(user?.user_metadata?.avatar as string | undefined) ?? '🦈'}
+              fallback={(nameInput || playerName || 'P')[0].toUpperCase()}
+              backgroundColor={colors.surfaceSecondary}
+              size={28}
+              textSize={18}
+            />
+          </View>
           <TextInput
             style={[styles.nicknameInput, { color: colors.textPrimary }]}
             value={nameInput}

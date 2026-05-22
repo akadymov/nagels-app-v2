@@ -22,6 +22,7 @@ import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
 import { gameClient } from '../lib/gameClient';
+import { UserAvatar } from './UserAvatar';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail, setUserPassword } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from './GoogleButton';
@@ -282,13 +283,14 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
             )}
 
             <View style={styles.avatarRow}>
-              <View style={[styles.avatarCircle, { backgroundColor: avatarColor }]}>
-                {selectedAvatar ? (
-                  <Text style={styles.avatarEmoji}>{selectedAvatar}</Text>
-                ) : (
-                  <Text style={styles.avatarInitial}>{initial}</Text>
-                )}
-              </View>
+              <UserAvatar
+                avatarUrl={(user?.user_metadata?.avatar_url as string | undefined) ?? null}
+                emoji={selectedAvatar}
+                fallback={initial}
+                backgroundColor={avatarColor}
+                size={56}
+                textSize={28}
+              />
               {isLoggedIn && (
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.emailText, { color: colors.textMuted }]}>{user?.email}</Text>
