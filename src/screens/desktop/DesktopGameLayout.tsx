@@ -99,6 +99,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     sessionId: senderSrc.session_id,
     displayName: senderSrc.display_name,
     avatar: senderSrc.avatar ?? null,
+    avatarUrl: senderSrc.avatar_url ?? null,
     avatarColor: senderSrc.avatar_color ?? null,
   } : null;
 
@@ -157,6 +158,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
               lastPoints: won + bonus,
               madeBet,
               avatar: p.avatar ?? null,
+              avatarUrl: p.avatar_url ?? null,
               avatarColor: p.avatar_color ?? null,
             };
           })
@@ -180,6 +182,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
             lastPoints: won + bonus,
             madeBet,
             avatar: (p as any).avatar ?? null,
+            avatarUrl: (p as any).avatarUrl ?? null,
             avatarColor: (p as any).avatarColor ?? null,
           };
         })

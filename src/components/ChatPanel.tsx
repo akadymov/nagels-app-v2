@@ -23,6 +23,7 @@ import { useChatStore } from '../store/chatStore';
 import { useRoomStore } from '../store/roomStore';
 import { sendChatMessage } from '../lib/realtimeBroadcast';
 import { avatarColorFor } from '../utils/avatarColor';
+import { UserAvatar } from './UserAvatar';
 
 export interface ChatPanelProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export interface ChatPanelProps {
     sessionId: string;
     displayName: string;
     avatar?: string | null;
+    avatarUrl?: string | null;
     avatarColor?: string | null;
   } | null;
   /** Field testID prefix — lets the demo find betting-chat-input vs.
@@ -178,6 +180,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       body,
       ts: Date.now(),
       avatar: sender.avatar ?? null,
+      avatarUrl: sender.avatarUrl ?? null,
       avatarColor: sender.avatarColor ?? null,
       // Snapshot the spectator flag at send time, not render time, so
       // the message keeps its origin even if the user later takes a seat.
@@ -236,11 +239,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               return (
                 <View style={[styles.row, isMe ? styles.rowMe : styles.rowOther]}>
                   {!isMe && (
-                    <View style={[styles.avatar, { backgroundColor: bg }]}>
-                      <Text style={styles.avatarText}>
-                        {item.avatar || (item.displayName?.[0] ?? '?').toUpperCase()}
-                      </Text>
-                    </View>
+                    <UserAvatar
+                      avatarUrl={item.avatarUrl}
+                      emoji={item.avatar}
+                      fallback={(item.displayName?.[0] ?? '?').toUpperCase()}
+                      backgroundColor={bg}
+                      size={28}
+                      textSize={14}
+                    />
                   )}
                   <View
                     style={[

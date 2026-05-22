@@ -7,6 +7,7 @@ export interface ChatMessage {
   body: string;
   ts: number;       // ms since epoch
   avatar?: string | null;
+  avatarUrl?: string | null;
   avatarColor?: string | null;
   /** True when the sender was a spectator at the time the message was
    *  broadcast. Optional for backwards-compat with older payloads. */

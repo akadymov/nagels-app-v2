@@ -525,6 +525,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             sessionId: myPlayer.session_id,
             displayName: myPlayer.display_name,
             avatar: (myPlayer as any).avatar ?? null,
+            avatarUrl: (myPlayer as any).avatar_url ?? null,
             avatarColor: (myPlayer as any).avatar_color ?? null,
           } : null}
           testIdPrefix="betting-chat"

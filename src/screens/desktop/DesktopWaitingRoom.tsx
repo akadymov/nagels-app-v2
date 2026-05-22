@@ -34,6 +34,7 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
     sessionId: senderSrc.session_id,
     displayName: senderSrc.display_name,
     avatar: senderSrc.avatar ?? null,
+    avatarUrl: senderSrc.avatar_url ?? null,
     avatarColor: senderSrc.avatar_color ?? null,
   } : null;
 
