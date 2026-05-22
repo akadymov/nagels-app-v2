@@ -154,6 +154,9 @@ export const gameClient = {
   restartGame: (room_id: string) =>
     postAction(null, { kind: 'restart_game', room_id }),
 
+  setDisplayName: (display_name: string, room_id?: string) =>
+    postAction(null, { kind: 'set_display_name', display_name, room_id }),
+
   refreshSnapshot: async (room_id: string): Promise<void> => {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.rpc('get_room_state', { p_room_id: room_id });

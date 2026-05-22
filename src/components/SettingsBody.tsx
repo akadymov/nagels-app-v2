@@ -20,6 +20,8 @@ import { Spacing, Radius, TextStyles } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useSettingsStore, type ThemePreference } from '../store/settingsStore';
 import { useAuthStore } from '../store/authStore';
+import { useRoomStore } from '../store/roomStore';
+import { gameClient } from '../lib/gameClient';
 import { signOut, updateUserMetadata, resetPasswordForEmail, resendConfirmationEmail, setUserPassword } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from './GoogleButton';
@@ -130,6 +132,17 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
       useAuthStore.getState().setUser(updated, !!updated.is_anonymous);
       useAuthStore.getState().setDisplayName(nickname.trim());
       await setPlayerNameInStorage(nickname.trim()).catch(() => {});
+      // Propagate the new name into the current room (if any) so other
+      // players see it live. Avatar/color come from auth.users metadata
+      // directly in get_room_state, so they ride along on the broadcast.
+      const activeRoomId = useRoomStore.getState().snapshot?.room?.id ?? null;
+      if (activeRoomId) {
+        try {
+          await gameClient.setDisplayName(nickname.trim(), activeRoomId);
+        } catch (err) {
+          console.warn('[settings] propagate display_name failed:', err);
+        }
+      }
       setAlertMessage(String(t('profile.saved', 'Profile saved')));
       setShowConfirmAlert(true);
       setTimeout(() => setShowConfirmAlert(false), 3000);
