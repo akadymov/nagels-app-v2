@@ -15,7 +15,8 @@ export type PushEvent =
 
 export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room' | 'ready' | 'start_game'
-  | 'place_bet'   | 'play_card' | 'continue_hand' | 'request_timeout' | 'restart_game';
+  | 'place_bet'   | 'play_card' | 'continue_hand' | 'request_timeout' | 'restart_game'
+  | 'set_display_name';
 
 function seatToSession(snap: RoomSnapshot, seat: number): string | null {
   return snap.players.find((p) => p.seat_index === seat)?.session_id ?? null;

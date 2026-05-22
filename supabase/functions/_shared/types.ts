@@ -4,7 +4,8 @@ export type ActionKind =
   | 'place_bet' | 'play_card' | 'continue_hand'
   | 'record_tricks'
   | 'request_timeout'
-  | 'restart_game';
+  | 'restart_game'
+  | 'set_display_name';
 
 export type RoomMode = 'standard' | 'scorekeeper';
 
@@ -19,7 +20,8 @@ export type Action =
   | { kind: 'continue_hand'; room_id: string; hand_id: string }
   | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
-  | { kind: 'restart_game'; room_id: string };
+  | { kind: 'restart_game'; room_id: string }
+  | { kind: 'set_display_name'; display_name: string; room_id?: string };
 
 export interface ActorContext {
   auth_user_id: string;

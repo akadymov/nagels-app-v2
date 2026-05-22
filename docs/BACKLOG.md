@@ -62,47 +62,6 @@
 
 ## Next Up
 
-### Offline scorekeeper — record real-life game results without card dealing, manual score entry
-
-  - defaultExpanded: false
-    ```md
-    Новый room mode для оффлайн-партий — комната работает как электронный «арбитр», карты не раздаются.
-
-    **Flow**
-    - Хост при создании приватной комнаты выбирает Mode: Standard / Scorekeeper (фиксируется после создания).
-    - Игра стартует, но dealt_cards не пишется. Сразу идёт фаза `betting` в обычном порядке (десцендент по карт-капу, host pick для 1/2-карточных раздач — как сейчас).
-    - После закрытия всех ставок hand переходит в новую фазу `tricks_recording` (вместо `playing`).
-    - Каждый игрок сам видит ±-стейппер для своей заявки. Сервер пишет hand_trick_claims(hand_id, session_id, n).
-    - Когда у всех есть claim И sum == cards_dealt → авто-переход в `closed`, hand_scores инсертится как обычно, дальше существующий cycle.
-    - При sum ≠ cards_dealt: broadcast `tricks_mismatch` всем, баннер на столе, заявки НЕ сбрасываются, каждый правит свою.
-
-    **DB (1 миграция)**
-    - rooms.mode TEXT NOT NULL DEFAULT 'standard' CHECK ('standard'|'scorekeeper')
-    - hands.phase допускает 'tricks_recording'
-    - CREATE TABLE hand_trick_claims (hand_id UUID, session_id UUID, tricks_claimed INT, PRIMARY KEY (hand_id, session_id))
-    - RPC claim_tricks(p_hand_id, p_tricks) — upsert + sum-check + автопереход в closed
-    - create_room принимает p_mode
-
-    **Engine**
-    - start_hand в scorekeeper-режиме skip dealt_cards INSERT
-    - place_bet_action на последней ставке — в scorekeeper-режиме phase=tricks_recording, иначе playing (как сейчас)
-
-    **UI**
-    - PrivateRoom create form: toggle Standard / Scorekeeper
-    - GameTableScreen: hide hand row + trick area когда rooms.mode='scorekeeper' && phase=='tricks_recording', смонтировать TricksRecorder
-    - TricksRecorder: ±-стейппер для своей заявки + сводка кто сколько заявил
-    - Mismatch banner сверху стола: «Сумма не сходится — кто-то ошибся»
-    - i18n: ~15 строк × EN/RU/ES
-
-    **UX-решения**
-    - Каждый вводит сам (не один хост за всех).
-    - Mismatch → баннер всем, claims остаются (минимум кликов когда ошибся один).
-    - Mode toggle при создании, потом фикс.
-
-    SP-режим пока не трогаем — фича только для multiplayer комнат.
-    ```
-
-
 ## In Progress
 
 ### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
@@ -113,6 +72,13 @@
 
 ## Done
 
+### Guests can change visible nickname during the game (Akula, 2026-05-21)
+
+  - defaultExpanded: false
+    ```md
+    Settings → Profile nickname input уже был доступен через шестерёнку прямо за столом, но изменение не пробрасывалось в открытую игру — `room_sessions.display_name` фиксировался при join. Теперь после save в Settings клиент дополнительно вызывает новое edge-action `set_display_name`, которое обновляет `room_sessions.display_name` и бампит `rooms.version` → всем игрокам прилетает state_changed и они подтягивают новое имя через get_room_state. Avatar/avatar_color уже читались напрямую из auth.users.raw_user_meta_data, так что они проезжают на том же broadcast'е.
+    ```
+
 ### Detailed scoreboard on desktop — embedded in left pane, brief↔detailed toggle, rotated name headers, auto-advance to next hand, cap winner modal at 600px (Akula, 2026-05-18)
 
 
@@ -121,6 +87,46 @@
   - defaultExpanded: false
     ```md
     Когда хост выходит из комнаты до старта игры (WaitingRoom), остальные игроки остаются на экране ожидания. Должны автоматически выкидываться в Lobby с уведомлением "комната закрыта". Отличается от «Post-game scoreboard + Play again on host exit» — там сценарий пост-игровой, а тут pre-game.
+    ```
+
+### Offline scorekeeper — record real-life game results without card dealing, manual score entry
+
+  - defaultExpanded: false
+    ```md
+    Новый room mode для оффлайн-партий — комната работает как электронный «арбитр», карты не раздаются.
+    
+    **Flow**
+    - Хост при создании приватной комнаты выбирает Mode: Standard / Scorekeeper (фиксируется после создания).
+    - Игра стартует, но dealt_cards не пишется. Сразу идёт фаза `betting` в обычном порядке (десцендент по карт-капу, host pick для 1/2-карточных раздач — как сейчас).
+    - После закрытия всех ставок hand переходит в новую фазу `tricks_recording` (вместо `playing`).
+    - Каждый игрок сам видит ±-стейппер для своей заявки. Сервер пишет hand_trick_claims(hand_id, session_id, n).
+    - Когда у всех есть claim И sum == cards_dealt → авто-переход в `closed`, hand_scores инсертится как обычно, дальше существующий cycle.
+    - При sum ≠ cards_dealt: broadcast `tricks_mismatch` всем, баннер на столе, заявки НЕ сбрасываются, каждый правит свою.
+    
+    **DB (1 миграция)**
+    - rooms.mode TEXT NOT NULL DEFAULT 'standard' CHECK ('standard'|'scorekeeper')
+    - hands.phase допускает 'tricks_recording'
+    - CREATE TABLE hand_trick_claims (hand_id UUID, session_id UUID, tricks_claimed INT, PRIMARY KEY (hand_id, session_id))
+    - RPC claim_tricks(p_hand_id, p_tricks) — upsert + sum-check + автопереход в closed
+    - create_room принимает p_mode
+    
+    **Engine**
+    - start_hand в scorekeeper-режиме skip dealt_cards INSERT
+    - place_bet_action на последней ставке — в scorekeeper-режиме phase=tricks_recording, иначе playing (как сейчас)
+    
+    **UI**
+    - PrivateRoom create form: toggle Standard / Scorekeeper
+    - GameTableScreen: hide hand row + trick area когда rooms.mode='scorekeeper' && phase=='tricks_recording', смонтировать TricksRecorder
+    - TricksRecorder: ±-стейппер для своей заявки + сводка кто сколько заявил
+    - Mismatch banner сверху стола: «Сумма не сходится — кто-то ошибся»
+    - i18n: ~15 строк × EN/RU/ES
+    
+    **UX-решения**
+    - Каждый вводит сам (не один хост за всех).
+    - Mismatch → баннер всем, claims остаются (минимум кликов когда ошибся один).
+    - Mode toggle при создании, потом фикс.
+    
+    SP-режим пока не трогаем — фича только для multiplayer комнат.
     ```
 
 ### Mobile Safari (iPhone) — GameTable layout breaks after opening chat and going back (Ol via Akula, 2026-05-19)
