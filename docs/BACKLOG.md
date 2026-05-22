@@ -9,6 +9,13 @@
 ### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
 
 
+### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
+
+  - defaultExpanded: false
+    ```md
+    Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
+    ```
+
 ### Screenshots in feedback form (PopovIsNit, 2026-05-08)
 
 
@@ -37,20 +44,6 @@
 ### Sound effects — card played, bonus earned, turn notification
 
 
-### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
-
-  - defaultExpanded: false
-    ```md
-    Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
-    ```
-
-### In-game messages over avatars even when chat is open (Akula via feedback, 2026-05-20)
-
-  - defaultExpanded: false
-    ```md
-    Сейчас на десктопе с открытым чатом пузырь сообщения над аватаром игрока скрывается — текст идёт только в чат-панель. Хочется чтобы пузырь над аватаром показывался всегда, даже при открытом чате, чтобы видеть кто что сказал прямо за столом.
-    ```
-
 ### Lobby chat — general chat for finding players and socializing
 
 
@@ -61,6 +54,20 @@
 
 
 ## Next Up
+
+### BettingPhase desktop — chat opens from bottom, not from side (Akula via feedback, 2026-05-22)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в мультиплеере на экране ставок нажатие кнопки чата открывает чат снизу, а не сбоку. Поведение должно совпадать с GameTable, где чат на десктопе открывается в боковой панели.
+    ```
+
+### Detailed scoreboard desktop — first-player icon stuck on the left across all rounds (Akula via feedback, 2026-05-22)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в детализированном счёте иконка первого игрока всегда находится слева во всех раундах — то есть отображает неверную информацию о том, кто начинал раздачу. Должна сдвигаться по реальной ротации (как в brief-варианте / в соответствии с ▶ first player).
+    ```
 
 ## In Progress
 
@@ -165,6 +172,13 @@
   - defaultExpanded: false
     ```md
     Сейчас поделиться ссылкой для зрителей можно только из WaitingRoom (btn-share-spectator). Добавить ту же возможность прямо из GameTable, чтобы хост мог пригласить зрителя в любой момент партии.
+    ```
+
+### In-game messages over avatars even when chat is open (Akula via feedback, 2026-05-20)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас на десктопе с открытым чатом пузырь сообщения над аватаром игрока скрывается — текст идёт только в чат-панель. Хочется чтобы пузырь над аватаром показывался всегда, даже при открытом чате, чтобы видеть кто что сказал прямо за столом.
     ```
 
 ### сохранять курсор в чате

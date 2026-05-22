@@ -215,7 +215,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const [showChat, setShowChat] = useState(false);
   useChatTooltipListener({
     selfSessionId: myPlayer?.session_id ?? null,
-    isChatOpen: showChat,
+    // On desktop the chat lives in DesktopGameLayout's right pane, so
+    // its visibility is owned by desktopUI.chatVisible. Mobile / SP
+    // fall back to the local modal toggle.
+    isChatOpen: desktopUI ? !!desktopUI.chatVisible : showChat,
     // Hook runs unconditionally before the `if (!visible) return null`
     // guard below; gate it so the GameTable listener owns the stream
     // when the betting overlay isn't on screen.
@@ -516,8 +519,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         titleKey="onboarding.biddingTitle"
         bodyKey="onboarding.biddingBody"
       />
-      {/* Chat panel — multiplayer only. */}
-      {isMultiplayer && (
+      {/* Chat panel — multiplayer only. Skipped on desktop because
+          DesktopGameLayout already mounts an inline ChatPanel in the
+          right pane; mounting a second modal version on top would
+          slide a bottom-sheet over the bidding UI. */}
+      {isMultiplayer && !desktopUI && (
         <ChatPanel
           visible={showChat}
           onClose={() => setShowChat(false)}
@@ -687,8 +693,12 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             </Pressable>
             <Pressable
               onPress={() => {
-                setShowChat(true);
-                useChatTooltipStore.getState().dismissAll();
+                if (!isMultiplayer) return;
+                if (desktopUI) desktopUI.toggleChat();
+                else {
+                  setShowChat(true);
+                  useChatTooltipStore.getState().dismissAll();
+                }
               }}
               disabled={!isMultiplayer}
               style={[
@@ -699,13 +709,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   borderColor: colors.glassLight,
                   opacity: isMultiplayer ? 1 : 0.3,
                 },
+                desktopUI?.chatVisible && isMultiplayer && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="betting-btn-chat"
               hitSlop={8}
             >
-              <Icon name="chat" color={colors.iconButtonText} size={20} />
+              <Icon
+                name="chat"
+                color={desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText}
+                size={20}
+              />
               {isDesktop && (
-                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: desktopUI?.chatVisible && isMultiplayer ? '#ffffff' : colors.iconButtonText }]}>
                   {t('game.chat')}
                 </Text>
               )}
@@ -783,7 +798,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   <PlayerChatTooltip
                     sessionId={player.session_id}
                     onPress={() => {
-                      setShowChat(true);
+                      if (desktopUI) {
+                        if (!desktopUI.chatVisible) desktopUI.toggleChat();
+                      } else {
+                        setShowChat(true);
+                      }
                       useChatTooltipStore.getState().dismissAll();
                     }}
                   />

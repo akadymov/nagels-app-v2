@@ -58,6 +58,12 @@ export interface PlayerScore {
   avatarUrl?: string | null;
   /** Avatar color hex; falls back to a deterministic seat-based color. */
   avatarColor?: string | null;
+  /** Seat index at the table (0-based). The detailed table uses this to
+   *  decide which column shows the ▶ "started this hand" badge — without
+   *  it the comparison falls back to the player's index in the sorted
+   *  list, which always lands the ▶ on the leftmost (highest-scoring)
+   *  column regardless of who actually led. */
+  seatIndex?: number;
 }
 
 export interface ScoreboardModalProps {
@@ -114,17 +120,32 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     if (scoreHistory && scoreHistory.length > 0) return scoreHistory;
     const sh = snapshot?.score_history ?? [];
     if (!sh.length) return [];
-    return sh.map((h) => ({
-      handNumber: h.hand_number,
-      startingPlayerIndex: 0,
-      results: (h.scores ?? []).map((row) => ({
-        playerId: row.session_id,
-        bet: row.bet,
-        tricksWon: row.taken_tricks,
-        points: row.hand_score,
-        bonus: row.bet === row.taken_tricks ? 10 : 0,
-      })),
-    }));
+    // The room snapshot only carries the CURRENT hand's starting_seat;
+    // older hands aren't stored. Rotate +1 per hand (see continueHand.ts):
+    // hand H's start = (current.starting_seat - (currentHandNumber - H)) mod N.
+    const playerCount = snapshot?.room?.player_count ?? snapshot?.players?.length ?? 0;
+    const currentStart = snapshot?.current_hand?.starting_seat;
+    const currentHandNumber = snapshot?.current_hand?.hand_number;
+    const canDeriveStart =
+      playerCount > 0 &&
+      typeof currentStart === 'number' &&
+      typeof currentHandNumber === 'number';
+    return sh.map((h) => {
+      const startingPlayerIndex = canDeriveStart
+        ? (((currentStart as number) - ((currentHandNumber as number) - h.hand_number)) % playerCount + playerCount) % playerCount
+        : 0;
+      return {
+        handNumber: h.hand_number,
+        startingPlayerIndex,
+        results: (h.scores ?? []).map((row) => ({
+          playerId: row.session_id,
+          bet: row.bet,
+          tricksWon: row.taken_tricks,
+          points: row.hand_score,
+          bonus: row.bet === row.taken_tricks ? 10 : 0,
+        })),
+      };
+    });
   }, [scoreHistory, snapshot]);
   const effectiveHistory: HandResult[] =
     scoreHistory && scoreHistory.length > 0 ? scoreHistory : derivedHistory;
@@ -370,7 +391,12 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                 const result = hand.results.find(r => r.playerId === player.id);
                 if (!result) return <View key={player.id} style={[styles.tableCell, { width: playerColW }]} />;
                 const isBonus = result.bonus > 0;
-                const isFirst = hand.startingPlayerIndex === players.findIndex(p => p.id === player.id);
+                // Prefer the explicit seat index — `players.findIndex` would
+                // return the position in the score-sorted list, so the ▶
+                // badge would always land on the current leader's column.
+                const playerSeat = player.seatIndex
+                  ?? players.findIndex(p => p.id === player.id);
+                const isFirst = hand.startingPlayerIndex === playerSeat;
                 return (
                   <View key={player.id} style={[styles.tableCell, { width: playerColW }]}>
                     {isFirst && <Text style={styles.firstBadge}>▶</Text>}
