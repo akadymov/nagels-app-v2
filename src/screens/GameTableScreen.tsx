@@ -40,6 +40,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
+import { useAuthStore } from '../store/authStore';
 import { useTurnTimeout } from '../lib/turnTimeout';
 import { useHeartbeat } from '../lib/heartbeat';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
@@ -116,6 +117,14 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   const fourColorDeck = useSettingsStore((s) => s.fourColorDeck);
   const biddingTipDismissed = useSettingsStore((s) => s.shownTips.bidding);
+
+  // Subscribe to the auth user's metadata so SP vm picks up a fresh
+  // Google avatar after sign-in without needing a page refresh. Stored
+  // on the user record (set once on OAuth); selector returns the same
+  // object reference until the user/metadata actually changes.
+  const authUserMeta = useAuthStore((s) => s.user?.user_metadata ?? null) as
+    | Record<string, unknown>
+    | null;
 
   // ── Multiplayer state ──────────────────────────────────────
   const snapshot = useRoomStore((s) => s.snapshot);
@@ -507,7 +516,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       };
     }
 
-    // Single-player: map sp store into the same shape
+    // Single-player: map sp store into the same shape.
+    // The human always has !p.isBot; pull their avatar from auth metadata
+    // so a Google-signed-in player sees their own picture vs. bots.
+    const meta = authUserMeta ?? {};
+    const myAvatarUrl = (meta.avatar_url as string | undefined) ?? null;
+    const myAvatar = (meta.avatar as string | undefined) ?? null;
+    const myAvatarColor = (meta.avatar_color as string | undefined) ?? null;
     const players: VMPlayer[] = sp.players.map((p, i) => ({
       id: p.id,
       name: p.name,
@@ -519,6 +534,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       bonus: p.bonus,
       hand: p.hand,
       msSinceSeen: null,
+      avatar: p.isBot ? null : myAvatar,
+      avatarUrl: p.isBot ? null : myAvatarUrl,
+      avatarColor: p.isBot ? null : myAvatarColor,
     }));
     return {
       phase: sp.phase,
@@ -551,7 +569,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         : null,
       tricks: sp.tricks,
     };
-  }, [isMultiplayer, snapshot, room, mpPlayers, hand, handScores, currentTrick, lastClosedTrick, holdTrickActive, myHandStrings, myPlayerId, sp]);
+  }, [isMultiplayer, snapshot, room, mpPlayers, hand, handScores, currentTrick, lastClosedTrick, holdTrickActive, myHandStrings, myPlayerId, sp, authUserMeta]);
 
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
