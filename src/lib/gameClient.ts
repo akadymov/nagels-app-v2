@@ -66,6 +66,19 @@ async function postAction(
   return json;
 }
 
+// Playwright (and other WebDriver-driven contexts) sets
+// navigator.webdriver = true. We use that as the canonical "running
+// under automation" signal so test rooms don't spam the prod Telegram
+// channel via createRoom's side-effect. Wrapped so non-DOM contexts
+// (jest unit tests, Node demo scripts) safely report false.
+function isAutomatedContext(): boolean {
+  try {
+    return typeof navigator !== 'undefined' && navigator.webdriver === true;
+  } catch {
+    return false;
+  }
+}
+
 export const gameClient = {
   createRoom: (
     displayName: string,
@@ -79,6 +92,10 @@ export const gameClient = {
       player_count,
       max_cards,
       mode,
+      // Tests + automation must not fire the new-room Telegram
+      // notification. See docs/principles.md §8 "Test side-effect
+      // hygiene".
+      silent: isAutomatedContext(),
     }),
 
   joinRoom: (displayName: string, code: string) =>

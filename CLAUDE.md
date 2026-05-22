@@ -53,6 +53,26 @@ Whenever you (or another agent) **add, rename, or remove a `testID`** in `src/`:
 
 The user works alone and forgets easily. **Visibility > automation.** A short final-message line — "test:lint shows 3 orphans I think we should fix" — is exactly what they need.
 
+## No external side effects in tests
+
+Tests must not produce real-world noise — no Telegram messages, no
+Web Push, no transactional email, no analytics events. The current
+auto-detect: `navigator.webdriver === true` flips `silent: true` on
+`create_room` in `src/lib/gameClient.ts` (`isAutomatedContext()`),
+which the edge function honors via `shouldSendRoomNotification`.
+Smoke runs against the manual `:8081` dev server pointed at **prod**
+Supabase, so a missing gate fires real notifications to real people.
+
+When you add or change a test that exercises a new external-side-effect
+path, verify:
+
+1. The edge action has a `silent?: boolean` flag (or equivalent gate);
+2. The `gameClient` wrapper sets it from `isAutomatedContext()`;
+3. The smoke run completes without any new entry in the Telegram
+   channel — eyeball it after the first run.
+
+Full rule: `docs/principles.md` §8 "Test side-effect hygiene".
+
 ## Env
 `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_URL`
 
