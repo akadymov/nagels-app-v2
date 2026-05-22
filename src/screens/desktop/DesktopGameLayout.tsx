@@ -160,13 +160,14 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
               avatar: p.avatar ?? null,
               avatarUrl: p.avatar_url ?? null,
               avatarColor: p.avatar_color ?? null,
+              seatIndex: p.seat_index,
             };
           })
           .sort((a: PlayerScore, b: PlayerScore) => b.totalScore - a.totalScore)
           .map((p: PlayerScore, i: number) => ({ ...p, rank: i + 1 }));
       })()
     : sp.players
-        .map((p) => {
+        .map((p, i) => {
           const bet = p.bet;
           const won = p.tricksWon ?? 0;
           const madeBet = bet != null && bet === won;
@@ -184,6 +185,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
             avatar: (p as any).avatar ?? null,
             avatarUrl: (p as any).avatarUrl ?? null,
             avatarColor: (p as any).avatarColor ?? null,
+            seatIndex: i,
           };
         })
         .sort((a, b) => b.totalScore - a.totalScore)

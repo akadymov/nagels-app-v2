@@ -1000,6 +1000,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           avatar: p.avatar ?? null,
           avatarUrl: p.avatarUrl ?? null,
           avatarColor: p.avatarColor ?? null,
+          seatIndex: p.seatIndex,
         };
       })
       .sort((a, b) => b.totalScore - a.totalScore)
