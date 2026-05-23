@@ -387,7 +387,7 @@
   },
   "scorekeeper": {
     "modeStandard": "Обычный",
-    "modeScorekeeper": "Арбитр",
+    "modeScorekeeper": "Счёт для офлайн-игры",
     "modeStandardDesc": "Карты раздаются и разыгрываются в приложении",
     "modeScorekeeperDesc": "Оффлайн-игра — результаты вводятся вручную",
     "gameMode": "Режим игры",
