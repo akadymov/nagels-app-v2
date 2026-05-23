@@ -54,13 +54,6 @@
 
 ## In Progress
 
-### Conditional stakes — opt-in rating wager per game + admin reset tools (Akula, 2026-05-23)
-
-  - defaultExpanded: false
-    ```md
-    Хост перед стартом выбирает ставку 0/1/5/10/25; каждый eligible (email-confirmed / Google) игрок opt-in'ится индивидуально. После старта ставка и opt-in заблокированы. В конце игры — zero-sum: delta_i = round((score_i − mean) × stake), settle для всех opt-in (≥2). Журнал в rating_events, баланс в user_ratings. Гости видят disabled toggle с подсказкой. Provisional дельта в счёте видна только opt-in игрокам; финальный экран RatingSettlementModal — им же. Admin (по env ADMIN_EMAILS) может обнулить рейтинг отдельного игрока или всех — с записью в журнал. Полная спека: docs/superpowers/specs/2026-05-23-conditional-stakes-design.md
-    ```
-
 ### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
 
 
@@ -82,6 +75,13 @@
     ```
 
 ## Done
+
+### Conditional stakes — opt-in rating wager per game + admin reset tools (Akula, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    Хост перед стартом выбирает ставку 0/1/5/10/25; каждый eligible (email-confirmed / Google) игрок opt-in'ится индивидуально. После старта ставка и opt-in заблокированы. В конце игры — zero-sum: delta_i = round((score_i − mean) × stake), settle для всех opt-in (≥2). Журнал в rating_events, баланс в user_ratings. Гости видят disabled toggle с подсказкой. Provisional дельта в счёте видна только opt-in игрокам; финальный экран RatingSettlementModal — им же. Admin (по env ADMIN_EMAILS) может обнулить рейтинг отдельного игрока или всех — с записью в журнал. Релизный чек-лист: после merge нужно (1) задеплоить game-action edge function и (2) выставить ADMIN_EMAILS env для админ-функций. Полная спека: docs/superpowers/specs/2026-05-23-conditional-stakes-design.md
+    ```
 
 ### Guests can change visible nickname during the game (Akula, 2026-05-21)
 
