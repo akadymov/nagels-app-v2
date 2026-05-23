@@ -26,6 +26,11 @@ import { recordTricks }   from './actions/recordTricks.ts';
 import { requestTimeout } from './actions/requestTimeout.ts';
 import { restartGame }    from './actions/restartGame.ts';
 import { setDisplayName } from './actions/setDisplayName.ts';
+import { setStake }       from './actions/setStake.ts';
+import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
+import { adminCheck }      from './actions/adminCheck.ts';
+import { adminSearchUsers } from './actions/adminSearchUsers.ts';
+import { adminResetRating, adminResetAllRatings } from './actions/adminResetRating.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -48,6 +53,33 @@ Deno.serve(async (req: Request) => {
   const svc = makeServiceClient();
   const action = body.action;
   const room_id = (action as any).room_id ?? null;
+
+  // Admin actions are read-only and don't touch room state — bypass the
+  // snapshot/broadcast/push pipeline entirely.
+  if (action.kind.startsWith('admin_')) {
+    try {
+      if (action.kind === 'admin_check') {
+        const r = await adminCheck(svc, actor);
+        return jsonResponse(r, 200);
+      }
+      if (action.kind === 'admin_search_users') {
+        const r = await adminSearchUsers(svc, actor, action);
+        return jsonResponse(r, r.ok ? 200 : 403);
+      }
+      if (action.kind === 'admin_reset_rating') {
+        const r = await adminResetRating(svc, actor, action);
+        return jsonResponse(r, r.ok ? 200 : 403);
+      }
+      if (action.kind === 'admin_reset_all_ratings') {
+        const r = await adminResetAllRatings(svc, actor);
+        return jsonResponse(r, r.ok ? 200 : 403);
+      }
+      return jsonResponse({ ok: false, error: 'unknown_action' }, 400);
+    } catch (err) {
+      console.error('[game-action] admin handler threw:', err);
+      return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+    }
+  }
 
   // Snapshot of room state BEFORE the action — needed by the push detector.
   // Skipped for create_room (room doesn't exist yet) and join_room (the
@@ -83,6 +115,8 @@ Deno.serve(async (req: Request) => {
         case 'request_timeout': result = await requestTimeout(svc, actor, action); break;
         case 'restart_game':    result = await restartGame(svc, actor, action); break;
         case 'set_display_name': result = await setDisplayName(svc, actor, action); break;
+        case 'set_stake':       result = await setStake(svc, actor, action); break;
+        case 'toggle_stake_optin': result = await toggleStakeOptin(svc, actor, action); break;
         default:                throw new Error('unknown_action');
       }
     }

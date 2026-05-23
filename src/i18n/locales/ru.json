@@ -320,7 +320,22 @@
     "avatarOptional": "Необязательно — по умолчанию показывает инициал",
     "saved": "Профиль сохранён",
     "saveProgress": "Сохранить прогресс?",
-    "maybeLater": "Позже"
+    "maybeLater": "Позже",
+    "rating": "Рейтинг"
+  },
+  "stakes": {
+    "title": "Игра на рейтинг",
+    "off": "Выкл.",
+    "custom": "Своё",
+    "customPlaceholder": "1–999",
+    "apply": "ОК",
+    "optInBadge": "★ ставка",
+    "optInToggle": "Играть на рейтинг",
+    "guestHint": "Зарегистрируйтесь, чтобы играть на рейтинг",
+    "unconfirmedHint": "Подтвердите email, чтобы играть на рейтинг",
+    "lockedHint": "Ставка зафиксирована — идёт игра",
+    "settlementTitle": "Изменение рейтинга",
+    "newBalance": "Новый баланс: {{n}}"
   },
   "settings": {
     "title": "Настройки",

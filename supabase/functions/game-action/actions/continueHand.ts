@@ -37,6 +37,76 @@ export async function continueHand(
       version: (room.version ?? 0) + 1,
     }).eq('id', room.id);
 
+    // Stake settlement — runs once, atomically with the finished transition.
+    {
+      const { data: roomRow } = await svc
+        .from('rooms')
+        .select('stake')
+        .eq('id', action.room_id)
+        .maybeSingle();
+      const stake = roomRow?.stake ?? 0;
+
+      if (stake > 0) {
+        // Opted-in players in this room with their session_id + auth_user_id.
+        const { data: optIns } = await svc
+          .from('room_players')
+          .select('session_id, room_sessions!inner(auth_user_id)')
+          .eq('room_id', action.room_id)
+          .eq('opt_in_stake', true);
+        const eligible = (optIns ?? [])
+          .map((r: any) => ({
+            session_id: r.session_id as string,
+            user_id: r.room_sessions?.auth_user_id as string | null,
+          }))
+          .filter((r: { user_id: string | null }) => !!r.user_id) as { session_id: string; user_id: string }[];
+
+        if (eligible.length >= 2) {
+          // Aggregate final scores from hand_scores across all closed hands of this room.
+          const { data: scoresRows } = await svc
+            .from('hand_scores')
+            .select('hand_id, session_id, hand_score, hands!inner(room_id, phase)')
+            .eq('hands.room_id', action.room_id)
+            .eq('hands.phase', 'closed');
+
+          const totalsBySession = new Map<string, number>();
+          for (const row of scoresRows ?? []) {
+            const sid = (row as any).session_id as string;
+            const s = ((row as any).hand_score as number) ?? 0;
+            totalsBySession.set(sid, (totalsBySession.get(sid) ?? 0) + s);
+          }
+
+          const { computeSettlement } = await import('../../_shared/engine/stakes.ts');
+          const inputs = eligible.map((e) => ({
+            user_id: e.user_id,
+            score: totalsBySession.get(e.session_id) ?? 0,
+          }));
+          const deltas = computeSettlement(inputs, stake);
+
+          // Aggregate score for the journal row (base_score in events).
+          const meanScore =
+            inputs.reduce((s, x) => s + x.score, 0) / Math.max(inputs.length, 1);
+
+          for (const d of deltas) {
+            const baseScore = inputs.find((x) => x.user_id === d.user_id)!.score;
+            await svc.from('rating_events').insert({
+              user_id:    d.user_id,
+              room_id:    action.room_id,
+              reason:     'settle',
+              delta:      d.delta,
+              base_score: baseScore,
+              mean_score: meanScore,
+              stake,
+            });
+            // Upsert balance.
+            await svc.rpc('apply_rating_delta', { p_user_id: d.user_id, p_delta: d.delta });
+          }
+        }
+      }
+    }
+
+    // Always clear stake locks on finish so "Play again" can re-arm.
+    await svc.from('rooms').update({ stake_locked: false }).eq('id', action.room_id);
+
     await svc.from('game_events').insert({
       room_id: action.room_id, hand_id: hand.id, session_id: actor.session_id,
       kind: 'game_finished', payload: {},

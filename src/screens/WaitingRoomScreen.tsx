@@ -14,9 +14,9 @@ import {
   Pressable,
   ActivityIndicator,
   Share,
-  Switch,
   Alert,
 } from 'react-native';
+import { BrandSwitch } from '../components/BrandSwitch';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../components/glass';
@@ -41,6 +41,9 @@ import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
 import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
+import { StakeSelector } from '../components/stakes/StakeSelector';
+import { canPlayForRating } from '../utils/ratingEligibility';
+import { useAuthStore } from '../store/authStore';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -81,6 +84,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   );
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
   const amIReady = myPlayer?.is_ready ?? false;
+  const authUser = useAuthStore((s) => s.user);
+  const authIsGuest = useAuthStore((s) => s.isGuest);
+  const selfEligible = canPlayForRating(authUser, authIsGuest);
+  // Non-host: host-eligibility is irrelevant to the selector's chip state.
+  const hostEligible = isHost ? selfEligible : true;
   const [showChat, setShowChat] = useState(false);
   useChatTooltipListener({
     selfSessionId: myPlayerId,
@@ -412,6 +420,19 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           </GlassCard>
         )}
 
+        {room && (
+          <StakeSelector
+            stake={room.stake ?? 0}
+            isHost={isHost}
+            isHostEligible={hostEligible}
+            optedIn={!!myPlayer?.opt_in_stake}
+            selfEligible={selfEligible}
+            locked={!!room.stake_locked}
+            onStakeChange={(s) => gameClient.setStake(room.id, s)}
+            onToggleOptIn={(next) => gameClient.toggleStakeOptin(room.id, next)}
+          />
+        )}
+
         {/* Players List — hide the count until the snapshot has loaded so
             we don't flash "Players in Room (0/?)" during the brief gap
             between leaving a finished room and navigating away. */}
@@ -473,6 +494,14 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                       )}
                       {isOffline && (
                         <Text style={styles.seatSuffix}> · 📡</Text>
+                      )}
+                      {(player as any).opt_in_stake && (room?.stake ?? 0) > 0 && (
+                        <Text
+                          testID={`stake-badge-${player.seat_index}`}
+                          style={[styles.stakeBadgeText, { color: colors.accent, borderColor: colors.accent }]}
+                        >
+                          {' ±'}{room?.stake ?? 0}
+                        </Text>
                       )}
                     </Text>
                     {isHostPlayer && (
@@ -610,7 +639,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   {t('gameMode.skipOnesHint', 'Middle of the ladder stays at 2 cards')}
                 </Text>
               </View>
-              <Switch
+              <BrandSwitch
                 value={(room?.min_cards_per_hand ?? 1) >= 2}
                 onValueChange={handleToggleSkipOnes}
                 testID="switch-skip-ones"
@@ -790,6 +819,13 @@ const styles = StyleSheet.create({
   hostBadge: {
     ...TextStyles.caption,
     color: Colors.highlight,
+  },
+  // "Playing for ±N rating" badge next to opted-in player names.
+  // ±N reads instantly as "this player wagers N points either way";
+  // a plain ★ was opaque per Akula's feedback.
+  stakeBadgeText: {
+    ...TextStyles.caption,
+    fontWeight: '700',
   },
   readyIndicator: {
     width: 32,
