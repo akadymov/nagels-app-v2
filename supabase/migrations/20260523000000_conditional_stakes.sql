@@ -191,12 +191,12 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, pg_catalog
 AS $$
 DECLARE
-  v_my_user_id UUID;
-  v_my_session UUID;
-  v_my_opt_in  BOOLEAN;
-  v_rows       JSONB;
-  v_old        INTEGER;
-  v_new        INTEGER;
+  v_my_user_id  UUID;
+  v_my_session  UUID;
+  v_my_opt_in   BOOLEAN;
+  v_rows        JSONB;
+  v_new_balance INTEGER;
+  v_my_delta    INTEGER;
 BEGIN
   v_my_user_id := auth.uid();
   IF v_my_user_id IS NULL THEN
@@ -226,16 +226,19 @@ BEGIN
   JOIN public.room_players  rp ON rp.session_id = rs.id AND rp.room_id = p_room_id
   WHERE ev.room_id = p_room_id AND ev.reason = 'settle';
 
+  -- v_new_balance: caller's current rating, post-settlement.
+  -- v_my_delta:    caller's delta written by THIS room's settle event.
+  --                old_balance = new_balance - my_delta.
   SELECT
     COALESCE((SELECT balance FROM public.user_ratings WHERE user_id = v_my_user_id), 0),
     COALESCE((SELECT delta   FROM public.rating_events
               WHERE user_id = v_my_user_id AND room_id = p_room_id AND reason = 'settle'
               LIMIT 1), 0)
-    INTO v_new, v_old;
+    INTO v_new_balance, v_my_delta;
 
   RETURN jsonb_build_object(
-    'old_balance', v_new - v_old,
-    'new_balance', v_new,
+    'old_balance', v_new_balance - v_my_delta,
+    'new_balance', v_new_balance,
     'rows',        COALESCE(v_rows, '[]'::jsonb)
   );
 END;
