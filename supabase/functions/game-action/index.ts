@@ -30,6 +30,7 @@ import { setStake }       from './actions/setStake.ts';
 import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
 import { adminCheck }      from './actions/adminCheck.ts';
 import { adminSearchUsers } from './actions/adminSearchUsers.ts';
+import { adminResetRating, adminResetAllRatings } from './actions/adminResetRating.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -63,6 +64,14 @@ Deno.serve(async (req: Request) => {
       }
       if (action.kind === 'admin_search_users') {
         const r = await adminSearchUsers(svc, actor, action);
+        return jsonResponse(r, r.ok ? 200 : 403);
+      }
+      if (action.kind === 'admin_reset_rating') {
+        const r = await adminResetRating(svc, actor, action);
+        return jsonResponse(r, r.ok ? 200 : 403);
+      }
+      if (action.kind === 'admin_reset_all_ratings') {
+        const r = await adminResetAllRatings(svc, actor);
         return jsonResponse(r, r.ok ? 200 : 403);
       }
       return jsonResponse({ ok: false, error: 'unknown_action' }, 400);
