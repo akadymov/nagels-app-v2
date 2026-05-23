@@ -3,7 +3,7 @@
  * View/edit nickname, avatar, logout.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,13 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { useRatingStore } from '../store/ratingStore';
+import { canPlayForRating } from '../utils/ratingEligibility';
 import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from '../components/GoogleButton';
@@ -34,6 +37,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { user, isGuest, displayName } = useAuthStore();
+  const eligible = canPlayForRating(user, isGuest);
+  const balance = useRatingStore((s) => s.balance);
+  const loadRating = useRatingStore((s) => s.load);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (eligible) loadRating();
+    }, [eligible, loadRating]),
+  );
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
@@ -133,6 +145,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
             </Text>
           )}
         </View>
+
+        {/* Rating balance — visible to logged-in users with confirmed email or Google OAuth */}
+        {eligible && (
+          <View
+            testID="profile-rating-row"
+            style={[styles.section, styles.ratingRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+              {t('profile.rating', 'Rating')}
+            </Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+              {balance ?? '—'}
+            </Text>
+          </View>
+        )}
 
         {/* Nickname */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
@@ -313,6 +340,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginTop: Spacing.sm,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   input: {
     flex: 1,
