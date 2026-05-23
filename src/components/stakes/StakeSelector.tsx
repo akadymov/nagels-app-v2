@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
@@ -28,6 +29,7 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
 
   const chipsDisabled = !isHost || !isHostEligible || locked;
   const isCustomActive = stake > 0 && !PRESETS.includes(stake);
@@ -203,9 +205,25 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
         </View>
       )}
       {stake > 0 && !selfEligible && !locked && (
-        <Text style={[styles.hint, { color: colors.textMuted }]}>
-          {t('stakes.guestHint')}
-        </Text>
+        <Pressable
+          onPress={() => {
+            // Navigating to Auth unmounts WaitingRoom and lands the user
+            // in Lobby on success — they lose the room. Warn explicitly
+            // so it's not a surprise; preserve-on-rejoin is a separate
+            // follow-up (backlog: "Cross-device user sessions").
+            const proceed =
+              typeof window !== 'undefined' && typeof window.confirm === 'function'
+                ? window.confirm(String(t('stakes.guestHintConfirm')))
+                : true;
+            if (!proceed) return;
+            try { navigation.navigate('Auth'); } catch { /* no-op in tests */ }
+          }}
+          testID="stakes-sign-in-link"
+        >
+          <Text style={[styles.hint, styles.hintLink, { color: colors.accent }]}>
+            {t('stakes.guestHint')}
+          </Text>
+        </Pressable>
       )}
       {locked && (
         <Text style={[styles.hint, { color: colors.textMuted }]}>
@@ -240,4 +258,5 @@ const styles = StyleSheet.create({
   optInControl: { flexDirection: 'row', alignItems: 'center' },
   optInLabel: { fontSize: 14, fontWeight: '600' },
   hint: { fontSize: 12, marginTop: 4, fontStyle: 'italic' },
+  hintLink: { textDecorationLine: 'underline', fontStyle: 'normal' },
 });

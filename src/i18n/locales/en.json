@@ -330,6 +330,7 @@
     "optInBadge": "★ stake",
     "optInToggle": "Play for rating",
     "guestHint": "Sign in to play for rating",
+    "guestHintConfirm": "Signing in returns you to the lobby — you'll need to rejoin this room. Continue?",
     "unconfirmedHint": "Confirm your email to play for rating",
     "lockedHint": "Stakes locked — game in progress",
     "settlementTitle": "Rating settlement",
