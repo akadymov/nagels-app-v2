@@ -422,7 +422,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
         {room && (
           <StakeSelector
-            stake={(room.stake ?? 0) as 0 | 1 | 5 | 10 | 25}
+            stake={room.stake ?? 0}
             isHost={isHost}
             isHostEligible={hostEligible}
             optedIn={!!myPlayer?.opt_in_stake}

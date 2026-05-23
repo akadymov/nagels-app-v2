@@ -193,7 +193,7 @@ export const gameClient = {
 
   // --- Stakes cluster ---
 
-  setStake: (room_id: string, stake: 0 | 1 | 5 | 10 | 25) =>
+  setStake: (room_id: string, stake: number) =>
     postAction(null, { kind: 'set_stake', room_id, stake }),
 
   toggleStakeOptin: (room_id: string, opted_in: boolean) =>

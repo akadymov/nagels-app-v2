@@ -326,6 +326,9 @@
   "stakes": {
     "title": "Игра на рейтинг",
     "off": "Выкл.",
+    "custom": "Своё",
+    "customPlaceholder": "1–999",
+    "apply": "ОК",
     "optInBadge": "★ ставка",
     "optInToggle": "Играть на рейтинг",
     "guestHint": "Зарегистрируйтесь, чтобы играть на рейтинг",

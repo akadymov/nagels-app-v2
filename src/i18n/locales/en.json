@@ -324,6 +324,9 @@
   "stakes": {
     "title": "Rating stakes",
     "off": "Off",
+    "custom": "Custom",
+    "customPlaceholder": "1–999",
+    "apply": "Apply",
     "optInBadge": "★ stake",
     "optInToggle": "Play for rating",
     "guestHint": "Sign in to play for rating",

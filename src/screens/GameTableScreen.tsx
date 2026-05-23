@@ -579,7 +579,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // scoreboard at game end; suppresses ScoreboardModal's own Play
   // Again so the restart action funnels through the settlement.
   const meOptIn = !!(mpPlayers.find((p) => p.session_id === myPlayerId) as any)?.opt_in_stake;
-  const roomStake = (room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25;
+  const roomStake = room?.stake ?? 0;
   useEffect(() => {
     if (vm.phase === 'finished' && roomStake > 0 && meOptIn) {
       setShowSettlement(true);

@@ -323,7 +323,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         .filter((p: any) => p.opt_in_stake)
         .map((p: any) => p.session_id as string),
     );
-    const stake = ((snapshot?.room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25);
+    const stake = snapshot?.room?.stake ?? 0;
     const meSessionId = useRoomStore.getState().myPlayerId;
     const showDelta = stake > 0 && !!meSessionId && optedInIds.has(meSessionId);
 

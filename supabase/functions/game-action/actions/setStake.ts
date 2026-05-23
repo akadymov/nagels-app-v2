@@ -10,14 +10,16 @@ function empty(): RoomSnapshot {
   } as unknown as RoomSnapshot;
 }
 
-const ALLOWED = new Set([0, 1, 5, 10, 25]);
+// Any positive integer up to 999. UI offers presets + a free-form input;
+// the server bound matches the DB CHECK constraint.
+const MAX_STAKE = 999;
 
 export async function setStake(
   svc: SupabaseClient,
   actor: ActorContext,
   action: Extract<Action, { kind: 'set_stake' }>,
 ): Promise<ActionResult> {
-  if (!ALLOWED.has(action.stake)) {
+  if (!Number.isInteger(action.stake) || action.stake < 0 || action.stake > MAX_STAKE) {
     return { ok: false, error: 'invalid_stake', state: empty(), version: 0 };
   }
 

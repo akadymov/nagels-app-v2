@@ -203,7 +203,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   const meOptIn = !!(
     (snapshot?.players ?? []).find((p: any) => p.session_id === mpMyPlayerId) as any
   )?.opt_in_stake;
-  const roomStake = ((snapshot?.room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25);
+  const roomStake = snapshot?.room?.stake ?? 0;
   const [showSettlement, setShowSettlement] = useState(false);
   useEffect(() => {
     if (isMultiplayer && isGameOver && roomStake > 0 && meOptIn) {

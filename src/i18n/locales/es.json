@@ -324,6 +324,9 @@
   "stakes": {
     "title": "Apuesta de rating",
     "off": "Apagado",
+    "custom": "Otro",
+    "customPlaceholder": "1–999",
+    "apply": "OK",
     "optInBadge": "★ apuesta",
     "optInToggle": "Jugar por rating",
     "guestHint": "Inicia sesión para jugar por rating",

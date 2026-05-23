@@ -22,7 +22,7 @@ export type Action =
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string }
   | { kind: 'set_display_name'; display_name: string; room_id?: string }
-  | { kind: 'set_stake';                 room_id: string; stake: 0 | 1 | 5 | 10 | 25 }
+  | { kind: 'set_stake';                 room_id: string; stake: number }
   | { kind: 'toggle_stake_optin';        room_id: string; opted_in: boolean }
   | { kind: 'admin_check' }
   | { kind: 'admin_search_users';        q: string }
@@ -64,7 +64,7 @@ export interface RoomSnapshot {
     phase: 'waiting' | 'playing' | 'finished';
     current_hand_id: string | null;
     version: number;
-    stake: 0 | 1 | 5 | 10 | 25;
+    stake: number;
     stake_locked: boolean;
   } | null;
   players: Array<{
