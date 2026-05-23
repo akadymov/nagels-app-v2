@@ -217,6 +217,14 @@ export interface GameLoopOptions {
   idleLimit?: number;
   /** Optional label used in console output, e.g. "P3". */
   label?: string;
+  /**
+   * Player count for the room — only used by tryBet to choose a
+   * realistic bet target (cardsPerPlayer / playerCount). Default 6
+   * preserves backward-compat with the multiplayer-6p-mixed spec; the
+   * 3-player stakes-settlement spec passes 3 so the betting heuristic
+   * doesn't undersell on a 3p game.
+   */
+  playerCount?: number;
 }
 
 export type GameLoopResult = 'game-over' | 'budget-exhausted' | 'idle-timeout';
@@ -237,7 +245,7 @@ export async function runGameLoop(
   const budgetSec = opts.budgetSec ?? 35 * 60;
   const idleLimit = opts.idleLimit ?? 120;
   const label = opts.label ?? 'player';
-  const playerCount = 6;
+  const playerCount = opts.playerCount ?? 6;
   const deadline = Date.now() + budgetSec * 1000;
 
   let hands = 0;
