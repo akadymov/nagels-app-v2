@@ -262,4 +262,8 @@ BEGIN
   RETURN v_new;
 END;
 $$;
-REVOKE EXECUTE ON FUNCTION public.apply_rating_delta(uuid, integer) FROM PUBLIC;
+-- Supabase grants EXECUTE to anon/authenticated by default on new public
+-- functions. Revoke explicitly so only postgres + service_role (edge runtime)
+-- can call this writer. Combined with SECURITY DEFINER, clients can never
+-- bypass game settlement to mutate balances directly.
+REVOKE EXECUTE ON FUNCTION public.apply_rating_delta(uuid, integer) FROM anon, authenticated, PUBLIC;
