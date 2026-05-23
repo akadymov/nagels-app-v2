@@ -21,26 +21,16 @@ export async function adminSearchUsers(
     .eq('id', actor.session_id)
     .maybeSingle();
   if (!sess?.auth_user_id) return { ok: false, error: 'not_admin' };
-  const { data: au } = await svc
-    .schema('auth')
-    .from('users')
-    .select('email')
-    .eq('id', sess.auth_user_id)
-    .maybeSingle();
+  // PostgREST doesn't expose the auth schema — go through SECURITY DEFINER RPCs.
+  const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: sess.auth_user_id });
   if (!isAdminEmail(au?.email ?? null, adminCsv)) return { ok: false, error: 'not_admin' };
 
   const q = (action.q ?? '').trim().toLowerCase();
   if (q.length < 2) return { ok: true, rows: [] };
 
-  // Match by email or any display_name in room_sessions.
-  const { data: matches } = await svc
-    .schema('auth')
-    .from('users')
-    .select('id, email')
-    .ilike('email', `%${q}%`)
-    .limit(20);
-
-  const ids = (matches ?? []).map((m: { id: string }) => m.id);
+  const { data: matchesRaw } = await svc.rpc('search_auth_users_by_email', { p_q: q });
+  const matches = Array.isArray(matchesRaw) ? matchesRaw : [];
+  const ids = matches.map((m: { id: string }) => m.id);
   if (ids.length === 0) return { ok: true, rows: [] };
 
   const { data: ratings } = await svc
@@ -62,7 +52,7 @@ export async function adminSearchUsers(
     if (!nameByUser.has(uid)) nameByUser.set(uid, (s as { display_name: string }).display_name);
   }
 
-  const rows: Row[] = (matches ?? []).map((m: { id: string; email: string | null }) => ({
+  const rows: Row[] = matches.map((m: { id: string; email: string | null }) => ({
     id: m.id,
     email: m.email,
     display_name: nameByUser.get(m.id) ?? null,

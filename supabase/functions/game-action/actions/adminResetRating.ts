@@ -37,12 +37,7 @@ async function ensureAdmin(svc: SupabaseClient, actor: ActorContext): Promise<bo
     .eq('id', actor.session_id)
     .maybeSingle();
   if (!sess?.auth_user_id) return false;
-  const { data: au } = await svc
-    .schema('auth')
-    .from('users')
-    .select('email')
-    .eq('id', sess.auth_user_id)
-    .maybeSingle();
+  const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: sess.auth_user_id });
   return isAdminEmail(au?.email ?? null, adminCsv);
 }
 

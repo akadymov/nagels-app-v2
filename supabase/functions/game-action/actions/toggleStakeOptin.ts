@@ -46,12 +46,7 @@ export async function toggleStakeOptin(
     if (!meSess?.auth_user_id) {
       return { ok: false, error: 'not_eligible_to_opt_in', state: empty(), version: 0 };
     }
-    const { data: au } = await svc
-      .schema('auth')
-      .from('users')
-      .select('email_confirmed_at')
-      .eq('id', meSess.auth_user_id)
-      .maybeSingle();
+    const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: meSess.auth_user_id });
     if (!au?.email_confirmed_at) {
       return { ok: false, error: 'not_eligible_to_opt_in', state: empty(), version: 0 };
     }
