@@ -41,6 +41,9 @@ import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
 import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
+import { StakeSelector } from '../components/stakes/StakeSelector';
+import { canPlayForRating } from '../utils/ratingEligibility';
+import { useAuthStore } from '../store/authStore';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -81,6 +84,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   );
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
   const amIReady = myPlayer?.is_ready ?? false;
+  const authUser = useAuthStore((s) => s.user);
+  const authIsGuest = useAuthStore((s) => s.isGuest);
+  const selfEligible = canPlayForRating(authUser, authIsGuest);
+  // Non-host: host-eligibility is irrelevant to the selector's chip state.
+  const hostEligible = isHost ? selfEligible : true;
   const [showChat, setShowChat] = useState(false);
   useChatTooltipListener({
     selfSessionId: myPlayerId,
@@ -412,6 +420,19 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           </GlassCard>
         )}
 
+        {room && (
+          <StakeSelector
+            stake={(room.stake ?? 0) as 0 | 1 | 5 | 10 | 25}
+            isHost={isHost}
+            isHostEligible={hostEligible}
+            optedIn={!!myPlayer?.opt_in_stake}
+            selfEligible={selfEligible}
+            locked={!!room.stake_locked}
+            onStakeChange={(s) => gameClient.setStake(room.id, s)}
+            onToggleOptIn={(next) => gameClient.toggleStakeOptin(room.id, next)}
+          />
+        )}
+
         {/* Players List — hide the count until the snapshot has loaded so
             we don't flash "Players in Room (0/?)" during the brief gap
             between leaving a finished room and navigating away. */}
@@ -473,6 +494,9 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                       )}
                       {isOffline && (
                         <Text style={styles.seatSuffix}> · 📡</Text>
+                      )}
+                      {(player as any).opt_in_stake && (
+                        <Text testID={`stake-star-${player.seat_index}`}> ★</Text>
                       )}
                     </Text>
                     {isHostPlayer && (
