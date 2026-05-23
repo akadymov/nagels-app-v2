@@ -124,6 +124,7 @@ export async function startGame(
   await svc.from('rooms').update({
     phase: 'playing',
     current_hand_id: hand.id,
+    stake_locked: true,
     version: (room.version ?? 0) + 1,
   }).eq('id', room.id);
 

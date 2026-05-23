@@ -66,6 +66,26 @@ async function postAction(
   return json;
 }
 
+// Admin actions and other auth-only endpoints. Skips the anon-sign-in
+// retry loop (admin actions require a real logged-in user; if no
+// session, fail fast) and does NOT push a snapshot to useRoomStore
+// (admin actions don't mutate room state).
+async function postAdminAction(action: Action): Promise<any> {
+  const supabase = getSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('not_signed_in');
+  const res = await fetch(FN_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+    },
+    body: JSON.stringify({ action }),
+  });
+  return res.json();
+}
+
 // Playwright (and other WebDriver-driven contexts) sets
 // navigator.webdriver = true. We use that as the canonical "running
 // under automation" signal so test rooms don't spam the prod Telegram
@@ -170,6 +190,48 @@ export const gameClient = {
 
   restartGame: (room_id: string) =>
     postAction(null, { kind: 'restart_game', room_id }),
+
+  // --- Stakes cluster ---
+
+  setStake: (room_id: string, stake: number) =>
+    postAction(null, { kind: 'set_stake', room_id, stake }),
+
+  toggleStakeOptin: (room_id: string, opted_in: boolean) =>
+    postAction(null, { kind: 'toggle_stake_optin', room_id, opted_in }),
+
+  getMyRating: async (): Promise<number> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_my_rating');
+    if (error) throw error;
+    return typeof data === 'number' ? data : 0;
+  },
+
+  getRatingSettlement: async (
+    room_id: string,
+  ): Promise<{
+    old_balance: number;
+    new_balance: number;
+    rows: Array<{ user_id: string; display_name: string; score: number; delta: number }>;
+  } | null> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_rating_settlement', { p_room_id: room_id });
+    if (error) throw error;
+    return (data as any) ?? null;
+  },
+
+  adminCheck: (): Promise<{ ok: true; is_admin: boolean }> =>
+    postAdminAction({ kind: 'admin_check' }),
+
+  adminSearchUsers: (
+    q: string,
+  ): Promise<{ ok: boolean; error?: string; rows?: Array<{ id: string; email: string | null; display_name: string | null; balance: number }> }> =>
+    postAdminAction({ kind: 'admin_search_users', q }),
+
+  adminResetRating: (target_user_id: string): Promise<{ ok: boolean; error?: string; affected?: number }> =>
+    postAdminAction({ kind: 'admin_reset_rating', target_user_id }),
+
+  adminResetAllRatings: (): Promise<{ ok: boolean; error?: string; affected?: number }> =>
+    postAdminAction({ kind: 'admin_reset_all_ratings' }),
 
   setDisplayName: (display_name: string, room_id?: string) =>
     postAction(null, { kind: 'set_display_name', display_name, room_id }),

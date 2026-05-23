@@ -11,11 +11,13 @@ function emptySnap(): RoomSnapshot {
 }
 function room(id: string, code: string, host_session_id: string, phase = 'waiting') {
   return { id, code, host_session_id, phase, current_hand_id: null,
-           player_count: 4, max_cards: 10, version: 1, created_at: '2026-05-06T00:00:00Z' };
+           player_count: 4, max_cards: 10, version: 1, created_at: '2026-05-06T00:00:00Z',
+           stake: 0 as const, stake_locked: false };
 }
 function player(seat: number, session_id: string, display_name: string) {
   return { seat_index: seat, session_id, display_name,
-           is_ready: true, is_connected: true, last_seen_at: '2026-05-06T00:00:00Z' };
+           is_ready: true, is_connected: true, last_seen_at: '2026-05-06T00:00:00Z',
+           opt_in_stake: false };
 }
 function hand(phase: 'betting' | 'playing' | 'scoring' | 'closed', current_seat: number) {
   return { id: 'h1', room_id: 'r1', hand_number: 1, cards_per_player: 5,

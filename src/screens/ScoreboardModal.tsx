@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { UserAvatar } from '../components/UserAvatar';
+import { computeSettlement } from '../../supabase/functions/_shared/engine/stakes';
 
 // Compact result row for one player in a closed hand.
 export interface HandResultRow {
@@ -92,6 +93,13 @@ export interface ScoreboardModalProps {
    *  user can switch between the two views (Akula: "давать
    *  возможность переключать между подробной и краткой записью"). */
   embedded?: boolean;
+  /** When true, suppress the in-scoreboard "Play again" CTA so an
+   *  upstream modal (e.g. RatingSettlementModal for opt-in stake
+   *  players) can own the restart action. Non-host "Waiting for host…"
+   *  placeholder is also suppressed since the upstream flow replaces
+   *  the entire restart UX. Defaults to false — non-stake flows are
+   *  unchanged. */
+  suppressPlayAgain?: boolean;
 }
 
 export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
@@ -109,6 +117,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   onClose,
   onLeaveRoom,
   embedded = false,
+  suppressPlayAgain = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -306,6 +315,30 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       : Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
     const headerMinHeight = embedded ? 96 : 38;
 
+    // Δ-rating preview row — only opt-in stake players see their own
+    // running settlement. Uses the same pure engine the server runs on
+    // game-end, so this row matches the final RatingSettlementModal.
+    const optedInIds = new Set(
+      (snapshot?.players ?? [])
+        .filter((p: any) => p.opt_in_stake)
+        .map((p: any) => p.session_id as string),
+    );
+    const stake = snapshot?.room?.stake ?? 0;
+    const meSessionId = useRoomStore.getState().myPlayerId;
+    const showDelta = stake > 0 && !!meSessionId && optedInIds.has(meSessionId);
+
+    let deltaByUser: Map<string, number> | null = null;
+    if (showDelta) {
+      const inputs = (snapshot?.players ?? [])
+        .filter((p: any) => optedInIds.has(p.session_id))
+        .map((p: any) => ({
+          user_id: p.session_id as string,
+          score: sortedPlayers.find((sp) => sp.id === p.session_id)?.totalScore ?? 0,
+        }));
+      const deltas = computeSettlement(inputs, stake);
+      deltaByUser = new Map(deltas.map((d) => [d.user_id, d.delta]));
+    }
+
     return (
       <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
         {/* Hand counter — suppressed on game-over (winner banner above
@@ -429,6 +462,25 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             ))}
           </View>
 
+          {showDelta && (
+            <View style={styles.tableRow} testID="scoreboard-delta-row">
+              <View style={[styles.tableCell, { width: roundColW }]}>
+                <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Δ</Text>
+              </View>
+              {sortedPlayers.map((p) => {
+                const d = deltaByUser?.get(p.id) ?? 0;
+                const color = d > 0 ? colors.success : d < 0 ? colors.error : colors.textMuted;
+                return (
+                  <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
+                    <Text style={[styles.totalScore, { color }]}>
+                      {d > 0 ? `+${d}` : String(d)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {leader && (
             <Text style={[styles.leaderText, { color: colors.success }]}>
               🏆 {leader.name} {isGameOver ? t('scoreboard.winner', 'wins!') : t('scoreboard.leading', 'leading')}
@@ -483,7 +535,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             the next hand auto-loads when the server advances. */}
         {isGameOver && (
           <View style={styles.footer}>
-            {isHost && onPlayAgain ? (
+            {!suppressPlayAgain && (isHost && onPlayAgain ? (
               <Pressable
                 style={[styles.continueBtn, { backgroundColor: colors.accent }]}
                 onPress={onPlayAgain}
@@ -497,7 +549,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                   {t('scoreboard.waitingForHost', 'Waiting for host…')}
                 </Text>
               </View>
-            )}
+            ))}
             {onLeaveRoom && (
               <Pressable
                 style={[styles.continueBtn, { marginTop: Spacing.sm, backgroundColor: 'transparent', borderColor: colors.glassLight, borderWidth: 1 }]}
@@ -550,22 +602,24 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             */}
             <View style={styles.footer}>
               {isGameOver ? (
-                isHost && onPlayAgain ? (
-                  <Pressable
-                    style={[styles.continueBtn, { backgroundColor: colors.accent }]}
-                    onPress={onPlayAgain}
-                    testID="btn-play-again-scoreboard"
-                  >
-                    <Text style={styles.continueBtnText}>
-                      {t('scoreboard.playAgain')}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
-                    <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
-                      {t('scoreboard.waitingForHost', 'Waiting for host…')}
-                    </Text>
-                  </View>
+                suppressPlayAgain ? null : (
+                  isHost && onPlayAgain ? (
+                    <Pressable
+                      style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+                      onPress={onPlayAgain}
+                      testID="btn-play-again-scoreboard"
+                    >
+                      <Text style={styles.continueBtnText}>
+                        {t('scoreboard.playAgain')}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
+                      <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                        {t('scoreboard.waitingForHost', 'Waiting for host…')}
+                      </Text>
+                    </View>
+                  )
                 )
               ) : (
                 <Pressable

@@ -22,9 +22,6 @@
 ### Push notifications — follow-ups
 
 
-### Conditional stakes — agree on stake before game, winners earn rating points, losers pay difference
-
-
 ### Cross-device user sessions
 
   - defaultExpanded: false
@@ -55,6 +52,28 @@
 
 ## Next Up
 
+### Profile/Settings — replace toggle-row labels with BrandSwitch (Akula, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    Текущие переключатели «Вибрация», «Уведомления» в профиле и Settings отображаются как текстовые «Включено/Выключено» (Pressable + label). Перевести на компонент `<BrandSwitch>` (создан в этой ветке, src/components/BrandSwitch.tsx) — он уже использует brand-blue accent для on, серый для off, и работает на iOS/Android/Web одинаково. Заодно убрать ручную локализацию строк «Вкл/Выкл» если они станут лишними. Затронутые экраны: ProfileScreen, SettingsBody.
+    ```
+
+### GameTable desktop — gear icon opens Profile as bottom-sheet instead of toggling left pane (Akula via feedback, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в игровой комнате клик по шестерёнке открывает Profile снизу как bottom-sheet модалку. Должно: тот же клик переключает (show/hide) Profile+Settings в левой боковой панели (рядом с Score / Last Hand), как остальные desktop-кнопки топ-бара. Связано с задачей "Unify Profile + Lobby on desktop".
+    ```
+
+## In Progress
+
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
+### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+
+
 ### BettingPhase desktop — chat opens from bottom, not from side (Akula via feedback, 2026-05-22)
 
   - defaultExpanded: false
@@ -69,15 +88,14 @@
     На десктопе в детализированном счёте иконка первого игрока всегда находится слева во всех раундах — то есть отображает неверную информацию о том, кто начинал раздачу. Должна сдвигаться по реальной ротации (как в brief-варианте / в соответствии с ▶ first player).
     ```
 
-## In Progress
-
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
-
-
-### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
-
-
 ## Done
+
+### Conditional stakes — opt-in rating wager per game + admin reset tools (Akula, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    Хост перед стартом выбирает ставку 0/1/5/10/25; каждый eligible (email-confirmed / Google) игрок opt-in'ится индивидуально. После старта ставка и opt-in заблокированы. В конце игры — zero-sum: delta_i = round((score_i − mean) × stake), settle для всех opt-in (≥2). Журнал в rating_events, баланс в user_ratings. Гости видят disabled toggle с подсказкой. Provisional дельта в счёте видна только opt-in игрокам; финальный экран RatingSettlementModal — им же. Admin (по env ADMIN_EMAILS) может обнулить рейтинг отдельного игрока или всех — с записью в журнал. Релизный чек-лист: после merge нужно (1) задеплоить game-action edge function и (2) выставить ADMIN_EMAILS env для админ-функций. Полная спека: docs/superpowers/specs/2026-05-23-conditional-stakes-design.md
+    ```
 
 ### Guests can change visible nickname during the game (Akula, 2026-05-21)
 
