@@ -99,6 +99,25 @@ function isAutomatedContext(): boolean {
   }
 }
 
+// Dev/preview builds hit the same prod Supabase edge function as the
+// prod build, so the server can't distinguish them. Gate Telegram
+// side-effects on the client: only production builds should announce
+// new rooms. __DEV__ is Expo's canonical dev signal (true under
+// `expo start`, false in production builds, web+native).
+function isDevBuild(): boolean {
+  try {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) return true;
+  } catch {}
+  try {
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') return true;
+  } catch {}
+  return false;
+}
+
+function shouldSilenceTelegram(): boolean {
+  return isAutomatedContext() || isDevBuild();
+}
+
 export const gameClient = {
   createRoom: (
     displayName: string,
@@ -112,10 +131,10 @@ export const gameClient = {
       player_count,
       max_cards,
       mode,
-      // Tests + automation must not fire the new-room Telegram
-      // notification. See docs/principles.md §8 "Test side-effect
-      // hygiene".
-      silent: isAutomatedContext(),
+      // Tests/automation AND dev/preview builds must not fire the
+      // new-room Telegram notification. Only prod builds announce.
+      // See docs/principles.md §8 "Test side-effect hygiene".
+      silent: shouldSilenceTelegram(),
     }),
 
   joinRoom: (displayName: string, code: string) =>
