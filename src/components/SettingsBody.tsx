@@ -436,9 +436,6 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
           </View>
         )}
 
-        {/* === ADMIN — visible only when admin_check returns is_admin === */}
-        {ratingEligible && <AdminRatingBlock />}
-
         {/* === THEME === */}
         {showPreferences && (
         <View key="theme" style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
@@ -553,6 +550,13 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
           )}
         </View>
         )}
+
+        {/* === ADMIN — visible only when admin_check returns is_admin.
+              Gated by showPreferences so it doesn't duplicate when the
+              parent splits the body via the `only` prop (e.g. Desktop
+              Welcome page renders identity + preferences as two sibling
+              SettingsBody instances). */}
+        {showPreferences && ratingEligible && <AdminRatingBlock />}
 
         {/* === INSTALL APP === */}
         {showPreferences && pwaPromptApplies && (
