@@ -28,6 +28,7 @@ import { restartGame }    from './actions/restartGame.ts';
 import { setDisplayName } from './actions/setDisplayName.ts';
 import { setStake }       from './actions/setStake.ts';
 import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
+import { adminCheck }      from './actions/adminCheck.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -50,6 +51,21 @@ Deno.serve(async (req: Request) => {
   const svc = makeServiceClient();
   const action = body.action;
   const room_id = (action as any).room_id ?? null;
+
+  // Admin actions are read-only and don't touch room state — bypass the
+  // snapshot/broadcast/push pipeline entirely.
+  if (action.kind.startsWith('admin_')) {
+    try {
+      if (action.kind === 'admin_check') {
+        const r = await adminCheck(svc, actor);
+        return jsonResponse(r, 200);
+      }
+      return jsonResponse({ ok: false, error: 'unknown_action' }, 400);
+    } catch (err) {
+      console.error('[game-action] admin handler threw:', err);
+      return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+    }
+  }
 
   // Snapshot of room state BEFORE the action — needed by the push detector.
   // Skipped for create_room (room doesn't exist yet) and join_room (the
