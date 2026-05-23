@@ -25,6 +25,7 @@ import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/sup
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from '../components/GoogleButton';
 import { UserAvatar } from '../components/UserAvatar';
+import { AdminRatingBlock } from '../components/admin/AdminRatingBlock';
 
 export interface ProfileScreenProps {
   onBack: () => void;
@@ -230,6 +231,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
             ? t('auth.unlinkGoogle', 'Unlink Google Account')
             : t('auth.linkGoogle', 'Link Google Account')}
         />
+
+        {/* Admin · reset ratings — self-gates for non-admins (renders null) */}
+        {eligible && <AdminRatingBlock />}
 
         {/* Logout */}
         <Pressable
