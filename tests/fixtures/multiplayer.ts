@@ -22,6 +22,74 @@ import {
 } from './actions';
 
 /**
+ * Sign in to one of the pre-seeded confirmed-email demo accounts and
+ * land in the Lobby. Mirrors `loginAsRegistered` in multiplayer-demo.ts
+ * but lives here so smoke specs (which don't pull in the demo helper
+ * surface) can reach a logged-in lobby in a single call.
+ *
+ * Why pre-seeded accounts and not on-the-fly admin.createUser:
+ *   - Smoke runs against the manual :8081 dev server, which is pointed
+ *     at the *prod* Supabase project (see CLAUDE.md).
+ *   - We don't want to require a SUPABASE_SERVICE_ROLE_KEY in the
+ *     smoke env (would mean prod service-role on the dev machine).
+ *   - The 4 accounts (alice|bob|dave|eve@nigels.test, password
+ *     `demo-pass-1234`) already exist with email_confirmed_at set;
+ *     the e2e demo spec uses them daily.
+ *
+ * Override the password via DEMO_LOGIN_PASS env if the prod seed
+ * was reset.
+ */
+export async function enterLobbyAsRegisteredUser(
+  page: Page,
+  email: string,
+  label = 'player',
+): Promise<void> {
+  const password = process.env.DEMO_LOGIN_PASS ?? 'demo-pass-1234';
+  await page.goto('/');
+
+  // Same prompt-flag pre-seed as enterLobbyAsGuest — irrelevant for
+  // registered users today, harmless if logic shifts later.
+  await page.evaluate(() => {
+    try {
+      localStorage.setItem('auth_prompt_before_create_dismissed_v1', '1');
+      localStorage.setItem('auth_prompt_after_game_dismissed_v1', '1');
+    } catch {
+      /* ignore */
+    }
+  });
+
+  const vp = page.viewportSize();
+  const isDesktop = !!vp && vp.width >= 1024;
+  if (!isDesktop) {
+    await tap(page, 'btn-sign-in', 20_000);
+  } else {
+    await page
+      .locator('[data-testid="auth-input-email"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
+  }
+  await tap(page, 'auth-tab-signIn', 8_000);
+  await page.locator('[data-testid="auth-input-email"]').first().fill(email);
+  await page
+    .locator('[data-testid="auth-input-password"]')
+    .first()
+    .fill(password);
+  await tap(page, 'auth-btn-submit', 8_000);
+
+  await page
+    .locator('[data-testid="input-player-name"]:visible')
+    .first()
+    .waitFor({ state: 'visible', timeout: 20_000 });
+
+  for (let i = 0; i < 8; i += 1) {
+    if (await dismissPwaModalIfAny(page)) break;
+    await sleep(250);
+  }
+  // eslint-disable-next-line no-console
+  console.log(`[mp:${label}] ✓ logged in as ${email}`);
+}
+
+/**
  * Host flow: pick player-count chip, open Create tab, click Create,
  * wait for the WaitingRoom screen, return the 6-char room code.
  *
