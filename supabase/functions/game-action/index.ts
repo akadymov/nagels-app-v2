@@ -27,6 +27,7 @@ import { requestTimeout } from './actions/requestTimeout.ts';
 import { restartGame }    from './actions/restartGame.ts';
 import { setDisplayName } from './actions/setDisplayName.ts';
 import { setStake }       from './actions/setStake.ts';
+import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -85,6 +86,7 @@ Deno.serve(async (req: Request) => {
         case 'restart_game':    result = await restartGame(svc, actor, action); break;
         case 'set_display_name': result = await setDisplayName(svc, actor, action); break;
         case 'set_stake':       result = await setStake(svc, actor, action); break;
+        case 'toggle_stake_optin': result = await toggleStakeOptin(svc, actor, action); break;
         default:                throw new Error('unknown_action');
       }
     }
