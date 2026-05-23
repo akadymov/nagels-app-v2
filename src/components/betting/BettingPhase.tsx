@@ -38,6 +38,10 @@ import { SuitSymbols } from '../../constants/colors';
 import { betPlacedHaptic } from '../../utils/haptics';
 import { getAllowedBets } from '../../../supabase/functions/_shared/engine/rules';
 import { OnboardingTip } from '../OnboardingTip';
+import { ActiveTurnPulseBorder } from '../ActiveTurnPulseBorder';
+
+/** Black/near-black text on the yellow active-player fill — see GameTableScreen. */
+const ACTIVE_TEXT_DARK = '#1a1a1a';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -513,6 +517,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' },
       ]}
     >
+      <ActiveTurnPulseBorder active={isMyTurn && myBet === null} />
       {/* First-time bidding explainer (last-bidder rule + scoring intro). */}
       <OnboardingTip
         name="bidding"
@@ -762,21 +767,25 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                   { backgroundColor: colors.surface, borderColor: colors.glassLight },
                   // "It's me" highlight first; then the active-player
                   // highlight wins on top so when it's my turn to bet I
-                  // see the same yellow ring everyone else does, not the
+                  // see the same yellow fill everyone else does, not the
                   // blue accent that's just "this is me" elsewhere.
                   isMe && { borderColor: colors.accent, borderWidth: 2 },
-                  isBetting && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                  isBetting && {
+                    backgroundColor: colors.activePlayerBorder,
+                    borderColor: colors.activePlayerBorder,
+                    borderWidth: 2,
+                  },
                 ]}
               >
                 <Text
                   style={[
                     styles.playerCardName,
-                    // Active-player rule: whoever is bidding RIGHT NOW
-                    // gets the yellow accent. Only fall back to "this
-                    // is me" blue when it isn't my turn.
+                    // On the yellow fill we need dark text for contrast;
+                    // otherwise fall back to "this is me" blue or the
+                    // standard text color.
                     {
                       color: isBetting
-                        ? colors.activePlayerBorder
+                        ? ACTIVE_TEXT_DARK
                         : isMe
                           ? colors.accent
                           : colors.textPrimary,
@@ -789,7 +798,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 <Text
                   style={[
                     styles.playerCardBet,
-                    { color: hasBet ? colors.success : colors.textMuted },
+                    {
+                      color: isBetting
+                        ? ACTIVE_TEXT_DARK
+                        : hasBet
+                          ? colors.success
+                          : colors.textMuted,
+                    },
                   ]}
                 >
                   {hasBet ? `Bet: ${player.bet}` : isBetting ? t('game.betting') + '...' : '...'}

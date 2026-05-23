@@ -72,10 +72,17 @@ export async function loginAsRegistered(
     .first()
     .fill(password);
   await tap(page, 'auth-btn-submit', 8_000);
-  // Lobby mounts once auth succeeds. input-player-name is unique
-  // to LobbyScreen.
+  // Lobby mounts once auth succeeds. input-player-name is the
+  // canonical Lobby marker. On desktop, however, DesktopWelcomeAuth
+  // ALSO mounts a LobbyScreen in its right pane the moment auth
+  // flips isLoggedIn=true (see src/screens/desktop/DesktopWelcomeAuth.tsx).
+  // Navigation then pushes /Lobby, but /Welcome stays in the stack
+  // with display:none — so the DOM ends up with TWO input-player-name
+  // nodes and `.first()` picks the hidden one. The `:visible` filter
+  // pins us to the active route's input on both mobile (single match)
+  // and desktop (two matches, want the visible one).
   await page
-    .locator('[data-testid="input-player-name"]')
+    .locator('[data-testid="input-player-name"]:visible')
     .first()
     .waitFor({ state: 'visible', timeout: 20_000 });
 
@@ -157,7 +164,11 @@ export async function changeNicknameInLobby(
   nickname: string,
   label = 'player',
 ): Promise<void> {
-  const input = page.locator('[data-testid="input-player-name"]').first();
+  // `:visible` so we always grab the active route's input, not the
+  // dormant duplicate that DesktopWelcomeAuth leaves mounted in the
+  // /Welcome stack screen after navigation. See loginAsRegistered
+  // for the full reasoning.
+  const input = page.locator('[data-testid="input-player-name"]:visible').first();
   try {
     await input.waitFor({ state: 'visible', timeout: 5_000 });
     await input.click({ clickCount: 3 });

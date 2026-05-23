@@ -16,14 +16,20 @@ export const sleep = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
 export async function tap(p: Page, testId: string, timeout = 8000): Promise<void> {
-  const el: Locator = p.locator(`[data-testid="${testId}"]`).first();
+  // `:visible` so we skip dormant duplicates the React Navigation
+  // stack leaves mounted under display:none. Without it, .first()
+  // can land on a hidden Welcome-route copy of a Lobby testID and
+  // waitFor times out staring at the wrong node — see the
+  // DesktopWelcomeAuth-after-login trap in
+  // tests/fixtures/multiplayer-demo.ts::loginAsRegistered.
+  const el: Locator = p.locator(`[data-testid="${testId}"]:visible`).first();
   await el.waitFor({ state: 'visible', timeout });
   await el.click();
 }
 
 export async function exists(p: Page, testId: string, timeout = 1000): Promise<boolean> {
   return p
-    .locator(`[data-testid="${testId}"]`)
+    .locator(`[data-testid="${testId}"]:visible`)
     .first()
     .isVisible({ timeout })
     .catch(() => false);
