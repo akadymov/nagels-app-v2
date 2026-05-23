@@ -13,7 +13,7 @@
  * Mobile keeps the existing modal flow regardless.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
@@ -26,6 +26,7 @@ import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
 import { PlayingCard } from '../../components/cards';
 import { ScoreboardModal, type PlayerScore } from '../ScoreboardModal';
+import { RatingSettlementModal } from '../RatingSettlementModal';
 import { gameClient } from '../../lib/gameClient';
 import { useChatTooltipStore } from '../../store/chatTooltipStore';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
@@ -196,6 +197,20 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     ? snapshot?.room?.phase === 'finished'
     : sp.phase === 'finished';
 
+  // Opt-in stake players see RatingSettlementModal at game end. The
+  // embedded scoreboard suppresses its own Play Again so the restart
+  // funnels through that modal.
+  const meOptIn = !!(
+    (snapshot?.players ?? []).find((p: any) => p.session_id === mpMyPlayerId) as any
+  )?.opt_in_stake;
+  const roomStake = ((snapshot?.room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25);
+  const [showSettlement, setShowSettlement] = useState(false);
+  useEffect(() => {
+    if (isMultiplayer && isGameOver && roomStake > 0 && meOptIn) {
+      setShowSettlement(true);
+    }
+  }, [isMultiplayer, isGameOver, roomStake, meOptIn]);
+
   const handlePlayAgain = () => {
     if (!isMultiplayer) {
       try { sp.reset(); } catch {}
@@ -234,6 +249,14 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
         onContinue={() => { /* no-op — embedded mode has no Continue */ }}
         onPlayAgain={handlePlayAgain}
         onLeaveRoom={isMultiplayer ? handleLeaveRoom : undefined}
+        suppressPlayAgain={meOptIn && roomStake > 0}
+      />
+      <RatingSettlementModal
+        visible={showSettlement}
+        roomId={snapshot?.room?.id ?? null}
+        onClose={() => setShowSettlement(false)}
+        showPlayAgain={isHost}
+        onPlayAgain={() => { setShowSettlement(false); handlePlayAgain(); }}
       />
     </View>
   );

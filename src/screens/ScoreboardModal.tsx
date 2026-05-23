@@ -93,6 +93,13 @@ export interface ScoreboardModalProps {
    *  user can switch between the two views (Akula: "давать
    *  возможность переключать между подробной и краткой записью"). */
   embedded?: boolean;
+  /** When true, suppress the in-scoreboard "Play again" CTA so an
+   *  upstream modal (e.g. RatingSettlementModal for opt-in stake
+   *  players) can own the restart action. Non-host "Waiting for host…"
+   *  placeholder is also suppressed since the upstream flow replaces
+   *  the entire restart UX. Defaults to false — non-stake flows are
+   *  unchanged. */
+  suppressPlayAgain?: boolean;
 }
 
 export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
@@ -110,6 +117,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   onClose,
   onLeaveRoom,
   embedded = false,
+  suppressPlayAgain = false,
 }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -527,7 +535,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             the next hand auto-loads when the server advances. */}
         {isGameOver && (
           <View style={styles.footer}>
-            {isHost && onPlayAgain ? (
+            {!suppressPlayAgain && (isHost && onPlayAgain ? (
               <Pressable
                 style={[styles.continueBtn, { backgroundColor: colors.accent }]}
                 onPress={onPlayAgain}
@@ -541,7 +549,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
                   {t('scoreboard.waitingForHost', 'Waiting for host…')}
                 </Text>
               </View>
-            )}
+            ))}
             {onLeaveRoom && (
               <Pressable
                 style={[styles.continueBtn, { marginTop: Spacing.sm, backgroundColor: 'transparent', borderColor: colors.glassLight, borderWidth: 1 }]}
@@ -594,22 +602,24 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             */}
             <View style={styles.footer}>
               {isGameOver ? (
-                isHost && onPlayAgain ? (
-                  <Pressable
-                    style={[styles.continueBtn, { backgroundColor: colors.accent }]}
-                    onPress={onPlayAgain}
-                    testID="btn-play-again-scoreboard"
-                  >
-                    <Text style={styles.continueBtnText}>
-                      {t('scoreboard.playAgain')}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
-                    <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
-                      {t('scoreboard.waitingForHost', 'Waiting for host…')}
-                    </Text>
-                  </View>
+                suppressPlayAgain ? null : (
+                  isHost && onPlayAgain ? (
+                    <Pressable
+                      style={[styles.continueBtn, { backgroundColor: colors.accent }]}
+                      onPress={onPlayAgain}
+                      testID="btn-play-again-scoreboard"
+                    >
+                      <Text style={styles.continueBtnText}>
+                        {t('scoreboard.playAgain')}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View style={[styles.continueBtn, { backgroundColor: colors.surface, borderColor: colors.glassLight, borderWidth: 1 }]}>
+                      <Text style={[styles.continueBtnText, { color: colors.textMuted }]}>
+                        {t('scoreboard.waitingForHost', 'Waiting for host…')}
+                      </Text>
+                    </View>
+                  )
                 )
               ) : (
                 <Pressable

@@ -28,6 +28,7 @@ import { BettingPhase } from '../components/betting';
 import { TricksRecorder } from '../components/scorekeeper';
 import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
+import { RatingSettlementModal } from './RatingSettlementModal';
 import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
 import { TurnTimer } from '../components/TurnTimer';
@@ -573,6 +574,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // ── UI state ───────────────────────────────────────────────
   const [showScoreboard, setShowScoreboard] = useState(false);
+  const [showSettlement, setShowSettlement] = useState(false);
+  // Opt-in stake players see the RatingSettlementModal after the
+  // scoreboard at game end; suppresses ScoreboardModal's own Play
+  // Again so the restart action funnels through the settlement.
+  const meOptIn = !!(mpPlayers.find((p) => p.session_id === myPlayerId) as any)?.opt_in_stake;
+  const roomStake = (room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25;
+  useEffect(() => {
+    if (vm.phase === 'finished' && roomStake > 0 && meOptIn) {
+      setShowSettlement(true);
+    }
+  }, [vm.phase, roomStake, meOptIn]);
   const [showChat, setShowChat] = useState(false);
   useChatTooltipListener({
     selfSessionId: vm.myPlayer?.id ?? null,
@@ -1629,6 +1641,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           // (confirm dialog + leaveRoom + onExit) so each player can
           // bail to the lobby without waiting for the host's decision.
           onLeaveRoom={isMultiplayer ? handleLogoLeave : undefined}
+          suppressPlayAgain={meOptIn && roomStake > 0}
+        />
+
+        {/* Opt-in stake settlement — surfaces after scoreboard at game end
+            and replaces the in-scoreboard Play Again CTA. */}
+        <RatingSettlementModal
+          visible={showSettlement}
+          roomId={room?.id ?? null}
+          onClose={() => setShowSettlement(false)}
+          showPlayAgain={isMultiplayer && !!room && room.host_session_id === myPlayerId}
+          onPlayAgain={() => { setShowSettlement(false); handleScoreboardPlayAgain(); }}
         />
 
         {/* Save Progress auto-prompt (anonymous, after first finished game) */}
