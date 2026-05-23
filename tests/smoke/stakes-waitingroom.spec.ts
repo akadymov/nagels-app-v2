@@ -63,13 +63,15 @@ test.describe('stakes waitingroom', () => {
       await optinB.waitFor({ state: 'visible', timeout: 8_000 });
       await optinB.click({ timeout: 5_000 });
 
-      // The ★ badge appears in the host's roster for whichever seat
-      // B occupies. We don't pin the seat — either seat-0 or seat-1
-      // works (host could be seated first or second depending on
-      // server ordering, though host is typically seat 0). Match any
-      // stake-star-* in the host view.
-      const star = pageA.locator('[data-testid^="stake-star-"]').first();
-      await expect(star).toBeVisible({ timeout: 8_000 });
+      // The ±N stake badge appears next to whichever seat B occupies
+      // once their opt-in lands. We don't pin the seat — either
+      // seat-0 or seat-1 works (host is typically seat 0 but server
+      // ordering can vary). Match any stake-badge-* in the host view.
+      // (Earlier iterations of the UI used a ★ glyph and the test was
+      // written against stake-star-*; the badge was reshaped to ±N
+      // without updating the test.)
+      const badge = pageA.locator('[data-testid^="stake-badge-"]').first();
+      await expect(badge).toBeVisible({ timeout: 8_000 });
     } finally {
       await ctxA.close().catch(() => {});
       await ctxB.close().catch(() => {});

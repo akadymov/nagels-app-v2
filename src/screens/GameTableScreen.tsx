@@ -32,6 +32,11 @@ import { RatingSettlementModal } from './RatingSettlementModal';
 import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
 import { TurnTimer } from '../components/TurnTimer';
+import { ActiveTurnPulseBorder } from '../components/ActiveTurnPulseBorder';
+
+/** Text on the yellow active-player fill — black/near-black gives ~10:1 contrast
+ *  on #E6BF33 in both themes; the white profile text drops to ~3:1 and fails WCAG. */
+const ACTIVE_TEXT_DARK = '#1a1a1a';
 import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
 import { useChatStore } from '../store/chatStore';
@@ -1027,6 +1032,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <ActiveTurnPulseBorder active={isMyTurnPlaying} />
       {/* First-time onboarding tips. Tips self-gate on
           settingsStore.shownTips so once dismissed they never show again.
           We also chain the trump-related tip after the bidding tip: it
@@ -1386,7 +1392,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 <View
                   style={[
                     styles.profileCard,
-                    isMyTurnNow && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                    isMyTurnNow && {
+                      backgroundColor: colors.activePlayerBorder,
+                      borderColor: colors.activePlayerBorder,
+                      borderWidth: 2,
+                    },
                     !isMyTurnNow && { borderColor: colors.accent, borderWidth: 1.5 },
                   ]}
                 >
@@ -1406,8 +1416,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     textSize={16}
                     style={{ marginBottom: 3 }}
                   />
-                  <Text style={styles.profileName} numberOfLines={1}>{vm.myPlayer.name}</Text>
-                  <Text style={styles.profileStats}>Bet:{vm.myPlayer.bet ?? '-'} Won:{vm.myPlayer.tricksWon}</Text>
+                  <Text
+                    style={[styles.profileName, isMyTurnNow && { color: ACTIVE_TEXT_DARK }]}
+                    numberOfLines={1}
+                  >
+                    {vm.myPlayer.name}
+                  </Text>
+                  <Text
+                    style={[styles.profileStats, isMyTurnNow && { color: ACTIVE_TEXT_DARK }]}
+                  >
+                    Bet:{vm.myPlayer.bet ?? '-'} Won:{vm.myPlayer.tricksWon}
+                  </Text>
                 </View>
               </View>
             );
@@ -1439,7 +1458,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   style={[
                     styles.profileCard,
                     { marginTop: positionStyle.marginTop, marginLeft: positionStyle.marginLeft },
-                    isCurrentPlayer && { borderColor: colors.activePlayerBorder, borderWidth: 2 },
+                    isCurrentPlayer && {
+                      backgroundColor: colors.activePlayerBorder,
+                      borderColor: colors.activePlayerBorder,
+                      borderWidth: 2,
+                    },
                     isOffline && { opacity: 0.45 },
                   ]}
                 >
@@ -1460,8 +1483,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                     textSize={16}
                     style={{ marginBottom: 3 }}
                   />
-                  <Text style={styles.profileName} numberOfLines={1}>{player.name}</Text>
-                  <Text style={styles.profileStats}>Bet:{player.bet ?? '-'} Won:{player.tricksWon}</Text>
+                  <Text
+                    style={[styles.profileName, isCurrentPlayer && { color: ACTIVE_TEXT_DARK }]}
+                    numberOfLines={1}
+                  >
+                    {player.name}
+                  </Text>
+                  <Text
+                    style={[styles.profileStats, isCurrentPlayer && { color: ACTIVE_TEXT_DARK }]}
+                  >
+                    Bet:{player.bet ?? '-'} Won:{player.tricksWon}
+                  </Text>
                 </View>
                 <PlayerChatTooltip
                   sessionId={player.id}
