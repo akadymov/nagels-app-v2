@@ -330,6 +330,7 @@
     "optInBadge": "★ apuesta",
     "optInToggle": "Jugar por rating",
     "guestHint": "Inicia sesión para jugar por rating",
+    "guestHintConfirm": "Iniciar sesión te devuelve al lobby — tendrás que volver a entrar a esta sala. ¿Continuar?",
     "unconfirmedHint": "Confirma tu email para jugar por rating",
     "lockedHint": "Apuesta bloqueada — partida en curso",
     "settlementTitle": "Liquidación de rating",
