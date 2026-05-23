@@ -21,7 +21,13 @@ export type Action =
   | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string }
-  | { kind: 'set_display_name'; display_name: string; room_id?: string };
+  | { kind: 'set_display_name'; display_name: string; room_id?: string }
+  | { kind: 'set_stake';                 room_id: string; stake: 0 | 1 | 5 | 10 | 25 }
+  | { kind: 'toggle_stake_optin';        room_id: string; opted_in: boolean }
+  | { kind: 'admin_check' }
+  | { kind: 'admin_search_users';        q: string }
+  | { kind: 'admin_reset_rating';        target_user_id: string }
+  | { kind: 'admin_reset_all_ratings' };
 
 export interface ActorContext {
   auth_user_id: string;
@@ -58,6 +64,8 @@ export interface RoomSnapshot {
     phase: 'waiting' | 'playing' | 'finished';
     current_hand_id: string | null;
     version: number;
+    stake: 0 | 1 | 5 | 10 | 25;
+    stake_locked: boolean;
   } | null;
   players: Array<{
     session_id: string;
@@ -74,6 +82,7 @@ export interface RoomSnapshot {
     avatar_url?: string | null;
     /** User-chosen avatar color hex (#RRGGBB). Null → seat-based default. */
     avatar_color?: string | null;
+    opt_in_stake: boolean;
   }>;
   spectators: Spectator[];
   current_hand: {
