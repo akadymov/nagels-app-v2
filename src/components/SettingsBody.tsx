@@ -7,7 +7,7 @@
  * away (e.g., logout) so the modal isn't left open underneath.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,9 @@ import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
 import { isStandalone, isMobileWeb } from '../lib/pwaInstall';
 import { BrandSwitch } from './BrandSwitch';
+import { useRatingStore } from '../store/ratingStore';
+import { canPlayForRating } from '../utils/ratingEligibility';
+import { AdminRatingBlock } from './admin/AdminRatingBlock';
 
 export interface SettingsBodyProps {
   onClose: () => void;
@@ -90,6 +93,15 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const navigation = useNavigation<any>();
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
   const { user, isGuest, displayName } = useAuthStore();
+  const ratingEligible = canPlayForRating(user, isGuest);
+  const ratingBalance = useRatingStore((s) => s.balance);
+  const loadRating = useRatingStore((s) => s.load);
+  // SettingsBody is a sibling inside a modal / left pane — useFocusEffect
+  // on the parent doesn't fire when we surface, so kick the rating load
+  // on mount and whenever eligibility flips. Cheap RPC (single integer).
+  useEffect(() => {
+    if (ratingEligible) loadRating();
+  }, [ratingEligible, loadRating]);
   // "Anonymous" = not a registered user yet. The Supabase user.is_anonymous
   // flag isn't always populated on every session (especially right after
   // a refresh), so we OR with the canonical isGuest flag from authStore.
@@ -411,8 +423,21 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                 />
               </>
             )}
+            {ratingEligible && (
+              <View style={[styles.ratingRow, { borderTopColor: colors.glassLight }]} testID="profile-rating-row">
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+                  {t('profile.rating', 'Rating')}
+                </Text>
+                <Text style={[styles.ratingValue, { color: colors.accent }]}>
+                  {ratingBalance ?? '—'}
+                </Text>
+              </View>
+            )}
           </View>
         )}
+
+        {/* === ADMIN — visible only when admin_check returns is_admin === */}
+        {ratingEligible && <AdminRatingBlock />}
 
         {/* === THEME === */}
         {showPreferences && (
@@ -571,6 +596,12 @@ const styles = StyleSheet.create({
   section: { borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1 },
   // Single-row toggle: title (+optional description) on the left, BrandSwitch right.
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Rating balance row inside the Profile section.
+  ratingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: Spacing.md, marginTop: Spacing.md, borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  ratingValue: { fontSize: 18, fontWeight: '800' },
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
   sectionSubtitle: { fontSize: 13, marginTop: Spacing.md, marginBottom: Spacing.sm },
   sectionDesc: { ...TextStyles.caption, marginBottom: Spacing.md, lineHeight: 20 },
