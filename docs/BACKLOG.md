@@ -22,9 +22,6 @@
 ### Push notifications — follow-ups
 
 
-### Conditional stakes — agree on stake before game, winners earn rating points, losers pay difference
-
-
 ### Cross-device user sessions
 
   - defaultExpanded: false
@@ -55,6 +52,21 @@
 
 ## Next Up
 
+## In Progress
+
+### Conditional stakes — opt-in rating wager per game + admin reset tools (Akula, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    Хост перед стартом выбирает ставку 0/1/5/10/25; каждый eligible (email-confirmed / Google) игрок opt-in'ится индивидуально. После старта ставка и opt-in заблокированы. В конце игры — zero-sum: delta_i = round((score_i − mean) × stake), settle для всех opt-in (≥2). Журнал в rating_events, баланс в user_ratings. Гости видят disabled toggle с подсказкой. Provisional дельта в счёте видна только opt-in игрокам; финальный экран RatingSettlementModal — им же. Admin (по env ADMIN_EMAILS) может обнулить рейтинг отдельного игрока или всех — с записью в журнал. Полная спека: docs/superpowers/specs/2026-05-23-conditional-stakes-design.md
+    ```
+
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
+### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+
+
 ### BettingPhase desktop — chat opens from bottom, not from side (Akula via feedback, 2026-05-22)
 
   - defaultExpanded: false
@@ -68,14 +80,6 @@
     ```md
     На десктопе в детализированном счёте иконка первого игрока всегда находится слева во всех раундах — то есть отображает неверную информацию о том, кто начинал раздачу. Должна сдвигаться по реальной ротации (как в brief-варианте / в соответствии с ▶ first player).
     ```
-
-## In Progress
-
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
-
-
-### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
-
 
 ## Done
 
