@@ -244,3 +244,22 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.get_rating_settlement(uuid) TO authenticated;
+
+-- Atomic apply: creates a user_ratings row on first delta, otherwise increments.
+CREATE OR REPLACE FUNCTION public.apply_rating_delta(p_user_id uuid, p_delta integer)
+RETURNS INTEGER
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+DECLARE v_new INTEGER;
+BEGIN
+  INSERT INTO public.user_ratings (user_id, balance)
+  VALUES (p_user_id, p_delta)
+  ON CONFLICT (user_id) DO UPDATE
+    SET balance = public.user_ratings.balance + EXCLUDED.balance,
+        updated_at = now()
+  RETURNING balance INTO v_new;
+  RETURN v_new;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.apply_rating_delta(uuid, integer) FROM PUBLIC;
