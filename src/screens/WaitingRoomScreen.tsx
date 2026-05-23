@@ -495,8 +495,13 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                       {isOffline && (
                         <Text style={styles.seatSuffix}> · 📡</Text>
                       )}
-                      {(player as any).opt_in_stake && (
-                        <Text testID={`stake-star-${player.seat_index}`}> ★</Text>
+                      {(player as any).opt_in_stake && (room?.stake ?? 0) > 0 && (
+                        <Text
+                          testID={`stake-badge-${player.seat_index}`}
+                          style={[styles.stakeBadgeText, { color: colors.accent, borderColor: colors.accent }]}
+                        >
+                          {' ±'}{room?.stake ?? 0}
+                        </Text>
                       )}
                     </Text>
                     {isHostPlayer && (
@@ -814,6 +819,13 @@ const styles = StyleSheet.create({
   hostBadge: {
     ...TextStyles.caption,
     color: Colors.highlight,
+  },
+  // "Playing for ±N rating" badge next to opted-in player names.
+  // ±N reads instantly as "this player wagers N points either way";
+  // a plain ★ was opaque per Akula's feedback.
+  stakeBadgeText: {
+    ...TextStyles.caption,
+    fontWeight: '700',
   },
   readyIndicator: {
     width: 32,

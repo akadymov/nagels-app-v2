@@ -1,5 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Switch } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View, Text, TextInput, Pressable, StyleSheet, Switch, ActivityIndicator,
+  Platform,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
@@ -36,6 +39,32 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
   );
   const [customOpen, setCustomOpen] = useState<boolean>(isCustomActive);
 
+  // Optimistic pending markers — the edge round-trip is ~600-900ms in prod
+  // and without feedback the chip looks dead. We render an ActivityIndicator
+  // over the pending value until the snapshot prop catches up.
+  const [pendingStake, setPendingStake] = useState<number | null>(null);
+  const [pendingOptIn, setPendingOptIn] = useState<boolean | null>(null);
+  // We clear pending only after the prop changes — but a no-op press (clicking
+  // the already-active value) would never trigger that, so guard with a ref.
+  const lastSubmittedStake = useRef<number | null>(null);
+  useEffect(() => {
+    if (pendingStake !== null && stake === pendingStake) {
+      setPendingStake(null);
+    }
+  }, [stake, pendingStake]);
+  useEffect(() => {
+    if (pendingOptIn !== null && optedIn === pendingOptIn) {
+      setPendingOptIn(null);
+    }
+  }, [optedIn, pendingOptIn]);
+
+  const submitStake = (next: number) => {
+    if (next === stake) return;
+    lastSubmittedStake.current = next;
+    setPendingStake(next);
+    onStakeChange(next);
+  };
+
   // Keep the draft in sync if the room's stake is changed elsewhere
   // (e.g. another host action, restart reset to 0, server snapshot landing).
   useEffect(() => {
@@ -53,8 +82,16 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
     const n = parseInt(customDraft, 10);
     if (!Number.isFinite(n) || n < 0 || n > MAX_STAKE) return;
     if (n === stake) return;
-    onStakeChange(n);
+    submitStake(n);
   };
+
+  // Match the rest of the app: brand blue (accent) for the "on" track,
+  // matte gray for "off". Web defaults to a lime green that isn't used
+  // anywhere else in the UI.
+  const switchTrackColor = { false: colors.glassLight, true: colors.accent };
+  const switchThumbColor = Platform.OS === 'web'
+    ? '#ffffff'
+    : optedIn ? '#ffffff' : '#f4f4f5';
 
   return (
     <View style={[styles.root, { borderColor: colors.glassLight, backgroundColor: colors.surface }]}>
@@ -64,52 +101,68 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
       <View style={styles.chipRow}>
         {PRESETS.map((v) => {
           const active = stake === v && !isCustomActive;
+          const isPending = pendingStake === v;
+          const disabledThis = chipsDisabled || pendingStake !== null;
           return (
             <Pressable
               key={v}
               onPress={() => {
-                if (chipsDisabled) return;
+                if (disabledThis) return;
                 setCustomOpen(false);
-                onStakeChange(v);
+                submitStake(v);
               }}
-              disabled={chipsDisabled}
+              disabled={disabledThis}
               style={[
                 styles.chip,
                 {
-                  borderColor: active ? colors.accent : colors.glassLight,
+                  borderColor: active || isPending ? colors.accent : colors.glassLight,
                   backgroundColor: active ? colors.accent : 'transparent',
                   opacity: chipsDisabled && !active ? 0.4 : 1,
                 },
               ]}
               testID={`stake-chip-${v}`}
             >
-              <Text style={[styles.chipText, { color: active ? '#ffffff' : colors.textPrimary }]}>
-                {v === 0 ? t('stakes.off') : String(v)}
-              </Text>
+              {isPending ? (
+                <ActivityIndicator size="small" color={colors.accent} style={styles.chipSpinner} />
+              ) : (
+                <Text style={[styles.chipText, { color: active ? '#ffffff' : colors.textPrimary }]}>
+                  {v === 0 ? t('stakes.off') : String(v)}
+                </Text>
+              )}
             </Pressable>
           );
         })}
         {/* Custom chip — toggles a numeric input alongside the chip row. */}
-        <Pressable
-          onPress={() => {
-            if (chipsDisabled) return;
-            setCustomOpen((prev) => !prev);
-          }}
-          disabled={chipsDisabled}
-          style={[
-            styles.chip,
-            {
-              borderColor: isCustomActive ? colors.accent : colors.glassLight,
-              backgroundColor: isCustomActive ? colors.accent : 'transparent',
-              opacity: chipsDisabled && !isCustomActive ? 0.4 : 1,
-            },
-          ]}
-          testID="stake-chip-custom"
-        >
-          <Text style={[styles.chipText, { color: isCustomActive ? '#ffffff' : colors.textPrimary }]}>
-            {t('stakes.custom')}
-          </Text>
-        </Pressable>
+        {(() => {
+          const isPending = pendingStake !== null && !PRESETS.includes(pendingStake);
+          const disabledThis = chipsDisabled || pendingStake !== null;
+          return (
+            <Pressable
+              onPress={() => {
+                if (disabledThis) return;
+                setCustomOpen((prev) => !prev);
+              }}
+              disabled={disabledThis}
+              style={[
+                styles.chip,
+                {
+                  borderColor: isCustomActive || isPending ? colors.accent : colors.glassLight,
+                  backgroundColor: isCustomActive ? colors.accent : 'transparent',
+                  opacity: chipsDisabled && !isCustomActive ? 0.4 : 1,
+                },
+              ]}
+              testID="stake-chip-custom"
+            >
+              {isPending ? (
+                <ActivityIndicator size="small" color={colors.accent} style={styles.chipSpinner} />
+              ) : (
+                <Text style={[styles.chipText, { color: isCustomActive ? '#ffffff' : colors.textPrimary }]}>
+                  {t('stakes.custom')}
+                </Text>
+              )}
+            </Pressable>
+          );
+        })()}
       </View>
       {customOpen && !chipsDisabled && (
         <View style={styles.customRow}>
@@ -123,11 +176,13 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
             placeholderTextColor={colors.textMuted}
             style={[styles.customInput, { color: colors.textPrimary, borderColor: colors.glassLight, backgroundColor: colors.background }]}
             maxLength={3}
+            editable={pendingStake === null}
             testID="stake-custom-input"
           />
           <Pressable
             onPress={commitCustom}
-            style={[styles.customApply, { backgroundColor: colors.accent }]}
+            disabled={pendingStake !== null}
+            style={[styles.customApply, { backgroundColor: colors.accent, opacity: pendingStake !== null ? 0.5 : 1 }]}
             testID="stake-custom-apply"
           >
             <Text style={{ color: '#ffffff', fontWeight: '700' }}>{t('stakes.apply')}</Text>
@@ -139,12 +194,26 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
           <Text style={[styles.optInLabel, { color: colors.textPrimary }]}>
             {t('stakes.optInToggle')}
           </Text>
-          <Switch
-            value={optedIn}
-            onValueChange={(next) => onToggleOptIn(next)}
-            disabled={!selfEligible || locked}
-            testID="stake-optin-toggle"
-          />
+          <View style={styles.optInControl}>
+            {pendingOptIn !== null && (
+              <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 6 }} />
+            )}
+            <Switch
+              value={optedIn}
+              onValueChange={(next) => {
+                setPendingOptIn(next);
+                onToggleOptIn(next);
+              }}
+              disabled={!selfEligible || locked || pendingOptIn !== null}
+              trackColor={switchTrackColor}
+              thumbColor={switchThumbColor}
+              ios_backgroundColor={colors.glassLight}
+              {...(Platform.OS === 'web'
+                ? ({ activeThumbColor: '#ffffff', activeTrackColor: colors.accent } as object)
+                : {})}
+              testID="stake-optin-toggle"
+            />
+          </View>
         </View>
       )}
       {stake > 0 && !selfEligible && !locked && (
@@ -168,8 +237,10 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: Radius.full, borderWidth: 1.5,
+    minWidth: 50, alignItems: 'center', justifyContent: 'center',
   },
   chipText: { fontSize: 14, fontWeight: '700' },
+  chipSpinner: { transform: [{ scale: 0.75 }] },
   customRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.sm },
   customInput: {
     flex: 1, borderWidth: 1, borderRadius: Radius.md,
@@ -180,6 +251,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: Spacing.sm,
   },
+  optInControl: { flexDirection: 'row', alignItems: 'center' },
   optInLabel: { fontSize: 14, fontWeight: '600' },
   hint: { fontSize: 12, marginTop: 4, fontStyle: 'italic' },
 });

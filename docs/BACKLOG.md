@@ -52,6 +52,13 @@
 
 ## Next Up
 
+### GameTable desktop — gear icon opens Profile as bottom-sheet instead of toggling left pane (Akula via feedback, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в игровой комнате клик по шестерёнке открывает Profile снизу как bottom-sheet модалку. Должно: тот же клик переключает (show/hide) Profile+Settings в левой боковой панели (рядом с Score / Last Hand), как остальные desktop-кнопки топ-бара. Связано с задачей "Unify Profile + Lobby on desktop".
+    ```
+
 ## In Progress
 
 ### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
