@@ -29,6 +29,7 @@ import { setDisplayName } from './actions/setDisplayName.ts';
 import { setStake }       from './actions/setStake.ts';
 import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
 import { adminCheck }      from './actions/adminCheck.ts';
+import { adminSearchUsers } from './actions/adminSearchUsers.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
@@ -59,6 +60,10 @@ Deno.serve(async (req: Request) => {
       if (action.kind === 'admin_check') {
         const r = await adminCheck(svc, actor);
         return jsonResponse(r, 200);
+      }
+      if (action.kind === 'admin_search_users') {
+        const r = await adminSearchUsers(svc, actor, action);
+        return jsonResponse(r, r.ok ? 200 : 403);
       }
       return jsonResponse({ ok: false, error: 'unknown_action' }, 400);
     } catch (err) {
