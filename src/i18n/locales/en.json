@@ -318,7 +318,19 @@
     "avatarOptional": "Optional — default shows your initial",
     "saved": "Profile saved",
     "saveProgress": "Save your progress?",
-    "maybeLater": "Maybe Later"
+    "maybeLater": "Maybe Later",
+    "rating": "Rating"
+  },
+  "stakes": {
+    "title": "Rating stakes",
+    "off": "Off",
+    "optInBadge": "★ stake",
+    "optInToggle": "Play for rating",
+    "guestHint": "Sign in to play for rating",
+    "unconfirmedHint": "Confirm your email to play for rating",
+    "lockedHint": "Stakes locked — game in progress",
+    "settlementTitle": "Rating settlement",
+    "newBalance": "New balance: {{n}}"
   },
   "settings": {
     "title": "Settings",

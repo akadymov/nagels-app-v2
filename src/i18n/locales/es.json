@@ -318,7 +318,19 @@
     "avatarOptional": "Opcional — por defecto muestra tu inicial",
     "saved": "Perfil guardado",
     "saveProgress": "¿Guardar tu progreso?",
-    "maybeLater": "Más tarde"
+    "maybeLater": "Más tarde",
+    "rating": "Rating"
+  },
+  "stakes": {
+    "title": "Apuesta de rating",
+    "off": "Apagado",
+    "optInBadge": "★ apuesta",
+    "optInToggle": "Jugar por rating",
+    "guestHint": "Inicia sesión para jugar por rating",
+    "unconfirmedHint": "Confirma tu email para jugar por rating",
+    "lockedHint": "Apuesta bloqueada — partida en curso",
+    "settlementTitle": "Liquidación de rating",
+    "newBalance": "Nuevo saldo: {{n}}"
   },
   "settings": {
     "title": "Ajustes",
