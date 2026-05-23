@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../store/roomStore';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { UserAvatar } from '../components/UserAvatar';
+import { computeSettlement } from '../../supabase/functions/_shared/engine/stakes';
 
 // Compact result row for one player in a closed hand.
 export interface HandResultRow {
@@ -306,6 +307,30 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
       : Math.max(52, Math.floor((Dimensions.get('window').width - 48 - roundColW) / playerCount));
     const headerMinHeight = embedded ? 96 : 38;
 
+    // Δ-rating preview row — only opt-in stake players see their own
+    // running settlement. Uses the same pure engine the server runs on
+    // game-end, so this row matches the final RatingSettlementModal.
+    const optedInIds = new Set(
+      (snapshot?.players ?? [])
+        .filter((p: any) => p.opt_in_stake)
+        .map((p: any) => p.session_id as string),
+    );
+    const stake = ((snapshot?.room?.stake ?? 0) as 0 | 1 | 5 | 10 | 25);
+    const meSessionId = useRoomStore.getState().myPlayerId;
+    const showDelta = stake > 0 && !!meSessionId && optedInIds.has(meSessionId);
+
+    let deltaByUser: Map<string, number> | null = null;
+    if (showDelta) {
+      const inputs = (snapshot?.players ?? [])
+        .filter((p: any) => optedInIds.has(p.session_id))
+        .map((p: any) => ({
+          user_id: p.session_id as string,
+          score: sortedPlayers.find((sp) => sp.id === p.session_id)?.totalScore ?? 0,
+        }));
+      const deltas = computeSettlement(inputs, stake);
+      deltaByUser = new Map(deltas.map((d) => [d.user_id, d.delta]));
+    }
+
     return (
       <View style={styles.fullContainer} testID={isGameOver ? 'game-over' : undefined}>
         {/* Hand counter — suppressed on game-over (winner banner above
@@ -428,6 +453,25 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
               </View>
             ))}
           </View>
+
+          {showDelta && (
+            <View style={styles.tableRow} testID="scoreboard-delta-row">
+              <View style={[styles.tableCell, { width: roundColW }]}>
+                <Text style={[styles.totalLabel, { color: colors.textPrimary }]}>Δ</Text>
+              </View>
+              {sortedPlayers.map((p) => {
+                const d = deltaByUser?.get(p.id) ?? 0;
+                const color = d > 0 ? colors.success : d < 0 ? colors.error : colors.textMuted;
+                return (
+                  <View key={p.id} style={[styles.tableCell, { width: playerColW }]}>
+                    <Text style={[styles.totalScore, { color }]}>
+                      {d > 0 ? `+${d}` : String(d)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {leader && (
             <Text style={[styles.leaderText, { color: colors.success }]}>
