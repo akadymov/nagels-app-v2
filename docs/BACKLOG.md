@@ -52,6 +52,13 @@
 
 ## Next Up
 
+### Profile/Settings — replace toggle-row labels with BrandSwitch (Akula, 2026-05-23)
+
+  - defaultExpanded: false
+    ```md
+    Текущие переключатели «Вибрация», «Уведомления» в профиле и Settings отображаются как текстовые «Включено/Выключено» (Pressable + label). Перевести на компонент `<BrandSwitch>` (создан в этой ветке, src/components/BrandSwitch.tsx) — он уже использует brand-blue accent для on, серый для off, и работает на iOS/Android/Web одинаково. Заодно убрать ручную локализацию строк «Вкл/Выкл» если они станут лишними. Затронутые экраны: ProfileScreen, SettingsBody.
+    ```
+
 ### GameTable desktop — gear icon opens Profile as bottom-sheet instead of toggling left pane (Akula via feedback, 2026-05-23)
 
   - defaultExpanded: false

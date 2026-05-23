@@ -14,9 +14,9 @@ import {
   Pressable,
   ActivityIndicator,
   Share,
-  Switch,
   Alert,
 } from 'react-native';
+import { BrandSwitch } from '../components/BrandSwitch';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '../components/glass';
@@ -639,7 +639,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   {t('gameMode.skipOnesHint', 'Middle of the ladder stays at 2 cards')}
                 </Text>
               </View>
-              <Switch
+              <BrandSwitch
                 value={(room?.min_cards_per_hand ?? 1) >= 2}
                 onValueChange={handleToggleSkipOnes}
                 testID="switch-skip-ones"

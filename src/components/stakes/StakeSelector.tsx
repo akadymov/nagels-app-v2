@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, Switch, ActivityIndicator,
-  Platform,
+  View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
+import { BrandSwitch } from '../BrandSwitch';
 
 export interface StakeSelectorProps {
   /** Any non-negative integer up to 999. 0 = stakes off. */
@@ -84,14 +84,6 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
     if (n === stake) return;
     submitStake(n);
   };
-
-  // Match the rest of the app: brand blue (accent) for the "on" track,
-  // matte gray for "off". Web defaults to a lime green that isn't used
-  // anywhere else in the UI.
-  const switchTrackColor = { false: colors.glassLight, true: colors.accent };
-  const switchThumbColor = Platform.OS === 'web'
-    ? '#ffffff'
-    : optedIn ? '#ffffff' : '#f4f4f5';
 
   return (
     <View style={[styles.root, { borderColor: colors.glassLight, backgroundColor: colors.surface }]}>
@@ -198,19 +190,13 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
             {pendingOptIn !== null && (
               <ActivityIndicator size="small" color={colors.accent} style={{ marginRight: 6 }} />
             )}
-            <Switch
+            <BrandSwitch
               value={optedIn}
               onValueChange={(next) => {
                 setPendingOptIn(next);
                 onToggleOptIn(next);
               }}
               disabled={!selfEligible || locked || pendingOptIn !== null}
-              trackColor={switchTrackColor}
-              thumbColor={switchThumbColor}
-              ios_backgroundColor={colors.glassLight}
-              {...(Platform.OS === 'web'
-                ? ({ activeThumbColor: '#ffffff', activeTrackColor: colors.accent } as object)
-                : {})}
               testID="stake-optin-toggle"
             />
           </View>
