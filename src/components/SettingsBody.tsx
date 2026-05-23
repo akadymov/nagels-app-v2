@@ -33,6 +33,7 @@ import i18n from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
 import { isStandalone, isMobileWeb } from '../lib/pwaInstall';
+import { BrandSwitch } from './BrandSwitch';
 
 export interface SettingsBodyProps {
   onClose: () => void;
@@ -478,42 +479,38 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
         {/* === HAPTICS === */}
         {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t('settings.haptics', 'Vibration')}
-          </Text>
-          <View style={{ height: Spacing.md }} />
-          <OptionPills
-            options={[
-              { key: 'on', label: t('settings.on', 'On') },
-              { key: 'off', label: t('settings.off', 'Off') },
-            ]}
-            selected={hapticsEnabled ? 'on' : 'off'}
-            onSelect={(key) => setHapticsEnabled(key === 'on')}
-            accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
-            testIDPrefix="haptics"
-          />
+          <View style={styles.toggleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0, flex: 1 }]}>
+              {t('settings.haptics', 'Vibration')}
+            </Text>
+            <BrandSwitch
+              value={hapticsEnabled}
+              onValueChange={setHapticsEnabled}
+              testID="haptics-switch"
+            />
+          </View>
         </View>
         )}
 
         {/* === NOTIFICATIONS === */}
         {showPreferences && (
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-            {t('settings.notifications', 'Notifications')}
-          </Text>
-          <Text style={[styles.sectionDesc, { color: colors.textMuted }]}>
-            {t('settings.notificationsDesc', 'Wake me when it is my turn or the game starts.')}
-          </Text>
-          <OptionPills
-            options={[
-              { key: 'on',  label: t('settings.on',  'On') },
-              { key: 'off', label: t('settings.off', 'Off') },
-            ]}
-            selected={push.state === 'subscribed' ? 'on' : 'off'}
-            onSelect={(key) => { void (key === 'on' ? push.enable() : push.disable()); }}
-            accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}
-            testIDPrefix="notifications"
-          />
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1, paddingRight: Spacing.sm }}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 2 }]}>
+                {t('settings.notifications', 'Notifications')}
+              </Text>
+              <Text style={[styles.sectionDesc, { color: colors.textMuted, marginBottom: 0 }]}>
+                {t('settings.notificationsDesc', 'Wake me when it is my turn or the game starts.')}
+              </Text>
+            </View>
+            <BrandSwitch
+              value={push.state === 'subscribed'}
+              onValueChange={(next) => { void (next ? push.enable() : push.disable()); }}
+              disabled={push.state === 'unsupported'}
+              testID="notifications-switch"
+            />
+          </View>
           {push.state === 'denied' && (
             <Text style={[styles.sectionDesc, { color: colors.textMuted, marginTop: Spacing.sm }]}>
               {t('settings.notificationsDenied', 'Enable notifications in your browser site settings, then come back.')}
@@ -572,6 +569,8 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
 
 const styles = StyleSheet.create({
   section: { borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1 },
+  // Single-row toggle: title (+optional description) on the left, BrandSwitch right.
+  toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
   sectionSubtitle: { fontSize: 13, marginTop: Spacing.md, marginBottom: Spacing.sm },
   sectionDesc: { ...TextStyles.caption, marginBottom: Spacing.md, lineHeight: 20 },

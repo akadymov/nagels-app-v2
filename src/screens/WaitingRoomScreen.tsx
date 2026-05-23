@@ -44,6 +44,7 @@ import { useChatTooltipStore } from '../store/chatTooltipStore';
 import { StakeSelector } from '../components/stakes/StakeSelector';
 import { canPlayForRating } from '../utils/ratingEligibility';
 import { useAuthStore } from '../store/authStore';
+import { useDesktopGameUI } from './desktop/DesktopGameContext';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -76,6 +77,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const isSpectator = useRoomStore((s) => s.isSpectator);
   const spectators = snapshot?.spectators ?? EMPTY_ARRAY;
 
+  // Desktop wraps this screen in DesktopWaitingRoom which provides the
+  // left-pane toggle context. Null on mobile / SP — we fall back to the
+  // bottom-sheet SettingsModal there.
+  const desktopUI = useDesktopGameUI();
   const room = snapshot?.room ?? null;
   const players = snapshot?.players ?? [];
   const myPlayer = useMemo(
@@ -367,7 +372,23 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             )}
           </Pressable>
           {onSettings ? (
-            <Pressable onPress={onSettings} hitSlop={8} style={styles.settingsBtn} testID="waiting-btn-settings">
+            <Pressable
+              onPress={() => {
+                // Desktop already mounts SettingsBody in the left pane —
+                // toggle that pane instead of stacking a bottom-sheet on top.
+                if (desktopUI) desktopUI.toggleLeftPanel('settings');
+                else onSettings();
+              }}
+              hitSlop={8}
+              style={[
+                styles.settingsBtn,
+                desktopUI?.leftPanel === 'settings' && {
+                  backgroundColor: colors.accent,
+                  borderColor: colors.accent,
+                },
+              ]}
+              testID="waiting-btn-settings"
+            >
               <Text style={{ fontSize: 18 }}>⚙️</Text>
             </Pressable>
           ) : (
