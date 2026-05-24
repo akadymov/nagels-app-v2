@@ -343,7 +343,12 @@
     "unconfirmedHint": "Confirm your email to play for rating",
     "lockedHint": "Stakes locked — game in progress",
     "settlementTitle": "Rating settlement",
-    "newBalance": "New balance: {{n}}"
+    "newBalance": "New balance: {{n}}",
+    "proposalTitle": "Host proposed playing for rating",
+    "proposalBody": "Stake: {{n}} per game. Decide if you want to join the rated game — you can change your mind any time before the game starts.",
+    "proposalAccept": "Play for rating",
+    "proposalDecline": "Not this time",
+    "baseStakeBadge": "Stake {{n}} / game"
   },
   "settings": {
     "title": "Settings",

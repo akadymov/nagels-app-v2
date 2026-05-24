@@ -183,7 +183,21 @@ export const StakeSelector: React.FC<StakeSelectorProps> = ({
           </Pressable>
         </View>
       )}
-      {stake > 0 && (
+      {/* Host's opt-in is implied by picking a stake — WaitingRoom auto-toggles
+          it for them. Show a quiet confirmation chip instead of a duplicate
+          switch. Non-hosts still see the switch to accept/decline the host's
+          proposed stake. */}
+      {stake > 0 && isHost && (
+        <View style={styles.optInRow}>
+          <Text
+            style={[styles.optInHostBadge, { color: colors.accent }]}
+            testID="stake-optin-host-badge"
+          >
+            ✓ {t('stakes.optInToggle')}
+          </Text>
+        </View>
+      )}
+      {stake > 0 && !isHost && (
         <View style={styles.optInRow}>
           <Text style={[styles.optInLabel, { color: colors.textPrimary }]}>
             {t('stakes.optInToggle')}
@@ -257,6 +271,7 @@ const styles = StyleSheet.create({
   },
   optInControl: { flexDirection: 'row', alignItems: 'center' },
   optInLabel: { fontSize: 14, fontWeight: '600' },
+  optInHostBadge: { fontSize: 13, fontWeight: '700' },
   hint: { fontSize: 12, marginTop: 4, fontStyle: 'italic' },
   hintLink: { textDecorationLine: 'underline', fontStyle: 'normal' },
 });
