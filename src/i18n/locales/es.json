@@ -343,7 +343,12 @@
     "unconfirmedHint": "Confirma tu email para jugar por rating",
     "lockedHint": "Apuesta bloqueada — partida en curso",
     "settlementTitle": "Liquidación de rating",
-    "newBalance": "Nuevo saldo: {{n}}"
+    "newBalance": "Nuevo saldo: {{n}}",
+    "proposalTitle": "El anfitrión propone jugar por rating",
+    "proposalBody": "Apuesta: {{n}} por partida. Decide si quieres entrar a la partida de rating — puedes cambiar de opinión antes de que empiece.",
+    "proposalAccept": "Jugar por rating",
+    "proposalDecline": "Esta vez no",
+    "baseStakeBadge": "Apuesta {{n}} / partida"
   },
   "settings": {
     "title": "Ajustes",

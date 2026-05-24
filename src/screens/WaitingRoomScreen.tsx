@@ -70,6 +70,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const { colors } = useTheme();
 
   const [startFeedback, setStartFeedback] = useState<string>('');
+  // Per (room, stake) local dismissal of the rating-proposal banner. If
+  // the host changes the stake the banner re-arms; if the player taps
+  // either button the banner stays hidden until the stake changes.
+  const [ratingProposalAck, setRatingProposalAck] = useState<string | null>(null);
 
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
@@ -108,6 +112,9 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const nonHostPlayers = players.filter((p) => p.session_id !== room?.host_session_id);
   const canStartGame =
     isHost && playerCount >= 2 && nonHostPlayers.every((p) => p.is_ready);
+  const ratingProposalKey = room?.id && room?.stake ? `${room.id}:${room.stake}` : null;
+  const ratingProposalDismissed =
+    ratingProposalKey != null && ratingProposalAck === ratingProposalKey;
 
   // Ensure subscription is active when this screen is mounted
   useEffect(() => {
@@ -115,6 +122,26 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
       subscribeRoom(room.id);
     }
   }, [room?.id]);
+
+  // Auto-opt-in the host whenever a positive stake is active. Selecting a
+  // stake is the host's implicit "I'm in" — having to also flip a separate
+  // switch reads as duplicate confirmation. Also handles the post-restart
+  // case where the server clears all opt-ins but keeps room.stake. The
+  // in-flight ref prevents an effect loop if the toggle fails.
+  const optInInFlightRef = useRef(false);
+  useEffect(() => {
+    if (!room?.id) return;
+    if (!isHost) return;
+    if (!selfEligible) return;
+    if (optInInFlightRef.current) return;
+    const want = (room.stake ?? 0) > 0;
+    const have = !!myPlayer?.opt_in_stake;
+    if (want === have) return;
+    optInInFlightRef.current = true;
+    void gameClient
+      .toggleStakeOptin(room.id, want)
+      .finally(() => { optInInFlightRef.current = false; });
+  }, [room?.id, room?.stake, isHost, selfEligible, myPlayer?.opt_in_stake]);
 
   // Mark this player online every 10s so the host (and others) can see
   // who actually has the tab open vs who closed/locked the device.
@@ -465,6 +492,61 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
               </Pressable>
             )}
           </GlassCard>
+        )}
+
+        {/* Rating proposal banner — non-host who hasn't opted in yet sees
+            a prominent prompt. Dismissed locally per (room, stake) so a
+            different stake re-arms the banner. Switch in StakeSelector
+            remains as the long-form control. */}
+        {room && !isHost && (room.stake ?? 0) > 0 && !myPlayer?.opt_in_stake &&
+          !ratingProposalDismissed && (
+          <View
+            style={[
+              styles.ratingProposal,
+              { backgroundColor: colors.accent + '18', borderColor: colors.accent },
+            ]}
+            testID="rating-proposal-banner"
+          >
+            <Text style={[styles.ratingProposalTitle, { color: colors.accent }]}>
+              ★ {t('stakes.proposalTitle')}
+            </Text>
+            <Text style={[styles.ratingProposalBody, { color: colors.textPrimary }]}>
+              {t('stakes.proposalBody', { n: room.stake })}
+            </Text>
+            <View style={styles.ratingProposalActions}>
+              <Pressable
+                onPress={() => {
+                  if (!selfEligible) return;
+                  void gameClient.toggleStakeOptin(room.id, true);
+                  setRatingProposalAck(`${room.id}:${room.stake}`);
+                }}
+                disabled={!selfEligible}
+                style={[
+                  styles.ratingProposalBtnPrimary,
+                  { backgroundColor: colors.accent, opacity: selfEligible ? 1 : 0.5 },
+                ]}
+                testID="rating-proposal-accept"
+              >
+                <Text style={styles.ratingProposalBtnPrimaryText}>
+                  {t('stakes.proposalAccept')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setRatingProposalAck(`${room.id}:${room.stake}`)}
+                style={[styles.ratingProposalBtnSecondary, { borderColor: colors.glassLight }]}
+                testID="rating-proposal-decline"
+              >
+                <Text style={[styles.ratingProposalBtnSecondaryText, { color: colors.textPrimary }]}>
+                  {t('stakes.proposalDecline')}
+                </Text>
+              </Pressable>
+            </View>
+            {!selfEligible && (
+              <Text style={[styles.ratingProposalHint, { color: colors.textMuted }]}>
+                {t('stakes.guestHint')}
+              </Text>
+            )}
+          </View>
         )}
 
         {room && (
@@ -1087,6 +1169,61 @@ const styles = StyleSheet.create({
   leftBannerDismiss: {
     ...TextStyles.h3,
     marginLeft: Spacing.md,
+  },
+  ratingProposal: {
+    marginBottom: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    gap: 6,
+  },
+  ratingProposalTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  ratingProposalBody: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ratingProposalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: 4,
+  },
+  ratingProposalBtnPrimary: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  ratingProposalBtnPrimaryText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  ratingProposalBtnSecondary: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  ratingProposalBtnSecondaryText: {
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  ratingProposalHint: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   spectatorBadge: {
     paddingHorizontal: 14,

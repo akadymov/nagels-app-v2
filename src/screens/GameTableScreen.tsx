@@ -831,8 +831,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // After a game ends, the host hits "Play Again" → server flips
   // room.phase 'finished' → 'waiting'. Every client (host + guests)
-  // should pop back to WaitingRoom so they can confirm readiness for
-  // the next match.
+  // should land in WaitingRoom for the same room. We navigate explicitly
+  // instead of goBack() because deeplink/auto-rejoin entrants don't
+  // necessarily have WaitingRoom on the back stack — goBack would pop
+  // them to Welcome/Lobby and leave them looking at a stale room.
   const wasFinishedRef = useRef(false);
   useEffect(() => {
     if (room?.phase === 'finished') {
@@ -841,9 +843,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       wasFinishedRef.current = false;
       setShowScoreboard(false);
       setIsViewingScores(false);
-      onExit?.();
+      try {
+        navigation.navigate('WaitingRoom');
+      } catch {
+        onExit?.();
+      }
     }
-  }, [room?.phase, onExit]);
+  }, [room?.phase, onExit, navigation]);
 
   // Haptic feedback on key gameplay milestones. We refire only on the
   // edge of the phase transition (refs gate per-hand / per-game) so a
@@ -1777,22 +1783,67 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       </ScrollView>
 
       {/* Spectator list sheet — sits above ScrollView so the backdrop
-          covers the full screen. */}
+          covers the full screen. Host can promote a spectator into an
+          empty seat while phase is waiting/finished; server rejects
+          during 'playing' (cannot_switch_during_game). */}
       {showSpectators && (
         <Pressable
           style={styles.spectatorSheetBackdrop}
           onPress={() => setShowSpectators(false)}
         >
-          <View style={[styles.spectatorSheet, { backgroundColor: colors.surface ?? colors.background }]}>
+          <Pressable
+            style={[styles.spectatorSheet, { backgroundColor: colors.surface ?? colors.background }]}
+            onPress={(e) => e.stopPropagation?.()}
+          >
             <Text style={[styles.spectatorSheetTitle, { color: colors.textPrimary }]}>
               {t('spectator.title')}
             </Text>
-            {spectators.map((s) => (
-              <Text key={s.session_id} style={[styles.spectatorRow, { color: colors.textPrimary }]}>
-                {s.display_name}
-              </Text>
-            ))}
-          </View>
+            {spectators.map((s: any) => {
+              const phaseAllowsPromote =
+                room?.phase === 'waiting' || room?.phase === 'finished';
+              const hasOpenSeat =
+                (snapshot?.players?.length ?? 0) < (room?.player_count ?? 6);
+              const canPromote = isHost && phaseAllowsPromote && hasOpenSeat && !!room?.id;
+              return (
+                <View key={s.session_id} style={styles.spectatorRowItem}>
+                  <UserAvatar
+                    avatarUrl={s.avatar_url ?? null}
+                    emoji={s.avatar ?? null}
+                    fallback={(s.display_name?.[0] ?? '?').toUpperCase()}
+                    backgroundColor={s.avatar_color || avatarColorFor(s.session_id)}
+                    size={24}
+                    textSize={12}
+                  />
+                  <Text
+                    style={[styles.spectatorRowName, { color: colors.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {s.display_name}
+                  </Text>
+                  {canPromote && (
+                    <Pressable
+                      onPress={async () => {
+                        const r = await gameClient.switchRole(
+                          room!.id,
+                          s.session_id,
+                          'player',
+                        );
+                        if (!r.ok) {
+                          console.warn('[GameTable] promote spectator failed', r.error);
+                        }
+                      }}
+                      hitSlop={8}
+                      style={{ marginLeft: 4, padding: 8 }}
+                      testID={`btn-promote-spectator-${s.session_id}`}
+                      accessibilityLabel={t('spectator.becomePlayer')}
+                    >
+                      <Text style={{ fontSize: 16 }}>🃏</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
+          </Pressable>
         </Pressable>
       )}
     </SafeAreaView>
@@ -2309,6 +2360,17 @@ const styles = StyleSheet.create({
   spectatorRow: {
     fontSize: 14,
     paddingVertical: 4,
+  },
+  spectatorRowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    minHeight: 36,
+  },
+  spectatorRowName: {
+    flex: 1,
+    fontSize: 14,
   },
 });
 
