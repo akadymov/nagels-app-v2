@@ -6,14 +6,25 @@
 ### Post-game scoreboard + "Play again" on host exit (Akhmed, 2026-05-16)
 
 
-### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
-
-
 ### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
 
   - defaultExpanded: false
     ```md
     Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
+    ```
+
+### Share spectator link from BettingPhase and desktop (Akula, 2026-05-24)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас share-spectator есть только в mobile-WaitingRoom и mobile-GameTable. Добавить ту же кнопку в DesktopWaitingRoom, DesktopGameLayout (десктопный игровой стол) и BettingPhase (mobile+desktop) — хост должен мочь пригласить зрителя из любого in-game экрана и из любой layout-версии.
+    ```
+
+### Spectator ↔ Player toggle in WaitingRoom (Akula, 2026-05-24)
+
+  - defaultExpanded: false
+    ```md
+    В моменты пауз между играми (rooms.status в waiting или finished) разрешить переключение роли spectator↔player. Правила: обычный пользователь конвертирует только себя; хост — любого, кроме себя. Во время активной игры (playing) переключения запрещены. RPC switch_role с server-side проверками auth + state + capacity, бамп rooms.version → broadcast. UI: маленькая toggle-иконка на player/spectator chip.
     ```
 
 ### Screenshots in feedback form (PopovIsNit, 2026-05-08)
@@ -52,12 +63,18 @@
 
 ## Next Up
 
-### Profile/Settings — replace toggle-row labels with BrandSwitch (Akula, 2026-05-23)
+## In Progress
 
-  - defaultExpanded: false
-    ```md
-    Текущие переключатели «Вибрация», «Уведомления» в профиле и Settings отображаются как текстовые «Включено/Выключено» (Pressable + label). Перевести на компонент `<BrandSwitch>` (создан в этой ветке, src/components/BrandSwitch.tsx) — он уже использует brand-blue accent для on, серый для off, и работает на iOS/Android/Web одинаково. Заодно убрать ручную локализацию строк «Вкл/Выкл» если они станут лишними. Затронутые экраны: ProfileScreen, SettingsBody.
-    ```
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+
+
+## Done
+
+### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
+
+
+### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
+
 
 ### GameTable desktop — gear icon opens Profile as bottom-sheet instead of toggling left pane (Akula via feedback, 2026-05-23)
 
@@ -66,19 +83,11 @@
     На десктопе в игровой комнате клик по шестерёнке открывает Profile снизу как bottom-sheet модалку. Должно: тот же клик переключает (show/hide) Profile+Settings в левой боковой панели (рядом с Score / Last Hand), как остальные desktop-кнопки топ-бара. Связано с задачей "Unify Profile + Lobby on desktop".
     ```
 
-## In Progress
-
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
-
-
-### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
-
-
-### BettingPhase desktop — chat opens from bottom, not from side (Akula via feedback, 2026-05-22)
+### Profile/Settings — replace toggle-row labels with BrandSwitch (Akula, 2026-05-23)
 
   - defaultExpanded: false
     ```md
-    На десктопе в мультиплеере на экране ставок нажатие кнопки чата открывает чат снизу, а не сбоку. Поведение должно совпадать с GameTable, где чат на десктопе открывается в боковой панели.
+    Текущие переключатели «Вибрация», «Уведомления» в профиле и Settings отображаются как текстовые «Включено/Выключено» (Pressable + label). Перевести на компонент `<BrandSwitch>` (создан в этой ветке, src/components/BrandSwitch.tsx) — он уже использует brand-blue accent для on, серый для off, и работает на iOS/Android/Web одинаково. Заодно убрать ручную локализацию строк «Вкл/Выкл» если они станут лишними. Затронутые экраны: ProfileScreen, SettingsBody.
     ```
 
 ### Detailed scoreboard desktop — first-player icon stuck on the left across all rounds (Akula via feedback, 2026-05-22)
@@ -88,7 +97,12 @@
     На десктопе в детализированном счёте иконка первого игрока всегда находится слева во всех раундах — то есть отображает неверную информацию о том, кто начинал раздачу. Должна сдвигаться по реальной ротации (как в brief-варианте / в соответствии с ▶ first player).
     ```
 
-## Done
+### BettingPhase desktop — chat opens from bottom, not from side (Akula via feedback, 2026-05-22)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе в мультиплеере на экране ставок нажатие кнопки чата открывает чат снизу, а не сбоку. Поведение должно совпадать с GameTable, где чат на десктопе открывается в боковой панели.
+    ```
 
 ### Conditional stakes — opt-in rating wager per game + admin reset tools (Akula, 2026-05-23)
 
