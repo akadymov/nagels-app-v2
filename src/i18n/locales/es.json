@@ -48,6 +48,8 @@
     "quickMatch": "Partida Rápida",
     "playingNow": "jugando ahora",
     "createRoom": "Crear Sala Privada",
+    "announceTelegram": "Anunciar en Telegram",
+    "announceTelegramHint": "Publica un mensaje de \"nueva sala\" en el canal público.",
     "playWithFriends": "Jugar con amigos",
     "recentRooms": "Salas Recientes",
     "or": "o",

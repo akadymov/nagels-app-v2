@@ -37,6 +37,7 @@ import { SaveProgressModal } from '../components/SaveProgressModal';
 import { shouldShowBeforeCreateRoom } from '../lib/auth/promptGate';
 import { useNavigation } from '@react-navigation/native';
 import { UserAvatar } from '../components/UserAvatar';
+import { BrandSwitch } from '../components/BrandSwitch';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -148,6 +149,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [roomMode, setRoomMode] = useState<'standard' | 'scorekeeper'>('standard');
+  const [announceTelegram, setAnnounceTelegram] = useState(true);
   const [showCreateSavePrompt, setShowCreateSavePrompt] = useState(false);
   const pendingCreateRef = useRef(false);
   const navigation = useNavigation<any>();
@@ -229,7 +231,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     setIsCreating(true);
     try {
       const displayName = (nameInput.trim() || playerName) ?? 'Guest';
-      const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10, roomMode);
+      const result = await gameClient.createRoom(displayName, playerCount ?? 4, 10, roomMode, announceTelegram);
       if (!result.ok) {
         const code = result.error || 'Failed to create room';
         const friendly = code === 'too_many_rooms'
@@ -259,7 +261,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     } finally {
       setIsCreating(false);
     }
-  }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t, roomMode]);
+  }, [saveName, playerCount, nameInput, playerName, onRoomCreated, t, roomMode, announceTelegram]);
 
   const handleCreateRoom = useCallback(async () => {
     // Soft prompt — only the first create per anonymous device sees it.
@@ -575,6 +577,27 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             <Text style={[styles.modeHint, { color: colors.textMuted }]}>
               {t(`scorekeeper.mode${roomMode === 'standard' ? 'Standard' : 'Scorekeeper'}Desc`)}
             </Text>
+            <View
+              style={[
+                styles.announceRow,
+                { backgroundColor: colors.surface, borderColor: colors.glassLight },
+              ]}
+              testID="row-announce-telegram"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.announceLabel, { color: colors.textPrimary }]}>
+                  {t('lobby.announceTelegram', 'Announce in Telegram')}
+                </Text>
+                <Text style={[styles.announceHint, { color: colors.textMuted }]}>
+                  {t('lobby.announceTelegramHint', 'Post a "new room" message to the public channel.')}
+                </Text>
+              </View>
+              <BrandSwitch
+                value={announceTelegram}
+                onValueChange={setAnnounceTelegram}
+                testID="switch-announce-telegram"
+              />
+            </View>
             <Pressable
               style={[styles.actionBtn, { backgroundColor: colors.accent }]}
               onPress={handleCreateRoom}
@@ -778,6 +801,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginTop: -Spacing.sm,
+  },
+  announceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    marginTop: Spacing.md,
+  },
+  announceLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  announceHint: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
   },
   // Code input
   codeInput: {
