@@ -61,6 +61,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList | null>(null);
   const inputRef = useRef<TextInput | null>(null);
+
+  // Refocus helper used after Enter / Send. preventScroll keeps the
+  // browser from scrolling ancestor containers to bring the input into
+  // view — the chat is always already visible by construction; the
+  // default scroll behaviour just yanks the surrounding game UI.
+  const refocusInput = () => {
+    const node = inputRef.current as any;
+    if (!node?.focus) return;
+    try {
+      node.focus({ preventScroll: true });
+    } catch {
+      try { node.focus(); } catch {}
+    }
+  };
   // iOS Safari does not shrink window.innerHeight when the on-screen
   // keyboard appears, so a bottom-anchored Modal sheet stays UNDER the
   // keyboard and the input becomes invisible. Track the keyboard
@@ -150,11 +164,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     // submit, but on RN-Web some versions still fire blur AFTER our
     // sync focus() call. A deferred second focus (next frame) wins that
     // race — without it, desktop users lose the caret after every Enter.
-    inputRef.current?.focus();
+    //
+    // preventScroll: on desktop the inline ChatPanel lives in a side
+    // pane nested inside scrollable ancestors. The browser's default
+    // "scroll focused input into view" yanks the page to the middle
+    // after every send. RN-Web 0.19+ forwards focus(options) through to
+    // the host element, so passing preventScroll suppresses the jump.
+    refocusInput();
     if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => {
-        try { inputRef.current?.focus(); } catch {}
-      });
+      requestAnimationFrame(refocusInput);
     }
     // iOS Safari: after each send the page picks up a stray horizontal
     // scroll (autocomplete/focus reflow), shifting the chat sheet right

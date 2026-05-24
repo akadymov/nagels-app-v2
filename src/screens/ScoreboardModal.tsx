@@ -163,6 +163,16 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
   const leader = sortedPlayers[0];
 
+  // Base stake visibility: only players who opted into rating see the
+  // stake-per-game badge in the scoreboard. The host's chosen value
+  // (room.stake) doesn't change once the game starts.
+  const meSessionId = useRoomStore.getState().myPlayerId;
+  const meOptedIn = !!(snapshot?.players ?? []).find(
+    (p: any) => p.session_id === meSessionId && p.opt_in_stake,
+  );
+  const roomStake = snapshot?.room?.stake ?? 0;
+  const showStakeBadge = roomStake > 0 && meOptedIn;
+
   // Winner-banner animation. Bounces in on game-over so the celebration
   // moment lands with weight; the confetti pops a beat later for layered
   // motion. Reset when the banner unmounts so a re-open re-animates.
@@ -242,6 +252,18 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     );
   };
 
+  const renderStakeBadge = () =>
+    showStakeBadge ? (
+      <View
+        style={[styles.stakeBadge, { borderColor: colors.accent, backgroundColor: colors.accent + '18' }]}
+        testID="scoreboard-stake-badge"
+      >
+        <Text style={[styles.stakeBadgeText, { color: colors.accent }]}>
+          ★ {t('stakes.baseStakeBadge', { n: roomStake })}
+        </Text>
+      </View>
+    ) : null;
+
   const renderCompact = () => (
     <View style={styles.compactContainer} testID={isGameOver ? 'game-over' : undefined}>
       {/* Hand counter — suppressed on game-over because the winner banner
@@ -254,6 +276,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           {t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
         </Text>
       )}
+      {renderStakeBadge()}
 
       {/* Rankings */}
       {sortedPlayers.map((p, i) => {
@@ -323,9 +346,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
         .filter((p: any) => p.opt_in_stake)
         .map((p: any) => p.session_id as string),
     );
-    const stake = snapshot?.room?.stake ?? 0;
-    const meSessionId = useRoomStore.getState().myPlayerId;
-    const showDelta = stake > 0 && !!meSessionId && optedInIds.has(meSessionId);
+    const showDelta = roomStake > 0 && !!meSessionId && optedInIds.has(meSessionId);
 
     let deltaByUser: Map<string, number> | null = null;
     if (showDelta) {
@@ -335,7 +356,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
           user_id: p.session_id as string,
           score: sortedPlayers.find((sp) => sp.id === p.session_id)?.totalScore ?? 0,
         }));
-      const deltas = computeSettlement(inputs, stake);
+      const deltas = computeSettlement(inputs, roomStake);
       deltaByUser = new Map(deltas.map((d) => [d.user_id, d.delta]));
     }
 
@@ -351,6 +372,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             {t('scoreboard.hand') + ' ' + handNumber + '/' + totalHands}
           </Text>
         )}
+        {renderStakeBadge()}
 
         {/* The brief↔detailed pill toggle at the top of embedded
             mode replaces this old "Hide History" button. */}
@@ -909,6 +931,19 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     borderWidth: 1,
     marginTop: Spacing.md,
+  },
+  stakeBadge: {
+    alignSelf: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    marginBottom: Spacing.sm,
+  },
+  stakeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   toggleText: {
     fontSize: 13,
