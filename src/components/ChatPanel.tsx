@@ -75,6 +75,38 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       try { node.focus(); } catch {}
     }
   };
+
+  // Scroll the chat list to its bottom. We hit it three ways because a
+  // single scrollToEnd often runs before the new message has finished
+  // laying out — RN-Web's onContentSizeChange can fire on the OLD
+  // scrollHeight, leaving us pinned to a position that's now mid-content
+  // (i.e. visible as "chat scrolled to the middle" after sending).
+  // 1) scrollToEnd via FlatList ref, 2) direct scrollTop on the host
+  // node so we use the freshly measured scrollHeight, 3) re-run on the
+  // next animation frame so layout has flushed.
+  const scrollListToEnd = () => {
+    const list: any = listRef.current;
+    if (!list) return;
+    try { list.scrollToEnd?.({ animated: false }); } catch {}
+    if (Platform.OS === 'web') {
+      try {
+        const node: any = list.getScrollableNode?.() ?? list.getNode?.();
+        if (node && typeof node.scrollTop === 'number') {
+          node.scrollTop = node.scrollHeight;
+        }
+      } catch {}
+    }
+  };
+  const scheduleScrollToEnd = () => {
+    if (typeof requestAnimationFrame === 'undefined') {
+      scrollListToEnd();
+      return;
+    }
+    requestAnimationFrame(() => {
+      scrollListToEnd();
+      requestAnimationFrame(scrollListToEnd);
+    });
+  };
   // iOS Safari does not shrink window.innerHeight when the on-screen
   // keyboard appears, so a bottom-anchored Modal sheet stays UNDER the
   // keyboard and the input becomes invisible. Track the keyboard
@@ -115,9 +147,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     // dependency that previously did the reset.
     setChatOpen(true);
     markRead();
-    const t = setTimeout(() => {
-      try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
-    }, 50);
+    scheduleScrollToEnd();
+    // Fallback for slow paths where rAF runs before layout settles.
+    const t = setTimeout(scrollListToEnd, 120);
     return () => {
       clearTimeout(t);
       setChatOpen(false);
@@ -240,16 +272,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             style={styles.list}
             contentContainerStyle={styles.listContent}
             // Stick to the bottom whenever new content lands while the
-            // panel is visible. Without this the mobile Modal animation
-            // outruns the 50ms scrollToEnd in the visibility effect and
-            // the chat opens pinned to the top.
+            // panel is visible. We schedule on rAF so the new item's
+            // layout is reflected in scrollHeight — a synchronous
+            // scrollToEnd here can land on the OLD scrollHeight, which
+            // is now mid-content and reads as "chat scrolled to middle".
             onContentSizeChange={() => {
               if (!visible) return;
-              try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
+              scheduleScrollToEnd();
             }}
             onLayout={() => {
               if (!visible) return;
-              try { listRef.current?.scrollToEnd({ animated: false }); } catch {}
+              scheduleScrollToEnd();
             }}
             renderItem={({ item }) => {
               const bg = item.avatarColor || avatarColorFor(item.sessionId);
