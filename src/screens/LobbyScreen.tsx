@@ -244,7 +244,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       const roomId = result.state.room?.id;
       if (roomId) {
         const { setActiveRoom } = await import('../lib/activeRoom');
-        await setActiveRoom(roomId);
+        await setActiveRoom(roomId, result.state.room?.code, 'player');
         subscribeRoom(roomId);
       }
       onRoomCreated();
@@ -312,7 +312,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       const roomId = result.state.room?.id;
       if (roomId) {
         const { setActiveRoom } = await import('../lib/activeRoom');
-        await setActiveRoom(roomId);
+        await setActiveRoom(roomId, result.state.room?.code, 'player');
         subscribeRoom(roomId);
       }
       onRoomJoined();

@@ -392,7 +392,7 @@ const NavigatorGuard: React.FC = () => {
             store.setMyPlayerId(result.session_id);
             const snap = result.state as any;
             store.applySnapshot(snap, Number(snap?.room?.version ?? 0));
-            await setActiveRoom(result.room_id);
+            await setActiveRoom(result.room_id, code, 'spectator');
             subscribeRoom(result.room_id);
             navigation.navigate('GameTable', { isMultiplayer: true });
           } else {
@@ -416,7 +416,7 @@ const NavigatorGuard: React.FC = () => {
           const result = await gameClient.joinRoom(displayName, code);
           console.log('[NavigatorGuard] auto-join result', result);
           if (result.ok && result.state.room?.id) {
-            await setActiveRoom(result.state.room.id);
+            await setActiveRoom(result.state.room.id, result.state.room.code, 'player');
             subscribeRoom(result.state.room.id);
             navigation.navigate('WaitingRoom');
           } else {
