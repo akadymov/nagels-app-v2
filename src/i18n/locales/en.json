@@ -227,7 +227,14 @@
     "roomNotFound": "Room not found.",
     "roomFinished": "This game has already finished.",
     "cannotJoin": "Couldn't watch {{code}}.",
-    "title": "Watching"
+    "title": "Watching",
+    "becomePlayer": "Become a player",
+    "becomeSpectator": "Become a spectator",
+    "cannotSwitchDuringGame": "You can only switch between games.",
+    "roomFull": "No free seat available.",
+    "hostCannotSpectate": "The host can't become a spectator.",
+    "switchFailed": "Couldn't switch role: {{error}}",
+    "spectatorsTitle": "Spectators"
   },
   "gameMode": {
     "skipOnes": "Skip 1-card rounds",

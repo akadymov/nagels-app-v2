@@ -200,6 +200,32 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     await gameClient.setReady(room.id, !amIReady);
   }, [room?.id, amIReady]);
 
+  const handleSwitchRole = useCallback(async (
+    targetSessionId: string,
+    toRole: 'player' | 'spectator',
+  ) => {
+    if (!room?.id) return;
+    const r = await gameClient.switchRole(room.id, targetSessionId, toRole);
+    if (!r.ok) {
+      const raw = String(r.error ?? '');
+      const map: Record<string, string> = {
+        cannot_switch_during_game: 'spectator.cannotSwitchDuringGame',
+        room_full: 'spectator.roomFull',
+        host_cannot_spectate: 'spectator.hostCannotSpectate',
+        not_host: 'spectator.hostCannotSpectate',
+      };
+      const key = Object.keys(map).find((k) => raw.includes(k));
+      const msg = key ? t(map[key]) : t('spectator.switchFailed', { error: raw });
+      showMessage(t('common.error'), msg);
+    }
+    // Success: rooms.version bump → realtime broadcast → snapshot refresh.
+    // For the demoted-self case the store still has us as a player; flip
+    // isSpectator locally so the badge swaps immediately.
+    if (r.ok && targetSessionId === myPlayerId) {
+      useRoomStore.getState().setIsSpectator(toRole === 'spectator');
+    }
+  }, [room?.id, myPlayerId, t]);
+
   const showMessage = (title: string, body: string) => {
     // Alert.alert is unreliable on react-native-web. Use window.alert directly.
     if (typeof window !== 'undefined' && typeof (window as any).alert === 'function') {
@@ -551,6 +577,20 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                       {player.is_ready ? '✓' : '○'}
                     </Text>
                   </Pressable>
+                  {/* Convert-to-spectator button. Self or host (never the
+                      host themselves). Only between games / before start. */}
+                  {!isHostPlayer && room?.id && (isMe || isHost) &&
+                   (room.phase === 'waiting' || room.phase === 'finished') && (
+                    <Pressable
+                      onPress={() => handleSwitchRole(player.session_id, 'spectator')}
+                      hitSlop={8}
+                      style={{ marginLeft: 4, padding: 8 }}
+                      testID={`btn-to-spectator-${player.seat_index}`}
+                      accessibilityLabel={t('spectator.becomeSpectator')}
+                    >
+                      <Text style={{ fontSize: 16 }}>👁</Text>
+                    </Pressable>
+                  )}
                   {isHost && !isMe && !isHostPlayer && room?.id && (
                     <Pressable
                       onPress={async () => {
@@ -582,6 +622,52 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           })}
         </View>
 
+        {/* Spectators — show only to the host so they can promote into
+            empty seats. Self-toggle for the spectator themselves lives
+            on the spectator badge further down. */}
+        {isHost && spectators.length > 0 && room?.id &&
+         (room.phase === 'waiting' || room.phase === 'finished') && (
+          <View style={styles.playersList} testID="spectators-list">
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+              👁 {t('spectator.spectatorsTitle')}
+            </Text>
+            {spectators.map((sp: any) => {
+              const canPromote = players.length < (room.player_count ?? 6);
+              return (
+                <GlassCard
+                  key={sp.session_id}
+                  style={[styles.playerCard, { backgroundColor: colors.surface }]}
+                >
+                  <UserAvatar
+                    avatarUrl={sp.avatar_url ?? null}
+                    emoji={sp.avatar ?? null}
+                    fallback={(sp.display_name?.[0] ?? '?').toUpperCase()}
+                    backgroundColor={sp.avatar_color || avatarColorFor(sp.session_id)}
+                    size={24}
+                    textSize={12}
+                  />
+                  <View style={styles.playerInfo}>
+                    <Text style={[styles.playerName, { color: colors.textPrimary }]}>
+                      {sp.display_name}
+                    </Text>
+                  </View>
+                  {canPromote && (
+                    <Pressable
+                      onPress={() => handleSwitchRole(sp.session_id, 'player')}
+                      hitSlop={8}
+                      style={{ marginLeft: 4, padding: 8 }}
+                      testID={`btn-to-player-${sp.session_id}`}
+                      accessibilityLabel={t('spectator.becomePlayer')}
+                    >
+                      <Text style={{ fontSize: 16 }}>🃏</Text>
+                    </Pressable>
+                  )}
+                </GlassCard>
+              );
+            })}
+          </View>
+        )}
+
         {/* Sync Status */}
         {connState === 'reconnecting' && (
           <View style={styles.statusBar}>
@@ -611,6 +697,26 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             <Text style={[styles.spectatorBadgeText, { color: colors.textPrimary }]}>
               👁 {t('spectator.watching')}
             </Text>
+            {room?.id && myPlayerId &&
+             (room.phase === 'waiting' || room.phase === 'finished') &&
+             players.length < (room.player_count ?? 6) && (
+              <Pressable
+                onPress={() => handleSwitchRole(myPlayerId, 'player')}
+                hitSlop={8}
+                style={{
+                  marginTop: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: Radius.md,
+                  backgroundColor: colors.accent,
+                }}
+                testID="btn-self-to-player"
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>
+                  🃏 {t('spectator.becomePlayer')}
+                </Text>
+              </Pressable>
+            )}
           </View>
         ) : !isHost ? (
           // Non-host: ready confirmation UI
