@@ -177,6 +177,20 @@ export const gameClient = {
     return { ok: !error, error: error?.message };
   },
 
+  switchRole: async (
+    room_id: string,
+    target_session_id: string,
+    to_role: 'player' | 'spectator',
+  ) => {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.rpc('switch_role', {
+      p_room_id: room_id,
+      p_target_session_id: target_session_id,
+      p_to_role: to_role,
+    });
+    return { ok: !error, error: error?.message };
+  },
+
   setReady: (room_id: string, is_ready: boolean, target_session_id?: string) =>
     postAction(null, { kind: 'ready', room_id, is_ready, target_session_id }),
 

@@ -227,7 +227,14 @@
     "roomNotFound": "Sala no encontrada.",
     "roomFinished": "Esta partida ya ha terminado.",
     "cannotJoin": "No se pudo entrar a {{code}}.",
-    "title": "Espectadores"
+    "title": "Espectadores",
+    "becomePlayer": "Pasar a jugador",
+    "becomeSpectator": "Pasar a espectador",
+    "cannotSwitchDuringGame": "Sólo puedes cambiar entre partidas.",
+    "roomFull": "No hay asientos libres.",
+    "hostCannotSpectate": "El anfitrión no puede ser espectador.",
+    "switchFailed": "No se pudo cambiar el rol: {{error}}",
+    "spectatorsTitle": "Espectadores"
   },
   "gameMode": {
     "skipOnes": "Sin rondas de 1 carta",

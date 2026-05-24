@@ -229,7 +229,14 @@
     "roomNotFound": "Комната не найдена.",
     "roomFinished": "Игра уже завершена.",
     "cannotJoin": "Не удалось подключиться к {{code}}.",
-    "title": "Зрители"
+    "title": "Зрители",
+    "becomePlayer": "Стать игроком",
+    "becomeSpectator": "Стать зрителем",
+    "cannotSwitchDuringGame": "Менять роль можно только между играми.",
+    "roomFull": "Нет свободных мест.",
+    "hostCannotSpectate": "Хост не может стать зрителем.",
+    "switchFailed": "Не удалось сменить роль: {{error}}",
+    "spectatorsTitle": "Зрители"
   },
   "gameMode": {
     "skipOnes": "Без раундов с одной картой",
