@@ -14,8 +14,12 @@ import {
   Pressable,
   Dimensions,
   RefreshControl,
+  Share,
+  Alert,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { CardHand } from '../cards';
+import { buildInviteLink } from '../../utils/inviteLink';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
@@ -89,6 +93,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // reading from an empty roomStore.
   const mpSnapshot = useRoomStore((s) => s.snapshot);
   const mpMyPlayerId = useRoomStore((s) => s.myPlayerId);
+  const mpIsSpectator = useRoomStore((s) => s.isSpectator);
   const sp = useGameStore();
 
   const SP_HAND_ID = 'sp-hand';
@@ -249,6 +254,21 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       setIsRefreshing(false);
     }
   }, [room?.id]);
+
+  const handleShareSpectator = useCallback(async () => {
+    if (!isMultiplayer || !room?.code) return;
+    const link = `${buildInviteLink(room.code)}?as=spectator`;
+    const message = `${t('spectator.shareMessage')}\n${link}`;
+    try {
+      await Share.share(
+        { message, title: 'Nägels Online' },
+        { dialogTitle: t('spectator.shareLink') },
+      );
+    } catch {
+      await Clipboard.setStringAsync(link);
+      Alert.alert(t('multiplayer.codeCopied'), link);
+    }
+  }, [isMultiplayer, room?.code, t]);
 
   const handleLeave = useCallback(async () => {
     const snap = useRoomStore.getState().snapshot;
@@ -742,6 +762,25 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 </View>
               )}
             </Pressable>
+            {isMultiplayer && !mpIsSpectator && !!room?.code && (
+              <Pressable
+                onPress={handleShareSpectator}
+                testID="betting-btn-share-spectator"
+                accessibilityLabel={t('spectator.shareLink')}
+                style={[
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
+                  { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+                ]}
+                hitSlop={8}
+              >
+                <Text style={{ fontSize: 18, color: colors.iconButtonText }}>👁</Text>
+                {isDesktop && (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('spectator.shareLink')}
+                  </Text>
+                )}
+              </Pressable>
+            )}
           </View>
         </View>
 
