@@ -48,6 +48,8 @@
     "quickMatch": "Быстрая игра",
     "playingNow": "сейчас играет",
     "createRoom": "Создать комнату",
+    "announceTelegram": "Анонс в Telegram",
+    "announceTelegramHint": "Опубликовать сообщение о новой комнате в общем канале.",
     "playWithFriends": "Играть с друзьями",
     "recentRooms": "Недавние комнаты",
     "or": "или",

@@ -41,6 +41,7 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `pwa-done` — src/components/PwaInstallModal.tsx:98
 - [ ] `pwa-install` — src/components/PwaInstallModal.tsx:115
 - [ ] `pwa-not-now` — src/components/PwaInstallModal.tsx:107
+- [ ] `row-announce-telegram` — src/screens/LobbyScreen.tsx:585
 - [ ] `save-progress-dismiss` — src/components/SaveProgressModal.tsx:68
 - [ ] `save-progress-email` — src/components/SaveProgressModal.tsx:76
 - [ ] `save-progress-google` — src/components/SaveProgressModal.tsx:84
@@ -63,6 +64,7 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `stake-chip-custom` — src/components/stakes/StakeSelector.tsx:148
 - [ ] `stake-custom-apply` — src/components/stakes/StakeSelector.tsx:180
 - [ ] `stake-custom-input` — src/components/stakes/StakeSelector.tsx:174
+- [ ] `switch-announce-telegram` — src/screens/LobbyScreen.tsx:598
 - [ ] `switch-skip-ones` — src/screens/WaitingRoomScreen.tsx:772
 - [ ] `tricks-recorder-dec` — src/components/scorekeeper/TricksRecorder.tsx:125
 - [ ] `tricks-recorder-inc` — src/components/scorekeeper/TricksRecorder.tsx:145

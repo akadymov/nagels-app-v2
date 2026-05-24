@@ -48,6 +48,8 @@
     "quickMatch": "Quick Match",
     "playingNow": "playing now",
     "createRoom": "Create Private Room",
+    "announceTelegram": "Announce in Telegram",
+    "announceTelegramHint": "Post a \"new room\" message to the public channel.",
     "playWithFriends": "Play with friends",
     "recentRooms": "Recent Rooms",
     "or": "or",

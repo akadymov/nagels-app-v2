@@ -124,6 +124,7 @@ export const gameClient = {
     player_count: number,
     max_cards = 10,
     mode: 'standard' | 'scorekeeper' = 'standard',
+    announce: boolean = true,
   ) =>
     postAction(displayName, {
       kind: 'create_room',
@@ -133,8 +134,9 @@ export const gameClient = {
       mode,
       // Tests/automation AND dev/preview builds must not fire the
       // new-room Telegram notification. Only prod builds announce.
+      // Host can also opt out per-room via the create form toggle.
       // See docs/principles.md §8 "Test side-effect hygiene".
-      silent: shouldSilenceTelegram(),
+      silent: shouldSilenceTelegram() || !announce,
     }),
 
   joinRoom: (displayName: string, code: string) =>
