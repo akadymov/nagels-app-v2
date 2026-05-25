@@ -4,6 +4,46 @@ import type {
   Action, ActionResult, RoomSnapshot,
 } from '../../supabase/functions/_shared/types.ts';
 
+export type RatingEvent = {
+  id: string;
+  reason: 'settle' | 'admin_reset' | 'transfer_in' | 'transfer_out';
+  delta: number;
+  created_at: string;
+  room_id: string | null;
+  counterparty_display_name: string | null;
+};
+
+export type LookupRecipientResult =
+  | { found: false }
+  | { found: true; is_self: true }
+  | {
+      found: true;
+      is_self: false;
+      recipient: {
+        display_name: string | null;
+        masked_email: string;
+        avatar: string | null;
+        avatar_url: string | null;
+        avatar_color: string | null;
+      };
+    };
+
+export type TransferRatingResult =
+  | {
+      ok: true;
+      new_balance: number;
+      recipient: { display_name: string | null; masked_email: string };
+    }
+  | {
+      ok: false;
+      error:
+        | 'unauthenticated'
+        | 'invalid_amount'
+        | 'recipient_not_found'
+        | 'self_transfer'
+        | 'insufficient_balance';
+    };
+
 const FN_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/game-action`;
 
 async function postAction(
@@ -252,6 +292,30 @@ export const gameClient = {
     const { data, error } = await supabase.rpc('get_rating_settlement', { p_room_id: room_id });
     if (error) throw error;
     return (data as any) ?? null;
+  },
+
+  lookupRatingRecipient: async (email: string): Promise<LookupRecipientResult> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('lookup_rating_recipient', { p_email: email });
+    if (error) throw error;
+    return data as LookupRecipientResult;
+  },
+
+  transferRating: async (toEmail: string, amount: number): Promise<TransferRatingResult> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('transfer_rating', {
+      p_to_email: toEmail,
+      p_amount: amount,
+    });
+    if (error) throw error;
+    return data as TransferRatingResult;
+  },
+
+  getMyRatingEvents: async (limit = 20): Promise<RatingEvent[]> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_my_rating_events', { p_limit: limit });
+    if (error) throw error;
+    return (data as RatingEvent[]) ?? [];
   },
 
   adminCheck: (): Promise<{ ok: true; is_admin: boolean }> =>
