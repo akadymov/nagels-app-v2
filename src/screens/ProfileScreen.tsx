@@ -36,7 +36,7 @@ const AVATAR_PRESETS = ['🦈', '🐺', '🦊', '🐻', '🐱', '🎯', '🎲', 
 const AVATAR_COLORS = ['#3380CC', '#CC4D80', '#66B366', '#9966CC', '#CC9933', '#33AAAA', '#CC6633', '#6666CC'];
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const { user, isGuest, displayName } = useAuthStore();
   const eligible = canPlayForRating(user, isGuest);
@@ -48,13 +48,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
 
   useFocusEffect(
     useCallback(() => {
-      if (eligible) loadRating();
-    }, [eligible, loadRating]),
+      if (eligible) {
+        loadRating();
+        loadEvents();
+      }
+    }, [eligible, loadRating, loadEvents]),
   );
-
-  useEffect(() => {
-    if (eligible) loadEvents();
-  }, [eligible, loadEvents]);
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
@@ -224,7 +223,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
                   : ev.delta > 0 ? colors.success
                   : colors.error;
                 const sign = ev.delta > 0 ? '+' : '';
-                const when = formatRatingEventDate(ev.created_at);
+                const when = formatRatingEventDate(ev.created_at, i18n.language);
                 return (
                   <View
                     key={ev.id}
@@ -338,7 +337,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   );
 };
 
-function formatRatingEventDate(iso: string): string {
+function formatRatingEventDate(iso: string, locale: string): string {
   const d = new Date(iso);
   const now = new Date();
   const sameDay =
@@ -348,8 +347,11 @@ function formatRatingEventDate(iso: string): string {
   if (sameDay) {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d.getDate()} ${months[d.getMonth()]}`;
+  try {
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+  } catch {
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  }
 }
 
 const styles = StyleSheet.create({
