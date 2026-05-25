@@ -67,6 +67,7 @@ export function TransferRatingModal({ visible, onClose }: Props) {
   };
 
   const handleLookup = async () => {
+    if (busy) return;
     setLookupError(null);
     setBusy(true);
     try {
@@ -89,6 +90,7 @@ export function TransferRatingModal({ visible, onClose }: Props) {
   };
 
   const handleConfirm = async () => {
+    if (busy) return;
     setConfirmError(null);
     setBusy(true);
     try {
@@ -145,6 +147,11 @@ export function TransferRatingModal({ visible, onClose }: Props) {
                 placeholder="player@example.com"
                 placeholderTextColor={colors.textMuted}
               />
+              {email.trim().length > 0 && !emailValid && (
+                <Text style={[styles.errorText, { color: colors.error }]}>
+                  {t('profile.transferRating.modal.invalidEmail')}
+                </Text>
+              )}
 
               <Text style={[styles.label, { color: colors.textSecondary }]}>
                 {t('profile.transferRating.modal.amountLabel')}
@@ -173,6 +180,8 @@ export function TransferRatingModal({ visible, onClose }: Props) {
               <View style={styles.row}>
                 <Pressable
                   onPress={close}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common.cancel')}
                   style={[styles.btnSecondary, { borderColor: colors.glassLight }]}
                 >
                   <Text style={{ color: colors.textPrimary }}>{t('common.cancel')}</Text>
@@ -181,6 +190,8 @@ export function TransferRatingModal({ visible, onClose }: Props) {
                   testID="btn-lookup-recipient"
                   onPress={handleLookup}
                   disabled={!canLookup}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('profile.transferRating.modal.lookup')}
                   style={[styles.btnPrimary, { backgroundColor: canLookup ? colors.accent : colors.surfaceSecondary }]}
                 >
                   {busy ? (
@@ -230,6 +241,8 @@ export function TransferRatingModal({ visible, onClose }: Props) {
                 <Pressable
                   testID="btn-transfer-back"
                   onPress={() => setStep('form')}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('profile.transferRating.preview.back')}
                   style={[styles.btnSecondary, { borderColor: colors.glassLight }]}
                 >
                   <Text style={{ color: colors.textPrimary }}>
@@ -240,6 +253,8 @@ export function TransferRatingModal({ visible, onClose }: Props) {
                   testID="btn-transfer-confirm"
                   onPress={handleConfirm}
                   disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('profile.transferRating.preview.confirm', { amount })}
                   style={[styles.btnPrimary, { backgroundColor: colors.accent }]}
                 >
                   {busy ? (
@@ -268,6 +283,8 @@ export function TransferRatingModal({ visible, onClose }: Props) {
               <Pressable
                 testID="btn-transfer-done"
                 onPress={close}
+                accessibilityRole="button"
+                accessibilityLabel={t('profile.transferRating.success.close')}
                 style={[styles.btnPrimaryFull, { backgroundColor: colors.accent }]}
               >
                 <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>
