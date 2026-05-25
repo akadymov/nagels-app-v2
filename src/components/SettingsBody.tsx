@@ -37,6 +37,7 @@ import { BrandSwitch } from './BrandSwitch';
 import { useRatingStore } from '../store/ratingStore';
 import { canPlayForRating } from '../utils/ratingEligibility';
 import { AdminRatingBlock } from './admin/AdminRatingBlock';
+import { TransferRatingModal } from '../screens/TransferRatingModal';
 
 export interface SettingsBodyProps {
   onClose: () => void;
@@ -109,6 +110,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
     isGuest || (!!user && (user as { is_anonymous?: boolean }).is_anonymous === true);
   const push = usePushSubscribe();
   const [showPwaModal, setShowPwaModal] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const pwaInstalled = isStandalone();
   // Only surface "Install App" on mobile-web browsers — desktop browsers
   // can't meaningfully install a PWA the same way and the prompt is
@@ -428,9 +430,30 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                 <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
                   {t('profile.rating', 'Rating')}
                 </Text>
-                <Text style={[styles.ratingValue, { color: colors.accent }]}>
-                  {ratingBalance ?? '—'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                  <Text style={[styles.ratingValue, { color: colors.accent }]}>
+                    {ratingBalance ?? '—'}
+                  </Text>
+                  {(ratingBalance ?? 0) > 0 && (
+                    <Pressable
+                      testID="btn-transfer-rating"
+                      onPress={() => setTransferOpen(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel={String(t('profile.transferRating.button', 'Transfer'))}
+                      style={({ pressed }) => [{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: Radius.sm,
+                        backgroundColor: colors.accent,
+                        opacity: pressed ? 0.75 : 1,
+                      }]}
+                    >
+                      <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>
+                        {t('profile.transferRating.button', 'Transfer')}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -592,6 +615,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
       )}
 
       <PwaInstallModal visible={showPwaModal} onClose={() => setShowPwaModal(false)} />
+      <TransferRatingModal visible={transferOpen} onClose={() => setTransferOpen(false)} />
     </View>
   );
 };
