@@ -3,7 +3,7 @@
  * View/edit nickname, avatar, logout.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google'
 import { GoogleButton } from '../components/GoogleButton';
 import { UserAvatar } from '../components/UserAvatar';
 import { AdminRatingBlock } from '../components/admin/AdminRatingBlock';
+import { TransferRatingModal } from './TransferRatingModal';
 
 export interface ProfileScreenProps {
   onBack: () => void;
@@ -41,12 +42,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const eligible = canPlayForRating(user, isGuest);
   const balance = useRatingStore((s) => s.balance);
   const loadRating = useRatingStore((s) => s.load);
+  const events = useRatingStore((s) => s.events);
+  const loadEvents = useRatingStore((s) => s.loadEvents);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (eligible) loadRating();
     }, [eligible, loadRating]),
   );
+
+  useEffect(() => {
+    if (eligible) loadEvents();
+  }, [eligible, loadEvents]);
 
   const [nickname, setNickname] = useState(displayName || '');
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
@@ -156,9 +164,86 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
             <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
               {t('profile.rating', 'Rating')}
             </Text>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
-              {balance ?? '—'}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+                {balance ?? '—'}
+              </Text>
+              {(balance ?? 0) > 0 && (
+                <Pressable
+                  testID="btn-transfer-rating"
+                  onPress={() => setTransferOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={String(t('profile.transferRating.button', 'Transfer'))}
+                  style={({ pressed }) => [
+                    {
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      backgroundColor: colors.accent,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: '600' }}>
+                    {t('profile.transferRating.button', 'Transfer')}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+        {eligible && (
+          <View
+            testID="profile-rating-history"
+            style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+              {t('profile.history.title', 'Recent operations')}
             </Text>
+            {events.length === 0 ? (
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                {t('profile.history.empty', 'No operations yet')}
+              </Text>
+            ) : (
+              events.slice(0, 10).map((ev) => {
+                const isSettle = ev.reason === 'settle';
+                const isAdminReset = ev.reason === 'admin_reset';
+                const name = ev.counterparty_display_name ?? t('profile.history.unknownPlayer', '—');
+                const label =
+                  ev.reason === 'transfer_out' ? t('profile.history.transferOut', { name })
+                  : ev.reason === 'transfer_in' ? t('profile.history.transferIn', { name })
+                  : isSettle ? t('profile.history.settle')
+                  : t('profile.history.adminReset');
+                const icon =
+                  ev.reason === 'transfer_out' ? '↗'
+                  : ev.reason === 'transfer_in' ? '↙'
+                  : isSettle ? '🏆'
+                  : '⚙';
+                const deltaColor =
+                  isAdminReset ? colors.textSecondary
+                  : ev.delta > 0 ? colors.success
+                  : colors.error;
+                const sign = ev.delta > 0 ? '+' : '';
+                const when = formatRatingEventDate(ev.created_at);
+                return (
+                  <View
+                    key={ev.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 }}
+                  >
+                    <Text style={{ fontSize: 16, width: 22, textAlign: 'center' }}>{icon}</Text>
+                    <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 14 }} numberOfLines={1}>
+                      {String(label)}
+                    </Text>
+                    <Text style={{ color: deltaColor, fontSize: 14, fontWeight: '600' }}>
+                      {sign}{ev.delta}
+                    </Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, width: 56, textAlign: 'right' }}>
+                      {when}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
           </View>
         )}
 
@@ -245,9 +330,27 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
           </Text>
         </Pressable>
       </ScrollView>
+      <TransferRatingModal
+        visible={transferOpen}
+        onClose={() => setTransferOpen(false)}
+      />
     </SafeAreaView>
   );
 };
+
+function formatRatingEventDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
 
 const styles = StyleSheet.create({
   container: {
