@@ -134,10 +134,10 @@ BEGIN
     ON CONFLICT (user_id) DO NOTHING;
 
   -- Lock in user_id order to avoid deadlock when two transfers cross.
-  PERFORM 1 FROM public.user_ratings
-    WHERE user_id IN (v_from, v_to_id)
-    ORDER BY user_id
-    FOR UPDATE;
+  -- Two explicit statements (rather than IN + ORDER BY) make the lock
+  -- order unambiguous regardless of planner choices.
+  PERFORM 1 FROM public.user_ratings WHERE user_id = least(v_from, v_to_id)    FOR UPDATE;
+  PERFORM 1 FROM public.user_ratings WHERE user_id = greatest(v_from, v_to_id) FOR UPDATE;
 
   SELECT balance INTO v_from_balance
     FROM public.user_ratings WHERE user_id = v_from;
