@@ -41,15 +41,15 @@ export async function adminSearchUsers(
     (ratings ?? []).map((r: { user_id: string; balance: number }) => [r.user_id, r.balance]),
   );
 
+  // room_sessions.auth_user_id is UNIQUE — at most one row per user, no sort needed.
   const { data: sessions } = await svc
     .from('room_sessions')
-    .select('auth_user_id, display_name, updated_at')
-    .in('auth_user_id', ids)
-    .order('updated_at', { ascending: false });
+    .select('auth_user_id, display_name')
+    .in('auth_user_id', ids);
   const nameByUser = new Map<string, string>();
   for (const s of sessions ?? []) {
     const uid = (s as { auth_user_id: string }).auth_user_id;
-    if (!nameByUser.has(uid)) nameByUser.set(uid, (s as { display_name: string }).display_name);
+    nameByUser.set(uid, (s as { display_name: string }).display_name);
   }
 
   const rows: Row[] = matches.map((m: { id: string; email: string | null }) => ({
