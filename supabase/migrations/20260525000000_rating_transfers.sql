@@ -61,7 +61,7 @@ BEGIN
   SELECT display_name INTO v_display_name
     FROM public.room_sessions
     WHERE auth_user_id = v_to_id
-    ORDER BY updated_at DESC
+    ORDER BY created_at DESC
     LIMIT 1;
 
   SELECT raw_user_meta_data INTO v_meta
@@ -167,7 +167,7 @@ BEGIN
   SELECT display_name INTO v_display_name
     FROM public.room_sessions
     WHERE auth_user_id = v_to_id
-    ORDER BY updated_at DESC
+    ORDER BY created_at DESC
     LIMIT 1;
 
   v_local  := split_part(v_email, '@', 1);
@@ -213,7 +213,7 @@ AS $$
         SELECT rs.display_name
         FROM public.room_sessions rs
         WHERE rs.auth_user_id = ev.counterparty_user_id
-        ORDER BY rs.updated_at DESC
+        ORDER BY rs.created_at DESC
         LIMIT 1
       ) AS counterparty_display_name
     FROM ev
