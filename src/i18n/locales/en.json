@@ -328,7 +328,46 @@
     "saved": "Profile saved",
     "saveProgress": "Save your progress?",
     "maybeLater": "Maybe Later",
-    "rating": "Rating"
+    "rating": "Rating",
+    "transferRating": {
+      "button": "Transfer",
+      "modal": {
+        "title": "Transfer rating points",
+        "balance": "Your balance: {{n}}",
+        "emailLabel": "Recipient email",
+        "amountLabel": "Amount",
+        "amountTooHigh": "No more than {{max}}",
+        "lookup": "Find recipient",
+        "invalidEmail": "Looks like an invalid email"
+      },
+      "preview": {
+        "title": "Confirm transfer",
+        "youSend": "You're sending: {{amount}} pts",
+        "willRemain": "Remaining: {{balance}}",
+        "back": "← Back",
+        "confirm": "Transfer {{amount}}"
+      },
+      "success": {
+        "title": "Done",
+        "message": "{{amount}} pts sent to {{recipient}}",
+        "close": "Close"
+      },
+      "error": {
+        "selfTransfer": "You can't transfer to yourself",
+        "recipientNotFound": "No player with that email",
+        "insufficientBalance": "Not enough rating points",
+        "unknown": "Transfer failed. Try again."
+      }
+    },
+    "history": {
+      "title": "Recent operations",
+      "empty": "No operations yet",
+      "transferOut": "Transfer to {{name}}",
+      "transferIn": "Transfer from {{name}}",
+      "settle": "Game settlement",
+      "adminReset": "Reset by admin",
+      "unknownPlayer": "—"
+    }
   },
   "stakes": {
     "title": "Rating stakes",

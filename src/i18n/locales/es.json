@@ -328,7 +328,46 @@
     "saved": "Perfil guardado",
     "saveProgress": "¿Guardar tu progreso?",
     "maybeLater": "Más tarde",
-    "rating": "Rating"
+    "rating": "Rating",
+    "transferRating": {
+      "button": "Transferir",
+      "modal": {
+        "title": "Transferir puntos de clasificación",
+        "balance": "Tu saldo: {{n}}",
+        "emailLabel": "Email del destinatario",
+        "amountLabel": "Cantidad",
+        "amountTooHigh": "No más de {{max}}",
+        "lookup": "Buscar destinatario",
+        "invalidEmail": "Parece un email no válido"
+      },
+      "preview": {
+        "title": "Confirmar transferencia",
+        "youSend": "Vas a enviar: {{amount}} pts",
+        "willRemain": "Quedarán: {{balance}}",
+        "back": "← Atrás",
+        "confirm": "Transferir {{amount}}"
+      },
+      "success": {
+        "title": "Listo",
+        "message": "{{amount}} pts enviados a {{recipient}}",
+        "close": "Cerrar"
+      },
+      "error": {
+        "selfTransfer": "No puedes transferirte a ti mismo",
+        "recipientNotFound": "No hay jugador con ese email",
+        "insufficientBalance": "Puntos de clasificación insuficientes",
+        "unknown": "La transferencia falló. Inténtalo de nuevo."
+      }
+    },
+    "history": {
+      "title": "Operaciones recientes",
+      "empty": "Aún no hay operaciones",
+      "transferOut": "Transferencia a {{name}}",
+      "transferIn": "Transferencia de {{name}}",
+      "settle": "Liquidación de partida",
+      "adminReset": "Restablecido por admin",
+      "unknownPlayer": "—"
+    }
   },
   "stakes": {
     "title": "Apuesta de rating",

@@ -330,7 +330,46 @@
     "saved": "Профиль сохранён",
     "saveProgress": "Сохранить прогресс?",
     "maybeLater": "Позже",
-    "rating": "Рейтинг"
+    "rating": "Рейтинг",
+    "transferRating": {
+      "button": "Перевести",
+      "modal": {
+        "title": "Перевод очков рейтинга",
+        "balance": "Ваш баланс: {{n}}",
+        "emailLabel": "Email получателя",
+        "amountLabel": "Сумма",
+        "amountTooHigh": "Не больше {{max}}",
+        "lookup": "Найти получателя",
+        "invalidEmail": "Похоже на некорректный email"
+      },
+      "preview": {
+        "title": "Подтверждение перевода",
+        "youSend": "Вы переводите: {{amount}} очков",
+        "willRemain": "Останется: {{balance}}",
+        "back": "← Назад",
+        "confirm": "Перевести {{amount}}"
+      },
+      "success": {
+        "title": "Готово",
+        "message": "{{amount}} очков отправлено игроку {{recipient}}",
+        "close": "Закрыть"
+      },
+      "error": {
+        "selfTransfer": "Нельзя переводить самому себе",
+        "recipientNotFound": "Игрок с таким email не найден",
+        "insufficientBalance": "Недостаточно очков рейтинга",
+        "unknown": "Не получилось перевести. Попробуйте ещё раз."
+      }
+    },
+    "history": {
+      "title": "Последние операции",
+      "empty": "Пока нет операций",
+      "transferOut": "Перевод игроку {{name}}",
+      "transferIn": "Перевод от {{name}}",
+      "settle": "Розыгрыш в комнате",
+      "adminReset": "Сброс администратором",
+      "unknownPlayer": "—"
+    }
   },
   "stakes": {
     "title": "Игра на рейтинг",
