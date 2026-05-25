@@ -24,7 +24,7 @@ import { useGameStore, type GameStore } from '../../store/gameStore';
 import { GameTableScreen, type GameTableScreenProps } from '../GameTableScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
-import { PlayingCard } from '../../components/cards';
+import { PlayingCard, type Rank } from '../../components/cards';
 import { ScoreboardModal, type PlayerScore } from '../ScoreboardModal';
 import { RatingSettlementModal } from '../RatingSettlementModal';
 import { gameClient } from '../../lib/gameClient';
@@ -61,8 +61,25 @@ interface LeftLastTrickCard {
   // Akula: "слева сейчас показываются названия и коды карт — этого
   // недостаточно, нужны изображения".
   suit: 'spades' | 'hearts' | 'clubs' | 'diamonds';
-  rank: string | number;
+  rank: Rank;
   isWinner: boolean;
+}
+
+// Snapshot encodes face cards as 'jack'/'queen'/'king'/'ace';
+// PlayingCard expects single-letter Rank literals.
+function parseRank(raw: string | undefined): Rank {
+  if (!raw) return 2;
+  if (/^\d+$/.test(raw)) {
+    const n = parseInt(raw, 10);
+    if (n >= 2 && n <= 10) return n as Rank;
+  }
+  switch (raw.toLowerCase()) {
+    case 'j': case 'jack':  return 'J';
+    case 'q': case 'queen': return 'Q';
+    case 'k': case 'king':  return 'K';
+    case 'a': case 'ace':   return 'A';
+    default: return 2;
+  }
 }
 interface LeftLastTrick {
   cards: LeftLastTrickCard[];
@@ -405,11 +422,10 @@ function buildLeftPaneData(args: {
           const player = players.find((p: any) => p.seat_index === c.seat) ?? null;
           // Snapshot stores cards as "spades-9" / "hearts-king".
           const [rawSuit, rawRank] = String(c.card ?? '').split('-');
-          const rank: string | number = /^\d+$/.test(rawRank ?? '') ? parseInt(rawRank, 10) : rawRank;
           return {
             playerName: player?.display_name ?? `Seat ${c.seat}`,
             suit: (rawSuit as LeftLastTrickCard['suit']) ?? 'spades',
-            rank,
+            rank: parseRank(rawRank),
             isWinner: last.winner_seat === c.seat,
           };
         }),
