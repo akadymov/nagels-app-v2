@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
 import { gameClient } from '../../lib/gameClient';
+import { BrandSwitch } from '../BrandSwitch';
 
-interface FoundUser { id: string; email: string | null; display_name: string | null; balance: number }
+interface FoundUser { id: string; email: string | null; display_name: string | null; balance: number; can_announce: boolean }
 
 export const AdminRatingBlock: React.FC = () => {
   const { t } = useTranslation();
@@ -46,6 +47,19 @@ export const AdminRatingBlock: React.FC = () => {
     setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, balance: 0 } : x));
   };
 
+  const toggleTelegram = async (u: FoundUser, next: boolean) => {
+    setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, can_announce: next } : x));
+    try {
+      const r = next
+        ? await gameClient.adminGrantTelegram(u.id)
+        : await gameClient.adminRevokeTelegram(u.id);
+      if (!r.ok) throw new Error(r.error || 'unknown');
+    } catch {
+      setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, can_announce: !next } : x));
+      Alert.alert('Error', 'Could not update Telegram permission');
+    }
+  };
+
   const resetAll = async () => {
     if (confirmText !== 'RESET ALL') {
       Alert.alert('Confirm', 'Type RESET ALL to confirm');
@@ -71,6 +85,11 @@ export const AdminRatingBlock: React.FC = () => {
         <View key={u.id} style={[styles.row, { borderColor: colors.glassLight }]}>
           <Text style={[styles.rowText, { color: colors.textPrimary }]} numberOfLines={1}>{u.email}</Text>
           <Text style={[styles.rowText, { color: colors.textMuted }]}>{u.balance}</Text>
+          <BrandSwitch
+            value={u.can_announce}
+            onValueChange={(v) => toggleTelegram(u, v)}
+            testID={`admin-allow-telegram-${u.id}`}
+          />
           <Pressable
             onPress={() => resetOne(u)}
             disabled={u.balance === 0}
