@@ -164,7 +164,7 @@ export const gameClient = {
     player_count: number,
     max_cards = 10,
     mode: 'standard' | 'scorekeeper' = 'standard',
-    announce: boolean = true,
+    announce: boolean = false,
   ) =>
     postAction(displayName, {
       kind: 'create_room',
@@ -172,11 +172,12 @@ export const gameClient = {
       player_count,
       max_cards,
       mode,
-      // Tests/automation AND dev/preview builds must not fire the
-      // new-room Telegram notification. Only prod builds announce.
-      // Host can also opt out per-room via the create form toggle.
+      // silent = test/dev gate (automation + non-prod builds).
+      // announce = explicit host intent + server-enforced allow-list.
+      // Both must align for Telegram to fire.
       // See docs/principles.md §8 "Test side-effect hygiene".
-      silent: shouldSilenceTelegram() || !announce,
+      silent: shouldSilenceTelegram(),
+      announce,
     }),
 
   joinRoom: (displayName: string, code: string) =>
@@ -323,7 +324,7 @@ export const gameClient = {
 
   adminSearchUsers: (
     q: string,
-  ): Promise<{ ok: boolean; error?: string; rows?: Array<{ id: string; email: string | null; display_name: string | null; balance: number }> }> =>
+  ): Promise<{ ok: boolean; error?: string; rows?: Array<{ id: string; email: string | null; display_name: string | null; balance: number; can_announce: boolean }> }> =>
     postAdminAction({ kind: 'admin_search_users', q }),
 
   adminResetRating: (target_user_id: string): Promise<{ ok: boolean; error?: string; affected?: number }> =>
@@ -331,6 +332,19 @@ export const gameClient = {
 
   adminResetAllRatings: (): Promise<{ ok: boolean; error?: string; affected?: number }> =>
     postAdminAction({ kind: 'admin_reset_all_ratings' }),
+
+  canAnnounceTelegram: async (): Promise<boolean> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('can_announce_telegram');
+    if (error) throw error;
+    return data === true;
+  },
+
+  adminGrantTelegram: (target_user_id: string): Promise<{ ok: boolean; error?: string }> =>
+    postAdminAction({ kind: 'admin_grant_telegram', target_user_id }),
+
+  adminRevokeTelegram: (target_user_id: string): Promise<{ ok: boolean; error?: string; affected?: number }> =>
+    postAdminAction({ kind: 'admin_revoke_telegram', target_user_id }),
 
   setDisplayName: (display_name: string, room_id?: string) =>
     postAction(null, { kind: 'set_display_name', display_name, room_id }),
