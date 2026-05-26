@@ -10,7 +10,7 @@ export type ActionKind =
 export type RoomMode = 'standard' | 'scorekeeper';
 
 export type Action =
-  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string; mode?: RoomMode; silent?: boolean }
+  | { kind: 'create_room'; player_count: number; max_cards?: number; display_name: string; mode?: RoomMode; silent?: boolean; announce?: boolean }
   | { kind: 'join_room';   code: string; display_name: string }
   | { kind: 'leave_room';  room_id: string; target_session_id?: string }
   | { kind: 'ready';       room_id: string; is_ready: boolean; target_session_id?: string }
@@ -27,7 +27,9 @@ export type Action =
   | { kind: 'admin_check' }
   | { kind: 'admin_search_users';        q: string }
   | { kind: 'admin_reset_rating';        target_user_id: string }
-  | { kind: 'admin_reset_all_ratings' };
+  | { kind: 'admin_reset_all_ratings' }
+  | { kind: 'admin_grant_telegram';  target_user_id: string }
+  | { kind: 'admin_revoke_telegram'; target_user_id: string };
 
 export interface ActorContext {
   auth_user_id: string;
