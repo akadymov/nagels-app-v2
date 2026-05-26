@@ -452,5 +452,10 @@
     "mismatchTitle": "Sum doesn't match",
     "mismatchBody": "Tricks recorded ({{actual}}) ≠ cards dealt ({{expected}}). Someone made a mistake — please fix your entry.",
     "submit": "Confirm"
+  },
+  "admin": {
+    "allowTelegram": "Can announce in Telegram",
+    "allowTelegramHint": "Allows this user's create-room toggle to fire the public-channel notification.",
+    "toggleTelegramError": "Could not update Telegram permission"
   }
 }

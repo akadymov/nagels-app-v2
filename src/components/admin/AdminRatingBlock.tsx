@@ -59,7 +59,7 @@ export const AdminRatingBlock: React.FC = () => {
       if (!r.ok) throw new Error(r.error || 'unknown');
     } catch {
       setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, can_announce: !next } : x));
-      Alert.alert('Error', 'Could not update Telegram permission');
+      Alert.alert('Error', String(t('admin.toggleTelegramError', 'Could not update Telegram permission')));
     } finally {
       setPendingTelegram((prev) => {
         const next = new Set(prev);

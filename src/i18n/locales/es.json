@@ -452,5 +452,10 @@
     "mismatchTitle": "La suma no coincide",
     "mismatchBody": "Bazas registradas ({{actual}}) ≠ cartas repartidas ({{expected}}). Alguien se equivocó — corrige tu entrada.",
     "submit": "Confirmar"
+  },
+  "admin": {
+    "allowTelegram": "Puede anunciar en Telegram",
+    "allowTelegramHint": "Permite que el interruptor «Anunciar en Telegram» del usuario dispare la notificación al canal público.",
+    "toggleTelegramError": "No se pudo actualizar el permiso de Telegram"
   }
 }

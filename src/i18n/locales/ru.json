@@ -454,5 +454,10 @@
     "mismatchTitle": "Сумма не сходится",
     "mismatchBody": "Сумма взяток ({{actual}}) ≠ количеству карт ({{expected}}). Кто-то ошибся — поправьте свой ввод.",
     "submit": "Готово"
+  },
+  "admin": {
+    "allowTelegram": "Может анонсить в Telegram",
+    "allowTelegramHint": "Разрешает свич «Анонс в Telegram» в форме создания комнаты у этого юзера.",
+    "toggleTelegramError": "Не удалось обновить разрешение Telegram"
   }
 }
