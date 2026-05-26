@@ -288,6 +288,7 @@
     "reconnecting": "Переподключение...",
     "disconnected": "Отключено",
     "leaveRoom": "Покинуть комнату",
+    "hostLeftBannerText": "Хост вышел из комнаты.",
     "startGame": "Начать игру",
     "waitingForReady": "Ожидание готовности ({{count}}/{{total}})",
     "playerJoined": "{{name}} присоединился",

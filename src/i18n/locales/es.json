@@ -286,6 +286,7 @@
     "reconnecting": "Reconectando...",
     "disconnected": "Desconectado",
     "leaveRoom": "Salir de la Sala",
+    "hostLeftBannerText": "El anfitrión salió de la sala.",
     "startGame": "Iniciar Juego",
     "waitingForReady": "Esperando jugadores listos ({{count}}/{{total}})",
     "playerJoined": "{{name}} se unió",
