@@ -54,6 +54,8 @@ import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
 import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
+import { HostLeftBanner } from '../components/HostLeftBanner';
+import { isHostAbsent } from '../lib/hostAbsent';
 import { useSettingsStore } from '../store/settingsStore';
 import { useSettingsUIStore } from '../store/settingsUIStore';
 import { useDesktopGameUI } from './desktop/DesktopGameContext';
@@ -286,6 +288,28 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     useRoomStore.getState().reset();
     onExit?.();
   }, [room?.id, onExit]);
+
+  // Host-left rescue — banner shows when host is absent so stuck
+  // players/spectators can detach and return to the lobby without
+  // waiting for the confirm dialog (banner itself is the prompt).
+  const hostAbsent = isMultiplayer && isHostAbsent({ room, players: mpPlayers });
+  const showHostLeftBanner = !!hostAbsent && !isHost;
+
+  const handleHostLeftRescue = useCallback(async () => {
+    if (!room?.id) return;
+    try {
+      if (isSpectator) {
+        await gameClient.leaveRoomAsSpectator(room.id);
+      } else {
+        await gameClient.leaveRoom(room.id);
+      }
+    } catch (err) {
+      console.error('[HostLeftRescue:GameTable] leave failed:', err);
+    }
+    unsubscribeRoom();
+    useRoomStore.getState().reset();
+    onExit?.();
+  }, [room?.id, isSpectator, onExit]);
 
   // ── Single-player init (unchanged behavior) ────────────────
   useEffect(() => {
@@ -1038,6 +1062,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <HostLeftBanner
+        visible={showHostLeftBanner}
+        onLeave={handleHostLeftRescue}
+      />
       <ActiveTurnPulseBorder active={isMyTurnPlaying} />
       {/* First-time onboarding tips. Tips self-gate on
           settingsStore.shownTips so once dismissed they never show again.
