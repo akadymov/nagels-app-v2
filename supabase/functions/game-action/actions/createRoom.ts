@@ -47,12 +47,13 @@ export async function isCallerAllowedToAnnounce(
   const adminCsv = Deno.env.get('ADMIN_EMAILS') ?? '';
   const { data: sess } = await svc.from('room_sessions')
     .select('auth_user_id').eq('id', actor.session_id).maybeSingle();
-  const authUserId = (sess as { auth_user_id: string } | null)?.auth_user_id ?? null;
-  if (!authUserId) return false;
-  const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: authUserId });
-  if (isAdminEmail((au as { email: string | null } | null)?.email ?? null, adminCsv)) return true;
+  if (!sess?.auth_user_id) return false;
+  const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: sess.auth_user_id });
+  if (isAdminEmail(au?.email ?? null, adminCsv)) return true;
+  // Errors here intentionally degrade to no-notify: room creation
+  // must never block on a permission-lookup failure.
   const { data: row } = await svc.from('telegram_announce_allowlist')
-    .select('user_id').eq('user_id', authUserId).maybeSingle();
+    .select('user_id').eq('user_id', sess.auth_user_id).maybeSingle();
   return !!row;
 }
 
