@@ -71,3 +71,10 @@ supabase/.temp/
 
 # Deno
 deno.lock
+
+# Local scratch files (release drafts, ad-hoc SQL, notes)
+/release-announce.txt
+/tmp.txt
+/tmp_*.sql
+/tmp_*.txt
+/tmp_*.md
