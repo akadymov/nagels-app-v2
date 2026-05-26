@@ -15,6 +15,7 @@ export const AdminRatingBlock: React.FC = () => {
   const [q, setQ] = useState('');
   const [results, setResults] = useState<FoundUser[]>([]);
   const [confirmText, setConfirmText] = useState('');
+  const [pendingTelegram, setPendingTelegram] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,8 @@ export const AdminRatingBlock: React.FC = () => {
   };
 
   const toggleTelegram = async (u: FoundUser, next: boolean) => {
+    if (pendingTelegram.has(u.id)) return;
+    setPendingTelegram((prev) => new Set(prev).add(u.id));
     setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, can_announce: next } : x));
     try {
       const r = next
@@ -57,6 +60,12 @@ export const AdminRatingBlock: React.FC = () => {
     } catch {
       setResults((prev) => prev.map((x) => x.id === u.id ? { ...x, can_announce: !next } : x));
       Alert.alert('Error', 'Could not update Telegram permission');
+    } finally {
+      setPendingTelegram((prev) => {
+        const next = new Set(prev);
+        next.delete(u.id);
+        return next;
+      });
     }
   };
 
@@ -88,6 +97,7 @@ export const AdminRatingBlock: React.FC = () => {
           <BrandSwitch
             value={u.can_announce}
             onValueChange={(v) => toggleTelegram(u, v)}
+            disabled={pendingTelegram.has(u.id)}
             testID={`admin-allow-telegram-${u.id}`}
           />
           <Pressable
