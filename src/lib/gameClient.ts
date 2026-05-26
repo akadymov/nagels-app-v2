@@ -282,6 +282,16 @@ export const gameClient = {
     return typeof data === 'number' ? data : 0;
   },
 
+  getMyActiveRoom: async (): Promise<
+    | { room_id: string; code: string; phase: 'waiting' | 'playing' | 'scoring'; role: 'player' | 'spectator' }
+    | null
+  > => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_my_active_room');
+    if (error) throw error;
+    return (data as any) ?? null;
+  },
+
   getRatingSettlement: async (
     room_id: string,
   ): Promise<{
