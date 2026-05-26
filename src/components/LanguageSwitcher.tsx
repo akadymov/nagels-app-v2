@@ -36,7 +36,7 @@ export const LanguageSwitcher: React.FC = () => {
 
   return (
     <GlassCard style={styles.container} blurAmount={15}>
-      <Text style={styles.title}>Language / Язык / Idioma</Text>
+      <Text style={styles.title}>Language / Язык / Idioma / Langue</Text>
       <View style={styles.buttonsContainer}>
         {(Object.keys(languages) as LanguageCode[]).map((langCode) => {
           const lang = languages[langCode];

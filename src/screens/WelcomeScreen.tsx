@@ -169,7 +169,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* Language switcher */}
         <View style={[styles.langRow, { backgroundColor: colors.surface }]}>
-          {['en', 'ru', 'es'].map((lang) => (
+          {['en', 'ru', 'es', 'fr'].map((lang) => (
             <Pressable
               key={lang}
               style={[

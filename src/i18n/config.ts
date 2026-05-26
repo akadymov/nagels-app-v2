@@ -9,11 +9,13 @@ import { Platform } from 'react-native';
 import enTranslations from './locales/en.json';
 import ruTranslations from './locales/ru.json';
 import esTranslations from './locales/es.json';
+import frTranslations from './locales/fr.json';
 
 export const resources = {
   en: { translation: enTranslations },
   ru: { translation: ruTranslations },
   es: { translation: esTranslations },
+  fr: { translation: frTranslations },
 } as const;
 
 export type TranslationResources = typeof resources;
@@ -22,6 +24,7 @@ export const languages = {
   en: { code: 'en', name: 'English', nativeName: 'English' },
   ru: { code: 'ru', name: 'Russian', nativeName: 'Русский' },
   es: { code: 'es', name: 'Spanish', nativeName: 'Español' },
+  fr: { code: 'fr', name: 'French', nativeName: 'Français' },
 } as const;
 
 export type LanguageCode = keyof typeof languages;
