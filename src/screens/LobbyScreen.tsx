@@ -149,7 +149,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [roomMode, setRoomMode] = useState<'standard' | 'scorekeeper'>('standard');
-  const [announceTelegram, setAnnounceTelegram] = useState(true);
+  const [announceTelegram, setAnnounceTelegram] = useState(false);
+  const [canAnnounce, setCanAnnounce] = useState(false);
   const [showCreateSavePrompt, setShowCreateSavePrompt] = useState(false);
   const pendingCreateRef = useRef(false);
   const navigation = useNavigation<any>();
@@ -161,6 +162,18 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
       setNameInput(prev => (prev === 'Guest' || prev === '') ? playerName : prev);
     }
   }, [playerName]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [allow, adminRes] = await Promise.all([
+        gameClient.canAnnounceTelegram().catch(() => false),
+        gameClient.adminCheck().catch(() => ({ is_admin: false })),
+      ]);
+      if (!cancelled) setCanAnnounce(allow || !!adminRes.is_admin);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const saveName = useCallback(async () => {
     const trimmed = nameInput.trim();
@@ -577,27 +590,29 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             <Text style={[styles.modeHint, { color: colors.textMuted }]}>
               {t(`scorekeeper.mode${roomMode === 'standard' ? 'Standard' : 'Scorekeeper'}Desc`)}
             </Text>
-            <View
-              style={[
-                styles.announceRow,
-                { backgroundColor: colors.surface, borderColor: colors.glassLight },
-              ]}
-              testID="row-announce-telegram"
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.announceLabel, { color: colors.textPrimary }]}>
-                  {t('lobby.announceTelegram', 'Announce in Telegram')}
-                </Text>
-                <Text style={[styles.announceHint, { color: colors.textMuted }]}>
-                  {t('lobby.announceTelegramHint', 'Post a "new room" message to the public channel.')}
-                </Text>
+            {canAnnounce && (
+              <View
+                style={[
+                  styles.announceRow,
+                  { backgroundColor: colors.surface, borderColor: colors.glassLight },
+                ]}
+                testID="row-announce-telegram"
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.announceLabel, { color: colors.textPrimary }]}>
+                    {t('lobby.announceTelegram', 'Announce in Telegram')}
+                  </Text>
+                  <Text style={[styles.announceHint, { color: colors.textMuted }]}>
+                    {t('lobby.announceTelegramHint', 'Post a "new room" message to the public channel.')}
+                  </Text>
+                </View>
+                <BrandSwitch
+                  value={announceTelegram}
+                  onValueChange={setAnnounceTelegram}
+                  testID="switch-announce-telegram"
+                />
               </View>
-              <BrandSwitch
-                value={announceTelegram}
-                onValueChange={setAnnounceTelegram}
-                testID="switch-announce-telegram"
-              />
-            </View>
+            )}
             <Pressable
               style={[styles.actionBtn, { backgroundColor: colors.accent }]}
               onPress={handleCreateRoom}
