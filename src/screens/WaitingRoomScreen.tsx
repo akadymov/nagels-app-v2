@@ -47,6 +47,7 @@ import { useAuthStore } from '../store/authStore';
 import { useDesktopGameUI } from './desktop/DesktopGameContext';
 import { HostLeftBanner } from '../components/HostLeftBanner';
 import { isHostAbsent } from '../lib/hostAbsent';
+import { useHostAbsentTicker } from '../lib/useHostAbsentTicker';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -94,6 +95,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     [players, myPlayerId]
   );
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
+  useHostAbsentTicker();
   const hostAbsent = isHostAbsent({ room, players });
   const showHostLeftBanner = hostAbsent && !isHost;
 

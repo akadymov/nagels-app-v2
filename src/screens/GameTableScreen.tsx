@@ -56,6 +56,7 @@ import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { HostLeftBanner } from '../components/HostLeftBanner';
 import { isHostAbsent } from '../lib/hostAbsent';
+import { useHostAbsentTicker } from '../lib/useHostAbsentTicker';
 import { useSettingsStore } from '../store/settingsStore';
 import { useSettingsUIStore } from '../store/settingsUIStore';
 import { useDesktopGameUI } from './desktop/DesktopGameContext';
@@ -292,6 +293,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Host-left rescue — banner shows when host is absent so stuck
   // players/spectators can detach and return to the lobby without
   // waiting for the confirm dialog (banner itself is the prompt).
+  useHostAbsentTicker();
   const hostAbsent = isMultiplayer && isHostAbsent({ room, players: mpPlayers });
   const showHostLeftBanner = !!hostAbsent && !isHost;
 

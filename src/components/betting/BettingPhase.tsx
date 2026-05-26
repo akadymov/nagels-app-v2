@@ -45,6 +45,7 @@ import { OnboardingTip } from '../OnboardingTip';
 import { ActiveTurnPulseBorder } from '../ActiveTurnPulseBorder';
 import { HostLeftBanner } from '../HostLeftBanner';
 import { isHostAbsent } from '../../lib/hostAbsent';
+import { useHostAbsentTicker } from '../../lib/useHostAbsentTicker';
 
 /** Black/near-black text on the yellow active-player fill — see GameTableScreen. */
 const ACTIVE_TEXT_DARK = '#1a1a1a';
@@ -173,6 +174,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // don't double-subscribe to the store.
   const mpRoom = isMultiplayer ? (mpSnapshot?.room ?? null) : null;
   const mpRoomPlayers = isMultiplayer ? (mpSnapshot?.players ?? []) : [];
+  useHostAbsentTicker();
   const hostAbsent = isMultiplayer && isHostAbsent({ room: mpRoom, players: mpRoomPlayers });
   const isViewerHost = isMultiplayer && !!mpRoom && !!myPlayerId && mpRoom.host_session_id === myPlayerId;
   const showHostLeftBanner = !!hostAbsent && !isViewerHost;
