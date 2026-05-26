@@ -72,7 +72,26 @@ async function getActiveRoomMeta(): Promise<ActiveRoomMeta | null> {
  *   - null          if there is no active room or the saved room has gone
  */
 export async function tryRestoreActiveRoom(): Promise<'WaitingRoom' | 'GameTable' | null> {
-  const roomId = await getActiveRoom();
+  // 1. Server-side lookup first (cross-device authoritative path).
+  // Falls through to the local AsyncStorage cache for anonymous guests
+  // (no auth.uid()) or transient server failures.
+  let roomId: string | null = null;
+  try {
+    const { gameClient } = await import('./gameClient');
+    const active = await gameClient.getMyActiveRoom();
+    if (active?.room_id) {
+      roomId = active.room_id;
+      // Sync the local cache so a subsequent offline boot still works.
+      await setActiveRoom(active.room_id, active.code, active.role);
+    }
+  } catch (err) {
+    console.warn('[rejoin] get_my_active_room failed, falling back to cache:', err);
+  }
+
+  // 2. Fallback: AsyncStorage (guests, server miss).
+  if (!roomId) {
+    roomId = await getActiveRoom();
+  }
   if (!roomId) return null;
 
   const supabase = getSupabaseClient();
