@@ -45,6 +45,8 @@ import { StakeSelector } from '../components/stakes/StakeSelector';
 import { canPlayForRating } from '../utils/ratingEligibility';
 import { useAuthStore } from '../store/authStore';
 import { useDesktopGameUI } from './desktop/DesktopGameContext';
+import { HostLeftBanner } from '../components/HostLeftBanner';
+import { isHostAbsent } from '../lib/hostAbsent';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -92,6 +94,23 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
     [players, myPlayerId]
   );
   const isHost = !!room && !!myPlayer && room.host_session_id === myPlayer.session_id;
+  const hostAbsent = isHostAbsent({ room, players });
+  const showHostLeftBanner = hostAbsent && !isHost;
+
+  const handleHostLeftRescue = useCallback(async () => {
+    if (!room?.id) return;
+    try {
+      if (isSpectator) {
+        await gameClient.leaveRoomAsSpectator(room.id);
+      } else {
+        await gameClient.leaveRoom(room.id);
+      }
+    } catch (err) {
+      console.error('[HostLeftRescue:WaitingRoom] leave failed:', err);
+    }
+    onLeave?.();
+  }, [room?.id, isSpectator, onLeave]);
+
   const amIReady = myPlayer?.is_ready ?? false;
   const authUser = useAuthStore((s) => s.user);
   const authIsGuest = useAuthStore((s) => s.isGuest);
@@ -381,6 +400,10 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <HostLeftBanner
+        visible={showHostLeftBanner}
+        onLeave={handleHostLeftRescue}
+      />
       <View style={[styles.logoHeader, { borderBottomColor: colors.glassLight }]}>
         <Pressable
           onPress={async () => {
