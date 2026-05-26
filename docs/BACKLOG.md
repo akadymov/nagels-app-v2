@@ -1,44 +1,27 @@
 ## Backlog
 
-### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
+### Leave-room rescue when host already left (Akula, 2026-05-26)
 
+  - defaultExpanded: false
+    ```md
+    Если хост вышел из комнаты, а другие игроки застряли внутри (например на frozen-руке, которая не авто-резолвилась) — выйти невозможно, кнопка Leave доступна только хосту. Сделать страховку: показывать Leave обычным игрокам, когда хост уже вышел. Условие в WaitingRoomScreen / GameTableScreen: рендерить контрол выхода если `host_session_id IS NULL` или строка хоста в `room_sessions` отсутствует/disconnected, независимо от сидения зрителя.
+    ```
+
+### Resizable desktop side panels (Akula, 2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    На десктопе боковые панели (чат, профиль, last trick, scoreboard) фиксированной ширины. Сделать их ресайзабельными: drag-and-drop за внутреннюю границу левого/правого контейнера. Сохранять ширину в `useSettingsStore` (per-panel, per-side), чтобы переживало reload. Реализация: тонкий компонент-разделитель `<PanelResizer side="left" min={240} max={520} onResize={…} />` внутри `DesktopGameLayout.tsx`; клампить до viewport-минус-центральная зона стола; только web (touch-устройства оставляем со статическими ширинами).
+    ```
 
 ### Post-game scoreboard + "Play again" on host exit (Akhmed, 2026-05-16)
 
-
-### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
-
-  - defaultExpanded: false
-    ```md
-    Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
-    ```
-
-### Share spectator link from BettingPhase and desktop (Akula, 2026-05-24)
-
-  - defaultExpanded: false
-    ```md
-    Сейчас share-spectator есть только в mobile-WaitingRoom и mobile-GameTable. Добавить ту же кнопку в DesktopWaitingRoom, DesktopGameLayout (десктопный игровой стол) и BettingPhase (mobile+desktop) — хост должен мочь пригласить зрителя из любого in-game экрана и из любой layout-версии.
-    ```
-
-### Spectator ↔ Player toggle in WaitingRoom (Akula, 2026-05-24)
-
-  - defaultExpanded: false
-    ```md
-    В моменты пауз между играми (rooms.status в waiting или finished) разрешить переключение роли spectator↔player. Правила: обычный пользователь конвертирует только себя; хост — любого, кроме себя. Во время активной игры (playing) переключения запрещены. RPC switch_role с server-side проверками auth + state + capacity, бамп rooms.version → broadcast. UI: маленькая toggle-иконка на player/spectator chip.
-    ```
 
 ### Screenshots in feedback form (PopovIsNit, 2026-05-08)
 
 
 ### Push notifications — follow-ups
 
-
-### Cross-device user sessions
-
-  - defaultExpanded: false
-    ```md
-    Надо сделать так, чтобы пользователь зайдя с другого устройства при логине попадал в ту игру или комнату, в которой он был, будучи залогиненным на другом устройстве. То есть чтобы полноценно поддерживалась кросс-девайс игра.
-    ```
 
 ### Player stats — game history, win rate, exact bid percentage
 
@@ -63,14 +46,45 @@
 
 ## Next Up
 
+### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
+
+  - defaultExpanded: false
+    ```md
+    Если обновить страницу в не стартовавшей игре (WaitingRoom), пользователя выкидывает из комнаты. Похоже, refresh пересоздаёт anon-сессию и связь с room_players / room_spectators теряется. Нужно сохранять roomCode в localStorage и тихо вступать обратно при mount, либо матчить по auth_user_id в SQL и переставлять session_id у существующей записи.
+    ```
+
+### Cross-device user sessions
+
+  - defaultExpanded: false
+    ```md
+    Надо сделать так, чтобы пользователь зайдя с другого устройства при логине попадал в ту игру или комнату, в которой он был, будучи залогиненным на другом устройстве. То есть чтобы полноценно поддерживалась кросс-девайс игра.
+    ```
+
 ## In Progress
 
-### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
+### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
 
 
 ## Done
 
 ### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
+
+
+### Spectator ↔ Player toggle in WaitingRoom (Akula, 2026-05-24)
+
+  - defaultExpanded: false
+    ```md
+    В моменты пауз между играми (rooms.status в waiting или finished) разрешить переключение роли spectator↔player. Правила: обычный пользователь конвертирует только себя; хост — любого, кроме себя. Во время активной игры (playing) переключения запрещены. RPC switch_role с server-side проверками auth + state + capacity, бамп rooms.version → broadcast. UI: маленькая toggle-иконка на player/spectator chip.
+    ```
+
+### Share spectator link from BettingPhase and desktop (Akula, 2026-05-24)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас share-spectator есть только в mobile-WaitingRoom и mobile-GameTable. Добавить ту же кнопку в DesktopWaitingRoom, DesktopGameLayout (десктопный игровой стол) и BettingPhase (mobile+desktop) — хост должен мочь пригласить зрителя из любого in-game экрана и из любой layout-версии.
+    ```
+
+### Turn timebank — countdown until auto-play (Akula, 2026-05-16)
 
 
 ### Unify Profile + Lobby on desktop — drop standalone Lobby route, in-game gear opens Profile in left sidebar alongside Score / Last Hand (Akula, 2026-05-17)
