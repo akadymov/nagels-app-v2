@@ -89,7 +89,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const showIdentity = only !== 'preferences';
   const showPreferences = only !== 'identity';
   const showLogout = only !== 'identity'; // logout lives with preferences
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
   const { themePreference, fourColorDeck, hapticsEnabled, setThemePreference, setFourColorDeck, setHapticsEnabled } = useSettingsStore();
@@ -97,12 +97,18 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const ratingEligible = canPlayForRating(user, isGuest);
   const ratingBalance = useRatingStore((s) => s.balance);
   const loadRating = useRatingStore((s) => s.load);
+  const ratingEvents = useRatingStore((s) => s.events);
+  const loadRatingEvents = useRatingStore((s) => s.loadEvents);
+  const [historyOpen, setHistoryOpen] = useState(false);
   // SettingsBody is a sibling inside a modal / left pane — useFocusEffect
   // on the parent doesn't fire when we surface, so kick the rating load
   // on mount and whenever eligibility flips. Cheap RPC (single integer).
   useEffect(() => {
-    if (ratingEligible) loadRating();
-  }, [ratingEligible, loadRating]);
+    if (ratingEligible) {
+      loadRating();
+      loadRatingEvents();
+    }
+  }, [ratingEligible, loadRating, loadRatingEvents]);
   // "Anonymous" = not a registered user yet. The Supabase user.is_anonymous
   // flag isn't always populated on every session (especially right after
   // a refresh), so we OR with the canonical isGuest flag from authStore.
@@ -456,6 +462,76 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                 </View>
               </View>
             )}
+            {ratingEligible && (
+              <View style={[styles.ratingRow, { borderTopColor: colors.glassLight, flexDirection: 'column', alignItems: 'stretch' }]} testID="profile-rating-history-row">
+                <Pressable
+                  onPress={() => setHistoryOpen((v) => !v)}
+                  accessibilityRole="button"
+                  testID="btn-toggle-rating-history"
+                  style={({ pressed }) => [{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    opacity: pressed ? 0.75 : 1,
+                  }]}
+                >
+                  <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>
+                    {t('profile.history.title', 'Recent operations')}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 14 }}>
+                    {historyOpen ? '▾' : '▸'}
+                  </Text>
+                </Pressable>
+                {historyOpen && (
+                  <View style={{ marginTop: Spacing.sm }}>
+                    {ratingEvents.length === 0 ? (
+                      <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                        {t('profile.history.empty', 'No operations yet')}
+                      </Text>
+                    ) : (
+                      ratingEvents.slice(0, 5).map((ev) => {
+                        const isSettle = ev.reason === 'settle';
+                        const isAdminReset = ev.reason === 'admin_reset';
+                        const name = ev.counterparty_display_name ?? t('profile.history.unknownPlayer', '—');
+                        const label =
+                          ev.reason === 'transfer_out' ? t('profile.history.transferOut', { name })
+                          : ev.reason === 'transfer_in' ? t('profile.history.transferIn', { name })
+                          : isSettle ? t('profile.history.settle')
+                          : t('profile.history.adminReset');
+                        const icon =
+                          ev.reason === 'transfer_out' ? '↗'
+                          : ev.reason === 'transfer_in' ? '↙'
+                          : isSettle ? '🏆'
+                          : '⚙';
+                        const deltaColor =
+                          isAdminReset ? colors.textSecondary
+                          : ev.delta > 0 ? colors.success
+                          : colors.error;
+                        const sign = ev.delta > 0 ? '+' : '';
+                        const when = formatRatingEventDate(ev.created_at, i18n.language);
+                        return (
+                          <View
+                            key={ev.id}
+                            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: 10 }}
+                          >
+                            <Text style={{ fontSize: 16, width: 22, textAlign: 'center' }}>{icon}</Text>
+                            <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 14 }} numberOfLines={1}>
+                              {String(label)}
+                            </Text>
+                            <Text style={{ color: deltaColor, fontSize: 14, fontWeight: '600' }}>
+                              {sign}{ev.delta}
+                            </Text>
+                            <Text style={{ color: colors.textMuted, fontSize: 12, width: 56, textAlign: 'right' }}>
+                              {when}
+                            </Text>
+                          </View>
+                        );
+                      })
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         )}
 
@@ -512,6 +588,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
               { key: 'en', label: 'English' },
               { key: 'ru', label: 'Русский' },
               { key: 'es', label: 'Español' },
+              { key: 'fr', label: 'Français' },
             ]}
             selected={currentLang}
             onSelect={handleLanguageChange}
@@ -658,3 +735,20 @@ const styles = StyleSheet.create({
   toast: { position: 'absolute', bottom: 40, left: Spacing.lg, right: Spacing.lg, padding: Spacing.md, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center' },
   toastText: { fontSize: 14, fontWeight: '500' },
 });
+
+function formatRatingEventDate(iso: string, locale: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  try {
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+  } catch {
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  }
+}
