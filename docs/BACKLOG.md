@@ -1,11 +1,120 @@
-## Backlog
+## Tech Debt
 
-### Leave-room rescue when host already left (Akula, 2026-05-26)
+> Источник: `docs/superpowers/audits/2026-05-26-security-audit.md` + `docs/superpowers/audits/2026-05-26-architecture-audit.md`. Все пункты тегированы `[tech]` чтобы отделить от продуктовых задач.
+
+### [tech][security][HIGH] Revoke switch_role RPC from anon (2026-05-26)
 
   - defaultExpanded: false
     ```md
-    Если хост вышел из комнаты, а другие игроки застряли внутри (например на frozen-руке, которая не авто-резолвилась) — выйти невозможно, кнопка Leave доступна только хосту. Сделать страховку: показывать Leave обычным игрокам, когда хост уже вышел. Условие в WaitingRoomScreen / GameTableScreen: рендерить контрол выхода если `host_session_id IS NULL` или строка хоста в `room_sessions` отсутствует/disconnected, независимо от сидения зрителя.
+    `supabase/migrations/20260524000000_switch_role.sql:142` грантит EXECUTE на `switch_role` для роли `anon`. Защищено внутренним `auth.uid() IS NULL → auth_failed`, но это формальный регресс относительно других RPC (transfer_rating, get_my_active_room, can_announce_telegram — все `TO authenticated` только). Fix: миграция с `REVOKE EXECUTE ON FUNCTION public.switch_role(...) FROM anon;`.
     ```
+
+### [tech][security][HIGH] Rate-limit lookup_rating_recipient (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `supabase/migrations/20260525000000_rating_transfers.sql:22-86`. Любой залогиненный юзер может в цикле проверять, существует ли email в Nägels — RPC возвращает `{found:true|false}` без троттлинга. Email-oracle. Fix: добавить лёгкую таблицу `rpc_throttle(user_id, fn_name, called_at)` + проверку «не более 30 вызовов за 10 минут» в теле функции. Возвращать `{ok:false, error:'rate_limited'}`.
+    ```
+
+### [tech][security][HIGH] Stop logging user email in authService (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `src/lib/supabase/authService.ts:96, 128, 155` — `console.log('[AuthService] Signed in as', data.user.email)`. PII в браузерных devtools и любых remote log sinks. Fix: либо логать только `data.user.id`, либо маскировать local-part: `email.replace(/(.).+(@)/, '$1***$2')`.
+    ```
+
+### [tech][security][MEDIUM] CORS wildcard on game-action (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `supabase/functions/_shared/cors.ts:2` — `Access-Control-Allow-Origin: *`. JWT-верификация защищает мутации (нет cookie → low CSRF), но defense-in-depth ослаблен. Fix: эхо-список разрешённых origin'ов (`https://nigels.online`, `https://*.vercel.app`, `http://localhost:8081`) и Vary: Origin.
+    ```
+
+### [tech][security][MEDIUM] Feedback table accepts anon inserts + forgeable player_id (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `supabase/migrations/20260516185139_remote_schema_baseline.sql:1412` — `feedback_insert_anyone WITH CHECK (true)`. Спам-вектор + можно подставить чужой `player_id` UUID. Fix: `WITH CHECK (player_id IS NULL OR player_id = auth.uid())` + триггер-throttle по IP/session.
+    ```
+
+### [tech][security][MEDIUM] adminGrantTelegram: validate target_user_id exists (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `supabase/functions/game-action/actions/adminGrantTelegram.ts:22-25`. Upsert проходит для любого UUID, FK к auth.users падает 500. Не security-дыра, но operational шум. Fix: предварительный select через `get_auth_user_info`, возврат `{ok:false, error:'user_not_found'}`.
+    ```
+
+### [tech][security][LOW] release-announce.txt в корне репо (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    Untracked, без секретов, но `git add .` подцепит. Fix: добавить `release-*.txt` в `.gitignore` или перенести в `docs/releases/`.
+    ```
+
+### [tech][arch][R1][HIGH] Split GameTableScreen.tsx (2407 строк) на слои (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    44 хука, 14-dep VM `useMemo` на 250 строк, geometry-математика inline (clockToScreen, getPlayerCardOffset), trump-таблицы цветов, ~10 модалок условно отрендеренных в одном return. Каждое изменение фичи трогает этот файл. Target: (a) `useGameTableVM(snapshot, isMultiplayer)` хук в `src/screens/gameTable/useGameTableVM.ts`; (b) presentational компоненты `<TopBar>`, `<TableSurface>`, `<MyHandTray>`, `<TrickOverlay>`, `<BannersStack>` по ≤200 строк; (c) `GameTableScreen` — ~150-строчный оркестратор. Geometry → pure functions в `src/screens/gameTable/geometry.ts`. Effort: 2-3 дня, слайсами. Самый высокий pay-off в репо.
+    ```
+
+### [tech][arch][R2][HIGH] Унифицировать «direct RPC vs edge action» (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас `placeBet/playCard` идут через edge function, а `switchRole/setMinCardsPerHand/joinRoomAsSpectator/transferRating` — direct-to-RPC. Direct-RPC обходят broadcast в `supabase/functions/game-action/index.ts:138-142`, поэтому другие клиенты узнают об этих мутациях только через heartbeat/reload. Правило: «любая мутация RoomSnapshot → через game-action». Effort: 1 день, обёртки вокруг существующих PL/pgSQL RPC. Pay-off: устраняет целый класс «почему не пропагировалось?» багов.
+    ```
+
+### [tech][arch][R3][HIGH] Убрать is_connected boolean → derive из last_seen_at (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `room_players.is_connected` ставится в true heartbeat'ом, но НИКОГДА не сбрасывается обратно — был тот самый live-баг 2026-05-26 с host-left rescue. Сейчас 7 разных RPC дублируют фильтр по `last_seen_at` (`20260520180000_filter_stale_spectators.sql`, `20260522080000_expose_avatar_url.sql` и др). Target: дроп колонки, derive через SQL view или helper `now() - last_seen_at < interval '15s'`. Effort: 0.5 дня. Снапшот-тип `_shared/types.ts:77` не меняется. Pay-off: фиксит баг структурно, киляет 3-5 будущих миграций.
+    ```
+
+### [tech][arch][R4][MEDIUM] Унифицировать SP+MP через useTableVM адаптер (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `gameStore.ts` (841 строк, SP-движок) vs `roomStore.ts` (29 строк, MP-снапшот). Каждый экран (`GameTableScreen.tsx`, `BettingPhase.tsx`, `ScoreboardModal.tsx`) ветвится `if (isMultiplayer) ... else ...` ~250 строк суммарно plumbing'а. Target: один `useTableVM()` хук, всегда возвращающий ту же `GameVM` форму через `adaptSnapshot()` / `adaptSp()`. Effort: 1-1.5 дня. Парится с R1.
+    ```
+
+### [tech][arch][R5][MEDIUM] Broadcast пушит сам snapshot вместо refetch (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    Сейчас: server мутация → `{event:'state_changed', version}` → каждый клиент делает `gameClient.refreshSnapshot(room_id)` = 2 RPC roundtrip × N игроков. Target (cheap): broadcast несёт `{version, state}` в payload, не-actor'ы делают `applySnapshot` напрямую. `my_hand` re-fetch можно пропускать для большинства action'ов. Effort: 0.5 дня. Pay-off: -150-400мс perceived latency, ~3× меньше snapshot-чтений.
+    ```
+
+### [tech][arch][cleanup] Drop supabase/migrations.legacy/ (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    26 файлов больше не применяются — baseline (20260516185139) содержит всё. Только сбивают с толку. Fix: удалить или переместить в `docs/history/`.
+    ```
+
+### [tech][arch][cleanup] Console.* (98 вызовов) → logger.ts (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    98 `console.log/warn/error` в `src/`, 5 в edge функциях. Обернуть в `logger.ts` с level + structured fields. Делает будущий Sentry/Datadog hook one-line change.
+    ```
+
+### [tech][arch][cleanup] Type RootStackParamList properly — kill 35 `as any` в AppNavigator (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `AppNavigator.tsx` — 35 `as any`, в основном на `navigation.navigate(...)`. Прописать `RootStackParamList` один раз и удалить касты. Effort: 1-2 часа.
+    ```
+
+### [tech][arch][cleanup] Typed payload parser в gameClient вместо `as any` (2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    `src/lib/gameClient.ts:94-104, 292, 305, 312, 322` — server payloads парсятся через `data as any` без narrowing'а. Если сервер изменит форму ответа, TS промолчит — runtime сломает где-то ниже. Fix: маленький validator (zod или ручной guard) на границе. Покрывает Rating, Telegram, getMyActiveRoom RPC.
+    ```
+
+## Backlog
 
 ### Resizable desktop side panels (Akula, 2026-05-26)
 
@@ -46,6 +155,8 @@
 
 ## Next Up
 
+## In Progress
+
 ### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
 
   - defaultExpanded: false
@@ -60,12 +171,17 @@
     Надо сделать так, чтобы пользователь зайдя с другого устройства при логине попадал в ту игру или комнату, в которой он был, будучи залогиненным на другом устройстве. То есть чтобы полноценно поддерживалась кросс-девайс игра.
     ```
 
-## In Progress
+## Done
 
 ### Active turn highlight — gradient fill + screen pulse (Akula, 2026-05-08)
 
 
-## Done
+### Leave-room rescue when host already left (Akula, 2026-05-26)
+
+  - defaultExpanded: false
+    ```md
+    Если хост вышел из комнаты, а другие игроки застряли внутри (например на frozen-руке, которая не авто-резолвилась) — выйти невозможно, кнопка Leave доступна только хосту. Сделать страховку: показывать Leave обычным игрокам, когда хост уже вышел. Условие в WaitingRoomScreen / GameTableScreen: рендерить контрол выхода если `host_session_id IS NULL` или строка хоста в `room_sessions` отсутствует/disconnected, независимо от сидения зрителя.
+    ```
 
 ### Email-confirmed redirect — extra screen on confirm (Dima via Akula, 2026-05-08)
 
