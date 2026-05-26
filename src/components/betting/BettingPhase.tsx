@@ -43,6 +43,8 @@ import { betPlacedHaptic } from '../../utils/haptics';
 import { getAllowedBets } from '../../../supabase/functions/_shared/engine/rules';
 import { OnboardingTip } from '../OnboardingTip';
 import { ActiveTurnPulseBorder } from '../ActiveTurnPulseBorder';
+import { HostLeftBanner } from '../HostLeftBanner';
+import { isHostAbsent } from '../../lib/hostAbsent';
 
 /** Black/near-black text on the yellow active-player fill — see GameTableScreen. */
 const ACTIVE_TEXT_DARK = '#1a1a1a';
@@ -165,6 +167,31 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const myHandCards: string[] = snapshot?.my_hand ?? [];
 
   const myPlayer = players.find((p) => p.session_id === myPlayerId) ?? null;
+
+  // Host-left rescue banner — multiplayer only, never shown to the host.
+  // Reuses the same mpSnapshot/mpMyPlayerId selectors wired above so we
+  // don't double-subscribe to the store.
+  const mpRoom = isMultiplayer ? (mpSnapshot?.room ?? null) : null;
+  const mpRoomPlayers = isMultiplayer ? (mpSnapshot?.players ?? []) : [];
+  const hostAbsent = isMultiplayer && isHostAbsent({ room: mpRoom, players: mpRoomPlayers });
+  const isViewerHost = isMultiplayer && !!mpRoom && !!myPlayerId && mpRoom.host_session_id === myPlayerId;
+  const showHostLeftBanner = !!hostAbsent && !isViewerHost;
+
+  const handleHostLeftRescue = useCallback(async () => {
+    const roomId = useRoomStore.getState().snapshot?.room?.id;
+    if (!roomId) return;
+    try {
+      if (useRoomStore.getState().isSpectator) {
+        await gameClient.leaveRoomAsSpectator(roomId);
+      } else {
+        await gameClient.leaveRoom(roomId);
+      }
+    } catch (err) {
+      console.error('[HostLeftRescue:BettingPhase] leave failed:', err);
+    }
+    onClose?.();
+  }, [onClose]);
+
   const trumpSuit = hand?.trump_suit ?? 'diamonds';
   const cardsPerPlayer = hand?.cards_per_player ?? 0;
   const handNumber = hand?.hand_number ?? 1;
@@ -537,6 +564,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         { backgroundColor: isDark ? 'rgba(20, 23, 32, 0.97)' : 'rgba(232, 232, 232, 0.97)' },
       ]}
     >
+      <HostLeftBanner
+        visible={showHostLeftBanner}
+        onLeave={handleHostLeftRescue}
+      />
       <ActiveTurnPulseBorder active={isMyTurn && myBet === null} />
       {/* First-time bidding explainer (last-bidder rule + scoring intro). */}
       <OnboardingTip
