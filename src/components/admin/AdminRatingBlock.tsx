@@ -81,7 +81,11 @@ export const AdminRatingBlock: React.FC = () => {
 
   return (
     <View style={[styles.block, { borderColor: colors.error, backgroundColor: colors.surface }]} testID="admin-rating-block">
-      <Text style={[styles.title, { color: colors.error }]}>Admin · Reset ratings</Text>
+      <Text style={[styles.title, { color: colors.error }]}>Admin · Players</Text>
+      <Text style={[styles.hint, { color: colors.textMuted }]}>
+        Search by email to manage a player. Toggle Telegram to grant the
+        announce-room permission. Tap Reset to zero their rating.
+      </Text>
       <TextInput
         value={q}
         onChangeText={setQ}
@@ -90,20 +94,30 @@ export const AdminRatingBlock: React.FC = () => {
         style={[styles.input, { color: colors.textPrimary, borderColor: colors.glassLight }]}
         testID="admin-search-input"
       />
+      {results.length > 0 && (
+        <View style={[styles.headerRow, { borderColor: colors.glassLight }]}>
+          <Text style={[styles.headerCell, { color: colors.textMuted, flex: 1 }]} numberOfLines={1}>Email</Text>
+          <Text style={[styles.headerCell, { color: colors.textMuted, flex: 1 }]} numberOfLines={1}>Rating</Text>
+          <Text style={[styles.headerCell, { color: colors.textMuted, width: 70, textAlign: 'center' }]} numberOfLines={1}>Telegram</Text>
+          <Text style={[styles.headerCell, { color: colors.textMuted, width: 60, textAlign: 'right' }]} numberOfLines={1}>Reset</Text>
+        </View>
+      )}
       {results.map((u) => (
         <View key={u.id} style={[styles.row, { borderColor: colors.glassLight }]}>
           <Text style={[styles.rowText, { color: colors.textPrimary }]} numberOfLines={1}>{u.email}</Text>
           <Text style={[styles.rowText, { color: colors.textMuted }]}>{u.balance}</Text>
-          <BrandSwitch
-            value={u.can_announce}
-            onValueChange={(v) => toggleTelegram(u, v)}
-            disabled={pendingTelegram.has(u.id)}
-            testID={`admin-allow-telegram-${u.id}`}
-          />
+          <View style={{ width: 70, alignItems: 'center' }}>
+            <BrandSwitch
+              value={u.can_announce}
+              onValueChange={(v) => toggleTelegram(u, v)}
+              disabled={pendingTelegram.has(u.id)}
+              testID={`admin-allow-telegram-${u.id}`}
+            />
+          </View>
           <Pressable
             onPress={() => resetOne(u)}
             disabled={u.balance === 0}
-            style={[styles.btnSmall, { borderColor: colors.error, opacity: u.balance === 0 ? 0.4 : 1 }]}
+            style={[styles.btnSmall, { width: 60, alignItems: 'center', borderColor: colors.error, opacity: u.balance === 0 ? 0.4 : 1 }]}
             testID={`admin-reset-${u.id}`}
           >
             <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>Reset</Text>
@@ -137,6 +151,9 @@ export const AdminRatingBlock: React.FC = () => {
 const styles = StyleSheet.create({
   block: { borderWidth: 2, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.lg },
   title: { fontSize: 14, fontWeight: '800', marginBottom: Spacing.sm, textTransform: 'uppercase' },
+  hint:  { fontSize: 12, lineHeight: 16, marginBottom: Spacing.sm },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, borderBottomWidth: 1 },
+  headerCell: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   input: {
     borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 10, paddingVertical: 8,
     fontSize: 14, marginBottom: Spacing.sm,
