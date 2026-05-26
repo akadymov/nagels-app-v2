@@ -2,6 +2,7 @@ import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { ActorContext, Action, ActionResult, RoomSnapshot } from '../../_shared/types.ts';
 import { buildSnapshot } from '../snapshot.ts';
 import { notifyNewRoom } from '../../_shared/telegram.ts';
+import { isAdminEmail } from '../../_shared/auth/isAdmin.ts';
 
 function generateCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -24,15 +25,35 @@ function emptySnapshot(): RoomSnapshot {
 }
 
 /**
- * Decide whether room creation should fire the Telegram new-room
- * notification. Off when the caller passes silent: true (tests, future
- * silent-room features). Off-by-default for new callers; default
- * behavior (no flag set) stays the same as before — notification on.
+ * Pure flag gate: the caller must NOT be a test/dev context AND must
+ * have explicitly opted in. Server-side permission check happens
+ * separately in isCallerAllowedToAnnounce().
  */
-export function shouldSendRoomNotification(
-  action: Extract<Action, { kind: 'create_room' }>,
+export function shouldSendByFlags(
+  action: { silent?: boolean; announce?: boolean },
 ): boolean {
-  return action.silent !== true;
+  return action.silent !== true && action.announce === true;
+}
+
+/**
+ * Server-side permission gate: caller must be admin (by env) OR
+ * present in telegram_announce_allowlist. Defends against a client
+ * that fabricates `announce: true` in the request body.
+ */
+export async function isCallerAllowedToAnnounce(
+  svc: SupabaseClient,
+  actor: ActorContext,
+): Promise<boolean> {
+  const adminCsv = Deno.env.get('ADMIN_EMAILS') ?? '';
+  const { data: sess } = await svc.from('room_sessions')
+    .select('auth_user_id').eq('id', actor.session_id).maybeSingle();
+  const authUserId = (sess as { auth_user_id: string } | null)?.auth_user_id ?? null;
+  if (!authUserId) return false;
+  const { data: au } = await svc.rpc('get_auth_user_info', { p_user_id: authUserId });
+  if (isAdminEmail((au as { email: string | null } | null)?.email ?? null, adminCsv)) return true;
+  const { data: row } = await svc.from('telegram_announce_allowlist')
+    .select('user_id').eq('user_id', authUserId).maybeSingle();
+  return !!row;
 }
 
 export async function createRoom(
@@ -113,7 +134,7 @@ export async function createRoom(
   // Awaited only so the AbortController inside sendTelegram has time to
   // run before the edge-function request context is torn down. Tests
   // (and future silent-room features) pass silent: true to bypass.
-  if (shouldSendRoomNotification(action)) {
+  if (shouldSendByFlags(action) && await isCallerAllowedToAnnounce(svc, actor)) {
     await notifyNewRoom({
       hostName: actor.display_name,
       roomCode: inserted.code,
