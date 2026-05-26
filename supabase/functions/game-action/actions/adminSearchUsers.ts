@@ -7,6 +7,7 @@ interface Row {
   email: string | null;
   display_name: string | null;
   balance: number;
+  can_announce: boolean;
 }
 
 export async function adminSearchUsers(
@@ -41,6 +42,14 @@ export async function adminSearchUsers(
     (ratings ?? []).map((r: { user_id: string; balance: number }) => [r.user_id, r.balance]),
   );
 
+  const { data: allow } = await svc
+    .from('telegram_announce_allowlist')
+    .select('user_id')
+    .in('user_id', ids);
+  const canAnnounceById = new Set<string>(
+    (allow ?? []).map((r: { user_id: string }) => r.user_id),
+  );
+
   // room_sessions.auth_user_id is UNIQUE — at most one row per user, no sort needed.
   const { data: sessions } = await svc
     .from('room_sessions')
@@ -57,6 +66,7 @@ export async function adminSearchUsers(
     email: m.email,
     display_name: nameByUser.get(m.id) ?? null,
     balance: balanceByUser.get(m.id) ?? 0,
+    can_announce: canAnnounceById.has(m.id),
   }));
 
   return { ok: true, rows };
