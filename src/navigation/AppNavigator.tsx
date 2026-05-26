@@ -9,6 +9,7 @@ import { NavigationContainer, useNavigation, createNavigationContainerRef } from
 import { createStackNavigator } from '@react-navigation/stack';
 import { FeedbackButton } from '../components/FeedbackButton';
 import { SettingsModal } from '../components/SettingsModal';
+import { CrossDeviceRejoinGuard } from '../components/CrossDeviceRejoinGuard';
 import { useSettingsUIStore } from '../store/settingsUIStore';
 import {
   WelcomeScreen,
@@ -462,6 +463,7 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <AuthProvider>
+        <CrossDeviceRejoinGuard navigationRef={navigationRef} />
         <Stack.Navigator
           initialRouteName="Welcome"
           screenOptions={{
