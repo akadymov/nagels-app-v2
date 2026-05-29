@@ -1,4 +1,7 @@
 -- supabase/migrations/20260526010000_get_my_active_room.sql
+-- NOTE: Superseded by 20260530010000_connection_liveness.sql, which redefines
+-- get_my_active_room to also skip dead rooms (room_is_alive guard). This body
+-- no longer runs at the end of the migration chain — edit the newer file.
 -- Cross-device session sync: lookup the calling user's active room.
 -- Used by the client on boot / login / focus to auto-navigate the user
 -- into whatever room they're currently in on another device.
