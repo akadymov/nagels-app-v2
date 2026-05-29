@@ -17,7 +17,7 @@ export const HOST_STALE_MS = 600_000;
  *
  * Used by the host-left rescue banner to surface a Leave button when
  * the auto-eject signal didn't reach this client or the host's row
- * lingers with is_connected stuck on true.
+ * lingers with a stale last_seen_at.
  *
  * `now` is injectable for tests; defaults to Date.now().
  */

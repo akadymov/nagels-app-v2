@@ -16,7 +16,7 @@ function room(id: string, code: string, host_session_id: string, phase = 'waitin
 }
 function player(seat: number, session_id: string, display_name: string) {
   return { seat_index: seat, session_id, display_name,
-           is_ready: true, is_connected: true, last_seen_at: '2026-05-06T00:00:00Z',
+           is_ready: true, last_seen_at: '2026-05-06T00:00:00Z',
            opt_in_stake: false };
 }
 function hand(phase: 'betting' | 'playing' | 'scoring' | 'closed', current_seat: number) {

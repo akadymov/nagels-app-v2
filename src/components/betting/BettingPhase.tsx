@@ -108,7 +108,6 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       display_name: p.name,
       seat_index: i,
       is_ready: true,
-      is_connected: true,
       last_seen_at: new Date().toISOString(),
       avatar: null,
       avatar_color: null,
@@ -153,7 +152,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       sp.startingPlayerIndex, sp.currentPlayerIndex, sp.bettingPlayerIndex, sp.phase, sp.playerCount]);
 
   type SnapPlayer = { session_id: string; display_name: string; seat_index: number;
-    is_ready: boolean; is_connected: boolean; last_seen_at: string;
+    is_ready: boolean; last_seen_at: string;
     avatar?: string | null; avatar_color?: string | null };
   type SnapScore = { hand_id: string; session_id: string; bet: number;
     taken_tricks: number; hand_score: number };

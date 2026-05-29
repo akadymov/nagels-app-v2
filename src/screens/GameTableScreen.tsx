@@ -151,7 +151,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   useTurnTimeout();
 
   // Mark this player online (last_seen_at = now()) every 10s. Other clients
-  // read room_players.is_connected via the snapshot to detect drop-offs.
+  // derive drop-offs from room_players.last_seen_at via the snapshot.
   useHeartbeat();
 
   // Force a fresh snapshot when the tab returns to foreground / online.

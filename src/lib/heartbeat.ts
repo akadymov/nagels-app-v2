@@ -1,6 +1,6 @@
 /**
  * Client heartbeat — pings the server every 10s with the current room id
- * so room_players.last_seen_at + is_connected stay fresh.
+ * so room_players.last_seen_at stays fresh.
  *
  * Used by the smart-timeout logic and the offline indicator on profile
  * cards. Without this, the server has no way to tell which players

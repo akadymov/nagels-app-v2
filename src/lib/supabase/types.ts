@@ -196,7 +196,6 @@ export type Database = {
       }
       room_players: {
         Row: {
-          is_connected: boolean
           is_ready: boolean
           last_seen_at: string
           room_id: string
@@ -204,7 +203,6 @@ export type Database = {
           session_id: string
         }
         Insert: {
-          is_connected?: boolean
           is_ready?: boolean
           last_seen_at?: string
           room_id: string
@@ -212,7 +210,6 @@ export type Database = {
           session_id: string
         }
         Update: {
-          is_connected?: boolean
           is_ready?: boolean
           last_seen_at?: string
           room_id?: string
