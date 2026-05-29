@@ -12,6 +12,13 @@
 
 **Testing note (read first):** The repo has **no** SQL/RPC test harness — Jest runs TS units only. So the SQL liveness logic is verified by a committed, transaction-wrapped `psql` script (seeds data, asserts, `ROLLBACK`s — zero side effects), not by Jest. The TS cleanup is covered by `tsc`, the existing Jest run, and a final `npm run smoke`. This is the honest fit for the toolchain; do not invent a fragile new harness.
 
+**DB access on this host (IMPORTANT):** `psql` is NOT installed on the host — the local Postgres only exists inside the Supabase Docker container. Everywhere this plan shows `psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" ...`, run it instead as:
+```bash
+docker exec -i supabase_db_nigels-app-v2 psql -U postgres -d postgres -v ON_ERROR_STOP=1 < <FILE.sql>   # for -f FILE
+docker exec -i supabase_db_nigels-app-v2 psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL' ... SQL  # for heredoc
+```
+(The container path doesn't see host files, so use stdin `<`/heredoc, not `-f`.) Migration apply/replay uses the CLI, which works as written: `npx supabase migration up` and `npx supabase db reset`.
+
 **Branch:** Work happens on `feat/connection-liveness` (already created; the design doc is committed there).
 
 ---
