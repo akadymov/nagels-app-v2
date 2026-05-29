@@ -17,7 +17,7 @@ import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import i18n from '../i18n/config';
+import i18n, { languages } from '../i18n/config';
 import { signOut } from '../lib/supabase/authService';
 import { UserAvatar } from '../components/UserAvatar';
 
@@ -169,7 +169,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
 
         {/* Language switcher */}
         <View style={[styles.langRow, { backgroundColor: colors.surface }]}>
-          {['en', 'ru', 'es', 'fr'].map((lang) => (
+          {Object.keys(languages).map((lang) => (
             <Pressable
               key={lang}
               style={[

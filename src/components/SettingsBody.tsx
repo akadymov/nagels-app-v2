@@ -29,7 +29,7 @@ import { GoogleButton } from './GoogleButton';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import i18n from '../i18n/config';
+import i18n, { languages } from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
 import { isStandalone, isMobileWeb } from '../lib/pwaInstall';
@@ -584,12 +584,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
           <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{t('settings.language', 'Language')}</Text>
           <View style={{ height: Spacing.md }} />
           <OptionPills
-            options={[
-              { key: 'en', label: 'English' },
-              { key: 'ru', label: 'Русский' },
-              { key: 'es', label: 'Español' },
-              { key: 'fr', label: 'Français' },
-            ]}
+            options={Object.values(languages).map((l) => ({ key: l.code, label: l.nativeName }))}
             selected={currentLang}
             onSelect={handleLanguageChange}
             accentColor={colors.accent} textColor={colors.textSecondary} bgColor={colors.surfaceSecondary}

@@ -93,7 +93,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
   }
   if (!data.user) throw new Error('Sign-in failed');
 
-  console.log('[AuthService] Signed in as', data.user.email);
+  console.log('[AuthService] Signed in as', data.user.id);
   return data.user;
 }
 
@@ -125,7 +125,7 @@ export async function signUpWithEmail(
   }
   if (!data.user) throw new Error('Sign-up failed');
 
-  console.log('[AuthService] Signed up as', data.user.email);
+  console.log('[AuthService] Signed up as', data.user.id);
   return data.user;
 }
 
@@ -152,7 +152,7 @@ export async function linkEmailToAnonymous(email: string, password: string, disp
   }
   if (!data.user) throw new Error('Link failed');
 
-  console.log('[AuthService] Anonymous session linked to', data.user.email);
+  console.log('[AuthService] Anonymous session linked to', data.user.id);
   return data.user;
 }
 
