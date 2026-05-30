@@ -28,6 +28,8 @@ import { restartGame }    from './actions/restartGame.ts';
 import { setDisplayName } from './actions/setDisplayName.ts';
 import { setStake }       from './actions/setStake.ts';
 import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
+import { pauseGame } from './actions/pauseGame.ts';
+import { resumeGame } from './actions/resumeGame.ts';
 import { adminCheck }      from './actions/adminCheck.ts';
 import { adminSearchUsers } from './actions/adminSearchUsers.ts';
 import { adminResetRating, adminResetAllRatings } from './actions/adminResetRating.ts';
@@ -127,6 +129,8 @@ Deno.serve(async (req: Request) => {
         case 'set_display_name': result = await setDisplayName(svc, actor, action); break;
         case 'set_stake':       result = await setStake(svc, actor, action); break;
         case 'toggle_stake_optin': result = await toggleStakeOptin(svc, actor, action); break;
+        case 'pause_game':      result = await pauseGame(svc, actor, action); break;
+        case 'resume_game':     result = await resumeGame(svc, actor, action); break;
         default:                throw new Error('unknown_action');
       }
     }

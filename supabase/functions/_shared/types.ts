@@ -5,6 +5,7 @@ export type ActionKind =
   | 'record_tricks'
   | 'request_timeout'
   | 'restart_game'
+  | 'pause_game' | 'resume_game'
   | 'set_display_name';
 
 export type RoomMode = 'standard' | 'scorekeeper';
@@ -24,6 +25,8 @@ export type Action =
   | { kind: 'set_display_name'; display_name: string; room_id?: string }
   | { kind: 'set_stake';                 room_id: string; stake: number }
   | { kind: 'toggle_stake_optin';        room_id: string; opted_in: boolean }
+  | { kind: 'pause_game';  room_id: string }
+  | { kind: 'resume_game'; room_id: string }
   | { kind: 'admin_check' }
   | { kind: 'admin_search_users';        q: string }
   | { kind: 'admin_reset_rating';        target_user_id: string }
@@ -63,11 +66,13 @@ export interface RoomSnapshot {
      *  players record trick results manually after betting. Fixed at
      *  room creation. Optional for backwards-compat with old snapshots. */
     mode?: RoomMode;
-    phase: 'waiting' | 'playing' | 'finished';
+    phase: 'waiting' | 'playing' | 'paused' | 'finished';
     current_hand_id: string | null;
     version: number;
     stake: number;
     stake_locked: boolean;
+    paused_at?: string | null;
+    paused_lineup?: string[] | null;
   } | null;
   players: Array<{
     session_id: string;
