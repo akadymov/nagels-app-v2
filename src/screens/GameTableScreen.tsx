@@ -53,6 +53,7 @@ import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
 import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
 import { leaveWithConfirm } from '../lib/leaveWithConfirm';
+import { freezeWithConfirm } from '../lib/freezeWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { HostLeftBanner } from '../components/HostLeftBanner';
 import { isHostAbsent } from '../lib/hostAbsent';
@@ -1247,7 +1248,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             {isHost && room?.phase === 'playing' && !mpPlayers.some((p) => (p as any).is_guest) && (
               <Pressable
                 hitSlop={8}
-                onPress={async () => { if (room) await gameClient.pauseGame(room.id); }}
+                onPress={async () => { if (room) await freezeWithConfirm(room.id, t); }}
                 style={[
                   isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },

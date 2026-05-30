@@ -31,6 +31,7 @@ import { useGameStore } from '../../store/gameStore';
 import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
+import { freezeWithConfirm } from '../../lib/freezeWithConfirm';
 import { ChatPanel } from '../ChatPanel';
 import { PlayerChatTooltip } from '../PlayerChatTooltip';
 import { useChatTooltipListener } from '../../hooks/useChatTooltipListener';
@@ -721,7 +722,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             {/* Freeze button: host-only, only during active play, only when no guest is seated */}
             {isMultiplayer && isViewerHost && mpRoom?.phase === 'playing' && !mpRoomPlayers.some((p: any) => p.is_guest) && (
               <Pressable
-                onPress={async () => { if (mpRoom) await gameClient.pauseGame(mpRoom.id); }}
+                onPress={async () => { if (mpRoom) await freezeWithConfirm(mpRoom.id, t); }}
                 style={[
                   isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                   { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
