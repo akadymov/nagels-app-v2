@@ -115,6 +115,27 @@
     "spades": "Pique",
     "notrump": "Sans atout"
   },
+  "offline": {
+    "briefing": {
+      "header": "Comment distribuer · Donne {{n}}",
+      "seatIntro": "Asseyez-vous autour de la table dans cet ordre (le jeu tourne dans le sens antihoraire) :",
+      "deal": "{{dealer}} distribue — {{count}} à chacun, une carte à la fois autour de la table, en commençant par {{first}}.",
+      "trump": "Atout de cette donne : {{glyph}} {{suit}}",
+      "noTrump": "Sans atout cette donne",
+      "first": "{{first}} mise et entame en premier.",
+      "dealsBadge": "distribue",
+      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} a entamé",
+      "rulesToggle": "Règles en bref"
+    },
+    "rules": {
+      "bets": "Les mises se font à tour de rôle ; le total ne doit pas égaler le nombre de cartes — le dernier joueur doit casser l'égalité.",
+      "follow": "Suivez la couleur demandée ; sinon, jouez atout ou n'importe quelle carte.",
+      "trumpBeats": "L'atout bat toute carte non-atout.",
+      "noDumpTrump": "L'entame n'est pas atout et un atout est déjà posé ? Vous ne pouvez poser qu'un atout supérieur. Impossible de se défausser d'un petit atout tant que vous avez des cartes non-atout ou un atout assez fort pour surcouper.",
+      "jackException": "Exception — le Valet d'atout : si l'on entame à l'atout et que votre seul atout est le Valet, vous n'êtes pas obligé de le jouer.",
+      "scoring": "Une enchère exacte rapporte des points et un bonus ; une erreur est pénalisée."
+    }
+  },
   "chat": {
     "title": "Chat",
     "empty": "Aucun message — dis bonjour !",

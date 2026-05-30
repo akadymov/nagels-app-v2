@@ -115,6 +115,27 @@
     "spades": "Picas",
     "notrump": "Sin Triunfo"
   },
+  "offline": {
+    "briefing": {
+      "header": "Cómo repartir · Mano {{n}}",
+      "seatIntro": "Sentaos a la mesa en este orden (el juego va en sentido antihorario):",
+      "deal": "Reparte {{dealer}} — {{count}} a cada uno, de una en una alrededor de la mesa, empezando por {{first}}.",
+      "trump": "Triunfo de esta mano: {{glyph}} {{suit}}",
+      "noTrump": "Sin triunfo esta mano",
+      "first": "{{first}} apuesta y sale primero.",
+      "dealsBadge": "reparte",
+      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} salió primero",
+      "rulesToggle": "Reglas rápidas"
+    },
+    "rules": {
+      "bets": "Las apuestas van por turno; el total no puede igualar el número de cartas — el último jugador debe romper el empate.",
+      "follow": "Sigue el palo de salida; si no puedes, juega triunfo o cualquier carta.",
+      "trumpBeats": "El triunfo gana a cualquier carta que no sea triunfo.",
+      "noDumpTrump": "¿La salida no es triunfo y ya hay un triunfo en la mesa? Solo puedes poner un triunfo más alto. No puedes deshacerte de un triunfo bajo mientras tengas cartas no triunfo o un triunfo con el que superar.",
+      "jackException": "Excepción — la Sota de triunfo: si sale triunfo y tu único triunfo es la Sota, no estás obligado a jugarla.",
+      "scoring": "Acertar la apuesta da puntos y bonificación; fallar penaliza."
+    }
+  },
   "chat": {
     "title": "Chat",
     "empty": "Aún no hay mensajes — ¡saluda!",

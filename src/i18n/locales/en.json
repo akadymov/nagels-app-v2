@@ -115,6 +115,27 @@
     "spades": "Spades",
     "notrump": "No Trump"
   },
+  "offline": {
+    "briefing": {
+      "header": "How to deal · Hand {{n}}",
+      "seatIntro": "Sit around the table in this order (play goes counter-clockwise):",
+      "deal": "{{dealer}} deals — {{count}} to each, one card at a time around the table, starting with {{first}}.",
+      "trump": "Trump this hand: {{glyph}} {{suit}}",
+      "noTrump": "No trump this hand",
+      "first": "{{first}} bets and leads first.",
+      "dealsBadge": "deals",
+      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} led",
+      "rulesToggle": "Quick rules"
+    },
+    "rules": {
+      "bets": "Bets go in turn; the total must not equal the number of cards — the last player must break the tie.",
+      "follow": "Follow the lead suit; if you can't, play trump or any card.",
+      "trumpBeats": "Trump beats any non-trump card.",
+      "noDumpTrump": "If the lead isn't trump and a trump is already down, you may only play a higher trump. You can't dump a lower trump while you still hold non-trump cards or a trump high enough to over-trump.",
+      "jackException": "Exception — the trump Jack: if trump is led and your only trump is the Jack, you don't have to play it.",
+      "scoring": "Exact bid earns points and a bonus; a miss is penalised."
+    }
+  },
   "chat": {
     "title": "Chat",
     "empty": "No messages yet — say hi!",
