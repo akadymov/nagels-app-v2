@@ -56,6 +56,7 @@ import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { HostLeftBanner } from '../components/HostLeftBanner';
 import { isHostAbsent } from '../lib/hostAbsent';
+import { PausedOverlay } from '../components/PausedOverlay';
 import { useHostAbsentTicker } from '../lib/useHostAbsentTicker';
 import { useSettingsStore } from '../store/settingsStore';
 import { useSettingsUIStore } from '../store/settingsUIStore';
@@ -296,6 +297,18 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   useHostAbsentTicker();
   const hostAbsent = isMultiplayer && isHostAbsent({ room, players: mpPlayers });
   const showHostLeftBanner = !!hostAbsent && !isHost;
+
+  // Paused-game overlay state
+  const isPaused = room?.phase === 'paused';
+  const pausedLineup = (room?.paused_lineup ?? []) as string[];
+  const PAUSE_LIVE_MS = 30_000;
+  // Lineup members not currently live (null/stale last_seen_at counts as away).
+  const missingNames = pausedLineup.reduce<string[]>((acc, sid) => {
+    const p = mpPlayers.find((x) => x.session_id === sid);
+    const seenMs = p?.last_seen_at ? Date.parse(p.last_seen_at) : 0;
+    if (!p || Date.now() - seenMs >= PAUSE_LIVE_MS) acc.push(p?.display_name ?? '—');
+    return acc;
+  }, []);
 
   const handleHostLeftRescue = useCallback(async () => {
     if (!room?.id) return;
@@ -1068,6 +1081,15 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         visible={showHostLeftBanner}
         onLeave={handleHostLeftRescue}
       />
+      {isPaused && isMultiplayer && (
+        <PausedOverlay
+          isHost={isHost}
+          missingNames={missingNames}
+          onResume={() => { if (room) gameClient.resumeGame(room.id); }}
+          onKill={() => { if (room) gameClient.leaveRoom(room.id); }}
+          onToLobby={() => onExit?.()}
+        />
+      )}
       <ActiveTurnPulseBorder active={isMyTurnPlaying} />
       {/* First-time onboarding tips. Tips self-gate on
           settingsStore.shownTips so once dismissed they never show again.
@@ -1217,6 +1239,26 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 {isDesktop && (
                   <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.sync')}
+                  </Text>
+                )}
+              </Pressable>
+            )}
+            {/* Freeze button: host-only, only during active play */}
+            {isHost && room?.phase === 'playing' && (
+              <Pressable
+                hitSlop={8}
+                onPress={async () => { if (room) await gameClient.pauseGame(room.id); }}
+                style={[
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
+                  { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
+                ]}
+                testID="btn-freeze-game"
+                accessibilityLabel={t('freeze.button')}
+              >
+                <Text style={{ fontSize: 18, color: colors.iconButtonText }}>❄️</Text>
+                {isDesktop && (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('freeze.button')}
                   </Text>
                 )}
               </Pressable>

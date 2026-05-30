@@ -45,6 +45,7 @@ import { OnboardingTip } from '../OnboardingTip';
 import { ActiveTurnPulseBorder } from '../ActiveTurnPulseBorder';
 import { HostLeftBanner } from '../HostLeftBanner';
 import { isHostAbsent } from '../../lib/hostAbsent';
+import { PausedOverlay } from '../PausedOverlay';
 import { useHostAbsentTicker } from '../../lib/useHostAbsentTicker';
 
 /** Black/near-black text on the yellow active-player fill — see GameTableScreen. */
@@ -177,6 +178,18 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const hostAbsent = isMultiplayer && isHostAbsent({ room: mpRoom, players: mpRoomPlayers });
   const isViewerHost = isMultiplayer && !!mpRoom && !!myPlayerId && mpRoom.host_session_id === myPlayerId;
   const showHostLeftBanner = !!hostAbsent && !isViewerHost;
+
+  // Paused-game overlay state
+  const isBettingPaused = isMultiplayer && mpRoom?.phase === 'paused';
+  const bettingPausedLineup = (mpRoom?.paused_lineup ?? []) as string[];
+  const BETTING_PAUSE_LIVE_MS = 30_000;
+  // Lineup members not currently live (null/stale last_seen_at counts as away).
+  const bettingMissingNames = bettingPausedLineup.reduce<string[]>((acc, sid) => {
+    const p = mpRoomPlayers.find((x: { session_id: string; last_seen_at: string; display_name: string }) => x.session_id === sid);
+    const seenMs = p?.last_seen_at ? Date.parse(p.last_seen_at) : 0;
+    if (!p || Date.now() - seenMs >= BETTING_PAUSE_LIVE_MS) acc.push(p?.display_name ?? '—');
+    return acc;
+  }, []);
 
   const handleHostLeftRescue = useCallback(async () => {
     const roomId = useRoomStore.getState().snapshot?.room?.id;
@@ -569,6 +582,15 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         visible={showHostLeftBanner}
         onLeave={handleHostLeftRescue}
       />
+      {isBettingPaused && (
+        <PausedOverlay
+          isHost={isViewerHost}
+          missingNames={bettingMissingNames}
+          onResume={() => { if (mpRoom) gameClient.resumeGame(mpRoom.id); }}
+          onKill={() => { if (mpRoom) gameClient.leaveRoom(mpRoom.id); }}
+          onToLobby={() => onClose?.()}
+        />
+      )}
       <ActiveTurnPulseBorder active={isMyTurn && myBet === null} />
       {/* First-time bidding explainer (last-bidder rule + scoring intro). */}
       <OnboardingTip
@@ -692,6 +714,26 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 {isDesktop && (
                   <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
                     {t('game.sync')}
+                  </Text>
+                )}
+              </Pressable>
+            )}
+            {/* Freeze button: host-only, only during active play */}
+            {isMultiplayer && isViewerHost && mpRoom?.phase === 'playing' && (
+              <Pressable
+                onPress={async () => { if (mpRoom) await gameClient.pauseGame(mpRoom.id); }}
+                style={[
+                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
+                  { backgroundColor: colors.iconButtonBg, borderWidth: 1, borderColor: colors.glassLight },
+                ]}
+                hitSlop={8}
+                testID="btn-freeze-game"
+                accessibilityLabel={t('freeze.button')}
+              >
+                <Text style={{ fontSize: 18, color: colors.iconButtonText }}>❄️</Text>
+                {isDesktop && (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
+                    {t('freeze.button')}
                   </Text>
                 )}
               </Pressable>
