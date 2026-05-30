@@ -17,6 +17,7 @@ import { useRoomStore } from '../../store/roomStore';
 import { gameClient } from '../../lib/gameClient';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
+import { suitGlyph, suitLabelKey, TrumpSuit } from '../../lib/offline/handBriefing';
 
 export interface TricksRecorderProps {
   visible: boolean;
@@ -38,6 +39,9 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
   const iHaveClaimed = !!myPlayerId && claimSessions.includes(myPlayerId);
   const cardsPerPlayer = hand?.cards_per_player ?? 0;
   const handNumber = hand?.hand_number ?? 1;
+  const trumpSuit = (hand?.trump_suit ?? 'notrump') as TrumpSuit;
+  const firstName =
+    players.find((p) => p.seat_index === (hand?.starting_seat ?? 0))?.display_name ?? '';
 
   // Local stepper value seeded from server taken_tricks (so reopens
   // show the last submitted value), capped to cards_per_player.
@@ -95,6 +99,13 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
             handNumber,
             cards: cardsPerPlayer,
             bet: myBet,
+          })}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]} testID="tricks-recorder-reminder">
+          {t('offline.briefing.firstReminder', {
+            glyph: suitGlyph(trumpSuit),
+            suit: t(suitLabelKey(trumpSuit)),
+            first: firstName,
           })}
         </Text>
 

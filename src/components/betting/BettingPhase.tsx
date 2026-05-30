@@ -48,6 +48,7 @@ import { ActiveTurnPulseBorder } from '../ActiveTurnPulseBorder';
 import { HostLeftBanner } from '../HostLeftBanner';
 import { isHostAbsent } from '../../lib/hostAbsent';
 import { PausedOverlay } from '../PausedOverlay';
+import { OfflineHandBriefing } from '../offline/OfflineHandBriefing';
 import { useHostAbsentTicker } from '../../lib/useHostAbsentTicker';
 
 /** Black/near-black text on the yellow active-player fill — see GameTableScreen. */
@@ -865,6 +866,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
         </View>
 
         <Text style={[styles.bettingTitle, { color: colors.accent }]}>{t('game.placeBets')}</Text>
+
+        <OfflineHandBriefing />
 
         {/* Players grid */}
         <View style={styles.playersGrid}>
