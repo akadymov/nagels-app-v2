@@ -44,6 +44,9 @@ test.describe('freeze game', () => {
     const ctxB = await browser.newContext({ ...MOBILE_VP });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
+    // Accept window.confirm dialogs on the host page so freezeWithConfirm
+    // proceeds to pauseGame (headless Playwright auto-dismisses → returns false).
+    pageA.on('dialog', (d) => d.accept());
 
     try {
       // 1) Two registered players log in (alice = host, bob = guest/joiner).
