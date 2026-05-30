@@ -144,6 +144,14 @@ export async function tryRestoreActiveRoom(): Promise<'WaitingRoom' | 'GameTable
     return null;
   }
 
+  // A paused room is "parked": never auto-navigate into it on boot/focus. The
+  // lobby's frozen-room card is the only path back — the user opts in there.
+  // Do NOT clearActiveRoom — the room is valid; the lobby card reads it from the
+  // server via get_my_active_room.
+  if (snapshot.room.phase === 'paused') {
+    return null;
+  }
+
   // Get our session_id via SECURITY DEFINER RPC so the UI knows which
   // player row in the snapshot represents us (host detection, "your turn", etc.)
   let { data: mySession } = await supabase.rpc('get_my_session_id');
