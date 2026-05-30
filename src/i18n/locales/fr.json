@@ -118,8 +118,10 @@
   "offline": {
     "briefing": {
       "header": "Comment distribuer · Donne {{n}}",
+      "summary": "{{trump}} · {{dealer}} distribue",
       "seatIntro": "Asseyez-vous autour de la table dans cet ordre (le jeu tourne dans le sens antihoraire) :",
-      "deal": "{{dealer}} distribue — {{count}} à chacun, une carte à la fois autour de la table, en commençant par {{first}}.",
+      "seatLabel": "Placement (jeu antihoraire) :",
+      "deal": "Distribuez {{count}} à chacun, une carte à la fois autour de la table.",
       "trump": "Atout de cette donne : {{glyph}} {{suit}}",
       "noTrump": "Sans atout cette donne",
       "first": "{{first}} mise et entame en premier.",
@@ -464,6 +466,7 @@
     "gameMode": "Mode de jeu",
     "title": "Note tes plis",
     "subtitle": "Manche {{handNumber}} · {{cards}} cartes · ton annonce : {{bet}}",
+    "playInstruction": "Jouez la donne jusqu'au bout avec vos cartes. À la fin, comptez vos plis et saisissez-les ci-dessous.",
     "yourTricks": "Plis que tu as pris",
     "summaryTitle": "Tous les joueurs",
     "notClaimedYet": "—",

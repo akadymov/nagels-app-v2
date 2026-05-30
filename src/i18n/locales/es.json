@@ -118,8 +118,10 @@
   "offline": {
     "briefing": {
       "header": "Cómo repartir · Mano {{n}}",
+      "summary": "{{trump}} · reparte {{dealer}}",
       "seatIntro": "Sentaos a la mesa en este orden (el juego va en sentido antihorario):",
-      "deal": "Reparte {{dealer}} — {{count}} a cada uno, de una en una alrededor de la mesa, empezando por {{first}}.",
+      "seatLabel": "Disposición (juego antihorario):",
+      "deal": "Repartid {{count}} a cada uno, de una en una alrededor de la mesa.",
       "trump": "Triunfo de esta mano: {{glyph}} {{suit}}",
       "noTrump": "Sin triunfo esta mano",
       "first": "{{first}} apuesta y sale primero.",
@@ -467,6 +469,7 @@
     "gameMode": "Modo de juego",
     "title": "Registra tus bazas",
     "subtitle": "Mano {{handNumber}} · {{cards}} cartas · tu apuesta: {{bet}}",
+    "playInstruction": "Jugad la mano hasta el final con vuestras cartas. Cuando termine, contad vuestras bazas e introducidlas abajo.",
     "yourTricks": "Bazas que has ganado",
     "summaryTitle": "Todos los jugadores",
     "notClaimedYet": "—",

@@ -18,6 +18,7 @@ import { gameClient } from '../../lib/gameClient';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
 import { suitGlyph, suitLabelKey, TrumpSuit } from '../../lib/offline/handBriefing';
+import { OfflineQuickRules } from '../offline/OfflineQuickRules';
 
 export interface TricksRecorderProps {
   visible: boolean;
@@ -110,6 +111,13 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
             trump: trumpDisplay,
             first: firstName,
           })}
+        </Text>
+
+        <Text
+          style={[styles.instruction, { color: colors.textPrimary, backgroundColor: colors.accent + '15' }]}
+          testID="tricks-recorder-instruction"
+        >
+          {t('scorekeeper.playInstruction')}
         </Text>
 
         {mismatch && (
@@ -210,6 +218,8 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
             </View>
           ))}
         </View>
+
+        <OfflineQuickRules />
       </ScrollView>
     </View>
   );
@@ -231,6 +241,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
+  },
+  instruction: {
+    fontSize: 14,
+    lineHeight: 19,
+    padding: Spacing.sm,
+    borderRadius: Radius.lg,
   },
   sectionLabel: {
     fontSize: 16,

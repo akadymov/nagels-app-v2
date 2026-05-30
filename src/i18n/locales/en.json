@@ -118,8 +118,10 @@
   "offline": {
     "briefing": {
       "header": "How to deal · Hand {{n}}",
+      "summary": "{{trump}} · {{dealer}} deals",
       "seatIntro": "Sit around the table in this order (play goes counter-clockwise):",
-      "deal": "{{dealer}} deals — {{count}} to each, one card at a time around the table, starting with {{first}}.",
+      "seatLabel": "Seating (counter-clockwise play):",
+      "deal": "Deal {{count}} to each, one card at a time around the table.",
       "trump": "Trump this hand: {{glyph}} {{suit}}",
       "noTrump": "No trump this hand",
       "first": "{{first}} bets and leads first.",
@@ -467,6 +469,7 @@
     "gameMode": "Game Mode",
     "title": "Record your tricks",
     "subtitle": "Hand {{handNumber}} · {{cards}} cards · your bet: {{bet}}",
+    "playInstruction": "Play the hand out with your cards. When the hand is over, count your tricks and enter them below.",
     "yourTricks": "Tricks you took",
     "summaryTitle": "All players",
     "notClaimedYet": "—",

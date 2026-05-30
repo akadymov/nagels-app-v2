@@ -28,13 +28,11 @@ export interface SettingsStore {
   gamesPlayedUnconfirmed: number;
   pendingEmail: string | null;
   shownTips: ShownTips;
-  offlineBriefingExpanded: boolean;
   _hydrated: boolean;
 
   setThemePreference: (pref: ThemePreference) => void;
   setFourColorDeck: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
-  setOfflineBriefingExpanded: (expanded: boolean) => void;
   setLanguage: (lang: string) => void;
   incrementGamesPlayed: () => void;
   resetGamesPlayed: () => void;
@@ -55,7 +53,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   gamesPlayedUnconfirmed: 0,
   pendingEmail: null,
   shownTips: { ...DEFAULT_SHOWN_TIPS },
-  offlineBriefingExpanded: true,
   _hydrated: false,
 
   setThemePreference: (pref) => {
@@ -74,11 +71,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ hapticsEnabled: enabled });
     persistSettings(get());
     syncToProfile(get());
-  },
-
-  setOfflineBriefingExpanded: (expanded) => {
-    set({ offlineBriefingExpanded: expanded });
-    persistSettings(get());
   },
 
   setLanguage: (lang) => {
@@ -137,7 +129,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           gamesPlayedUnconfirmed: parsed.gamesPlayedUnconfirmed ?? 0,
           pendingEmail: parsed.pendingEmail ?? null,
           shownTips: { ...DEFAULT_SHOWN_TIPS, ...(parsed.shownTips ?? {}) },
-          offlineBriefingExpanded: parsed.offlineBriefingExpanded ?? true,
           _hydrated: true,
         });
       } else {
@@ -158,7 +149,6 @@ function persistSettings(state: SettingsStore) {
     gamesPlayedUnconfirmed: state.gamesPlayedUnconfirmed,
     pendingEmail: state.pendingEmail,
     shownTips: state.shownTips,
-    offlineBriefingExpanded: state.offlineBriefingExpanded,
   };
   AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(() => {});
 }

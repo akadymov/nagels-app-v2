@@ -54,6 +54,7 @@ function isPlayerOffline(lastSeenAt: string | null | undefined): boolean {
 
 export function useTurnTimeout(): void {
   const roomId   = useRoomStore((s) => s.snapshot?.room?.id);
+  const mode     = useRoomStore((s) => s.snapshot?.room?.mode);
   const handId   = useRoomStore((s) => s.snapshot?.current_hand?.id);
   const seat     = useRoomStore((s) => s.snapshot?.current_hand?.current_seat);
   const players  = useRoomStore((s) => s.snapshot?.players);
@@ -65,6 +66,9 @@ export function useTurnTimeout(): void {
   const budget = offline ? TURN_TIMEOUT_SHORT_MS : TURN_TIMEOUT_LONG_MS;
 
   useEffect(() => {
+    // Scorekeeper (offline) mode: no auto-bet / auto-play — humans run the
+    // hand with real cards at their own pace. Never fire request_timeout.
+    if (mode === 'scorekeeper') return;
     if (!roomId || !handId || seat === undefined || seat === null) return;
     markTurnIfChanged(handId, seat);
 
@@ -80,7 +84,7 @@ export function useTurnTimeout(): void {
       void gameClient.requestTimeout(roomId, handId, seat);
     }, remaining);
     return () => clearTimeout(t);
-  }, [roomId, handId, seat, version, budget]);
+  }, [roomId, handId, seat, version, budget, mode]);
 }
 
 /**
@@ -91,6 +95,7 @@ export function useTurnTimeout(): void {
  * mounted hook so it stops when the screen unmounts.
  */
 export function useTurnCountdown(): number | null {
+  const mode   = useRoomStore((s) => s.snapshot?.room?.mode);
   const handId = useRoomStore((s) => s.snapshot?.current_hand?.id);
   const seat   = useRoomStore((s) => s.snapshot?.current_hand?.current_seat);
   const phase  = useRoomStore((s) => s.snapshot?.current_hand?.phase);
@@ -100,12 +105,15 @@ export function useTurnCountdown(): number | null {
 
   const [, tick] = useState(0);
   useEffect(() => {
+    if (mode === 'scorekeeper') return;
     if (!handId || seat === undefined || seat === null) return;
     if (phase !== 'playing') return;
     const id = setInterval(() => tick((n) => (n + 1) % 1_000_000), 500);
     return () => clearInterval(id);
-  }, [handId, seat, phase]);
+  }, [handId, seat, phase, mode]);
 
+  // Scorekeeper (offline) mode: no visible auto-play countdown.
+  if (mode === 'scorekeeper') return null;
   if (!handId || seat === undefined || seat === null) return null;
   if (phase !== 'playing') return null;
 

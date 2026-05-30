@@ -1711,6 +1711,21 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           );
         })()}
 
+        {/* Scorekeeper cover — in offline mode the underlying card table is
+            meaningless (no cards are dealt). Keep an opaque cover over it so
+            the seated-table view never flashes through in the gaps between
+            the betting / tricks-recording / scoreboard overlays. Rendered
+            before those overlays so they paint on top; ChatPanel and
+            ScoreboardModal are RN Modals on a separate layer, so they're
+            unaffected. */}
+        {!isSpectator && (room as { mode?: string } | null)?.mode === 'scorekeeper' && hand && (
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
+            testID="scorekeeper-table-cover"
+          />
+        )}
+
         {/* Betting Phase Modal — hidden for spectators */}
         {!isSpectator && (
           <BettingPhase
