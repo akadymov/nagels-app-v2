@@ -24,8 +24,18 @@ abandoned (no rating settle — same as a plain interruption today).
 
 ## Decisions (locked)
 
-- **Scope:** all multiplayer games (not only rated). Rated is the case where it
-  matters most, but freeze is useful for any table.
+- **Scope:** all multiplayer games whose seated players are ALL registered (not
+  only rated). Rated is the case where it matters most, but freeze is useful for
+  any registered table.
+- **No guests:** freezing is blocked if ANY seated player is an anonymous guest.
+  Rationale: a guest's identity (`session_id` ← anonymous `auth_user_id` in
+  browser localStorage) is fragile across a long pause — cleared storage, another
+  device, an expired anon JWT, or the WaitingRoom-refresh bug all give them a NEW
+  `session_id`, so they can never satisfy `paused_lineup` and the host can never
+  resume (the game hangs until the 48h TTL). Registered users have a stable
+  `auth_user_id` across devices/sessions → reliable resume. "Guest" =
+  `auth.users.is_anonymous = true`; a registered account counts as non-guest even
+  if its email is unconfirmed (the account, hence the id, is stable).
 - **When the host can freeze:** any time during play (mid-trick, mid-betting) —
   the state already lives in normalized DB rows, so freezing is just gating
   mutations.
@@ -58,6 +68,12 @@ by `session_id` survives a player leaving and rejoining.
 - `rooms` new columns:
   - `paused_at timestamptz NULL`
   - `paused_lineup uuid[] NULL` — `session_id`s of the players present at pause.
+- New SQL helper `room_has_guest(p_room_id uuid) returns boolean` (SECURITY
+  DEFINER): true iff any seated player's `auth.users.is_anonymous = true`. Called
+  by `pause_game` (server-authoritative guest block) and granted to
+  `service_role`. The snapshot also gains a per-player `is_guest` boolean
+  (`get_room_state` players CTE, from `au.is_anonymous`) so the client can hide
+  the Freeze button proactively when a guest is seated.
 - Resume always returns `phase → 'playing'`; the fine-grained hand phase
   (`hands.phase` ∈ betting/playing/scoring) is never touched by pause/resume.
 - `get_my_active_room` (currently `… AND public.room_is_alive(r.id)`) is amended
@@ -75,8 +91,10 @@ by `session_id` survives a player leaving and rejoining.
 `index.ts` `switch(action.kind)` and in the `Action` type (`_shared/types.ts`)
 and `gameClient`.
 
-- **`pause_game`** — host-only. Precondition: `room.phase === 'playing'` and
-  actor is `room.host_session_id`. Effect: set `phase='paused'`,
+- **`pause_game`** — host-only. Precondition: `room.phase === 'playing'`, actor
+  is `room.host_session_id`, AND no seated player is an anonymous guest (checked
+  via the `room_has_guest(room_id)` SQL helper — rejects with `guests_present`).
+  Effect: set `phase='paused'`,
   `paused_at=now()`, `paused_lineup =` array of current `room_players.session_id`,
   `version = version + 1`. Emit `game_events` kind `game_paused`. Broadcast
   `state_changed`. Errors: `not_host`, `not_in_play` (wrong phase).
@@ -154,9 +172,11 @@ the players list.
 
 ### 7. Client / UI
 
-- **Freeze button** — host-only, visible when `room.phase==='playing'`, in the
-  GameTable top bar and BettingPhase (mobile + desktop). Calls
-  `gameClient.pauseGame(room_id)`.
+- **Freeze button** — host-only, visible when `room.phase==='playing'` AND no
+  seated player is a guest (`!players.some(p => p.is_guest)`), in the GameTable
+  top bar and BettingPhase (mobile + desktop). Calls
+  `gameClient.pauseGame(room_id)`. (Server still enforces the guest block as the
+  authority; hiding the button is the proactive UX layer.)
 - **Paused overlay** — shown to everyone when `room.phase==='paused'`: "Партия
   заморожена хостом", the lineup with live/away markers, and (host-only) a
   **Resume** button enabled iff all lineup live (else disabled with "ждём:
