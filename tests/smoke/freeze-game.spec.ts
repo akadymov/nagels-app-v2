@@ -44,10 +44,6 @@ test.describe('freeze game', () => {
     const ctxB = await browser.newContext({ ...MOBILE_VP });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
-    // Accept window.confirm dialogs on the host page so freezeWithConfirm
-    // proceeds to pauseGame (headless Playwright auto-dismisses → returns false).
-    pageA.on('dialog', (d) => d.accept());
-
     try {
       // 1) Two registered players log in (alice = host, bob = guest/joiner).
       await enterLobbyAsRegisteredUser(pageA, 'alice@nigels.test', 'host');
@@ -89,6 +85,27 @@ test.describe('freeze game', () => {
       //    on the element itself bypasses the interception (same pattern
       //    as dismissTipIfAny / dismissPwaModalIfAny in actions.ts).
       await freezeBtn.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const opts = {
+          bubbles: true, cancelable: true, view: window,
+          clientX: r.left + r.width / 2, clientY: r.top + r.height / 2,
+          button: 0, pointerId: 1, pointerType: 'mouse', isPrimary: true,
+        };
+        el.dispatchEvent(new PointerEvent('pointerdown', opts));
+        el.dispatchEvent(new MouseEvent('mousedown', opts));
+        el.dispatchEvent(new PointerEvent('pointerup', opts));
+        el.dispatchEvent(new MouseEvent('mouseup', opts));
+        el.dispatchEvent(new MouseEvent('click', opts));
+      });
+
+      // 6b) The Freeze button now opens a styled ConfirmModal instead of a
+      //     native window.confirm. Tap the modal's confirm button to proceed.
+      //     The modal renders as an RN-web Pressable inside the same overlay
+      //     layer — use the same dispatchEvent pattern to bypass any
+      //     pointer-interception layers.
+      const confirmBtn = pageA.locator('[data-testid="btn-confirm-modal"]:visible').first();
+      await confirmBtn.waitFor({ state: 'visible', timeout: 10_000 });
+      await confirmBtn.evaluate((el) => {
         const r = el.getBoundingClientRect();
         const opts = {
           bubbles: true, cancelable: true, view: window,
