@@ -170,12 +170,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         let back = 0, total = 0;
         try {
           const { getSupabaseClient } = await import('../lib/supabase/client');
-          const { data: snap } = await getSupabaseClient().rpc('get_room_state', { p_room_id: active.room_id });
+          const supa = getSupabaseClient();
+          const [{ data: snap }, { data: mySid }] = await Promise.all([
+            supa.rpc('get_room_state', { p_room_id: active.room_id }),
+            supa.rpc('get_my_session_id'),
+          ]);
           const lineup: string[] = ((snap as any)?.room?.paused_lineup ?? []) as string[];
           const players: Array<{ session_id: string; last_seen_at: string }> = ((snap as any)?.players ?? []) as any[];
+          const others = lineup.filter((sid) => sid !== mySid);
           const LIVE_MS = 30_000;
-          total = lineup.length;
-          back = lineup.filter((sid) => {
+          total = others.length;
+          back = others.filter((sid) => {
             const p = players.find((x) => x.session_id === sid);
             return !!p && (Date.now() - Date.parse(p.last_seen_at)) < LIVE_MS;
           }).length;
