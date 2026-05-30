@@ -465,10 +465,15 @@
     "kill": "End game",
     "toLobby": "To lobby",
     "pausedTitle": "Game frozen by host",
-    "pausedBody": "Step away and come back any time. The host resumes when everyone is back.",
+    "pausedBody": "You can return to this room from your lobby if the host resumes the game.",
+    "pausedTitleHost": "Game frozen",
+    "pausedBodyHost": "Your room is waiting in your lobby — gather the players and resume there. Auto-closes after 48 hours.",
     "waitingFor": "Waiting for: {{names}}",
+    "returnedCount": "{{n}} of {{total}} back",
     "lobbyCard": "Frozen game {{code}}",
-    "autoCancelIn": "Auto-cancels in {{time}}",
-    "resumeDisabled": "Everyone must be back to resume"
+    "autoCloseIn": "Auto-closes in {{time}}",
+    "resumeDisabled": "Everyone must be back to resume",
+    "confirmTitle": "Freeze the game?",
+    "confirmBody": "The game pauses. Everyone can step away and come back; you resume once the full lineup is back. The frozen room stays in your lobby and auto-closes after 48 hours if not resumed."
   }
 }

@@ -503,7 +503,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               ⏸ {t('freeze.lobbyCard', { code: pausedRoom.code })}
             </Text>
             <Text style={[styles.pausedCardSub, { color: colors.textMuted }]}>
-              {t('freeze.autoCancelIn', { time: pausedRoomTimeStr })}
+              {t('freeze.autoCloseIn', { time: pausedRoomTimeStr })}
             </Text>
           </Pressable>
         )}

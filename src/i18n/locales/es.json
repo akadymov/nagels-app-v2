@@ -465,10 +465,15 @@
     "kill": "Finalizar partida",
     "toLobby": "Al vestíbulo",
     "pausedTitle": "Partida congelada por el anfitrión",
-    "pausedBody": "Aléjate y vuelve cuando quieras. El anfitrión reanuda cuando estén todos.",
+    "pausedBody": "Puedes volver a esta sala desde tu vestíbulo si el anfitrión reanuda la partida.",
+    "pausedTitleHost": "Partida congelada",
+    "pausedBodyHost": "Tu sala te espera en el vestíbulo — reúne a los jugadores y reanuda ahí. Se cierra automáticamente tras 48 horas.",
     "waitingFor": "Esperando a: {{names}}",
+    "returnedCount": "{{n}} de {{total}} de vuelta",
     "lobbyCard": "Partida congelada {{code}}",
-    "autoCancelIn": "Se cancela en {{time}}",
-    "resumeDisabled": "Deben estar todos para reanudar"
+    "autoCloseIn": "Se cierra en {{time}}",
+    "resumeDisabled": "Deben estar todos para reanudar",
+    "confirmTitle": "¿Congelar la partida?",
+    "confirmBody": "La partida se pausa. Todos pueden alejarse y volver; reanudas cuando esté todo el grupo. La sala congelada queda en tu vestíbulo y se cierra automáticamente tras 48 horas si no se reanuda."
   }
 }

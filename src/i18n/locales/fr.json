@@ -462,10 +462,15 @@
     "kill": "Terminer la partie",
     "toLobby": "Au salon",
     "pausedTitle": "Partie gelée par l'hôte",
-    "pausedBody": "Éloignez-vous et revenez quand vous voulez. L'hôte reprend quand tout le monde est là.",
+    "pausedBody": "Vous pouvez revenir dans ce salon depuis votre lobby si l'hôte reprend la partie.",
+    "pausedTitleHost": "Partie gelée",
+    "pausedBodyHost": "Votre salon vous attend dans le lobby — rassemblez les joueurs et reprenez là-bas. Fermeture automatique au bout de 48 heures.",
     "waitingFor": "En attente de : {{names}}",
+    "returnedCount": "{{n}} sur {{total}} de retour",
     "lobbyCard": "Partie gelée {{code}}",
-    "autoCancelIn": "Annulation auto dans {{time}}",
-    "resumeDisabled": "Tout le monde doit être là pour reprendre"
+    "autoCloseIn": "Fermeture auto dans {{time}}",
+    "resumeDisabled": "Tout le monde doit être là pour reprendre",
+    "confirmTitle": "Geler la partie ?",
+    "confirmBody": "La partie se met en pause. Chacun peut s'éloigner et revenir ; vous reprenez quand tout le monde est là. Le salon gelé reste dans votre lobby et se ferme automatiquement au bout de 48 heures s'il n'est pas repris."
   }
 }
