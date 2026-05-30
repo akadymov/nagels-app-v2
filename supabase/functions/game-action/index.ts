@@ -36,6 +36,13 @@ import { adminResetRating, adminResetAllRatings } from './actions/adminResetRati
 import { adminGrantTelegram }  from './actions/adminGrantTelegram.ts';
 import { adminRevokeTelegram } from './actions/adminRevokeTelegram.ts';
 
+// Gameplay mutations rejected while a room is paused (see the pause gate below).
+// Module scope: built once, not per request.
+const GAMEPLAY_WHILE_PAUSED_BLOCKED = new Set([
+  'place_bet', 'play_card', 'continue_hand', 'record_tricks', 'request_timeout',
+  'ready', 'start_game', 'restart_game', 'set_stake', 'toggle_stake_optin',
+]);
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions();
   if (req.method !== 'POST')   return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405);
@@ -102,6 +109,30 @@ Deno.serve(async (req: Request) => {
       prev = await buildSnapshot(svc, room_id, actor.session_id);
     } catch (err) {
       console.warn('[game-action] prev snapshot failed (push detector will skip):', err);
+    }
+  }
+
+  // Pause gate: while a room is frozen, reject every gameplay mutation. Allowed
+  // during pause: resume_game, leave_room, set_display_name (+ join_room rejoin,
+  // heartbeat, chat — which don't reach this switch). This one check also
+  // neutralizes request_timeout auto-play of absent seats.
+  //
+  // Fail CLOSED: the downstream handlers do NOT re-check room.phase, so this gate
+  // is the only guard. If the `prev` snapshot fetch failed (transient DB error),
+  // re-read just the phase rather than letting a gameplay action slip through.
+  if (room_id && GAMEPLAY_WHILE_PAUSED_BLOCKED.has(action.kind)) {
+    let isPaused = prev?.room?.phase === 'paused';
+    if (!prev) {
+      const { data: r } = await svc.from('rooms').select('phase').eq('id', room_id).maybeSingle();
+      isPaused = r?.phase === 'paused';
+    }
+    if (isPaused) {
+      return jsonResponse(
+        prev
+          ? { ok: false, error: 'game_paused', state: prev, version: prev.room?.version ?? 0 }
+          : { ok: false, error: 'game_paused' },
+        200,
+      );
     }
   }
 

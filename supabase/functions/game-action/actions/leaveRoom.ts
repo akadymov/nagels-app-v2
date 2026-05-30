@@ -34,13 +34,22 @@ export async function leaveRoom(
     return { ok: false, error: 'cannot_kick_host', state: snapshot, version: snapshot.room?.version ?? 0 };
   }
 
+  // The "host left" branch only applies when the host is leaving themselves.
+  const isHostLeaving = target === room.host_session_id;
+
+  // During a pause, a non-host "leave" is a soft step-out: keep the seat (the
+  // room_players row) and the frozen hand intact so the host can still resume
+  // once everyone returns. The host leaving during pause falls through to the
+  // host-leaving branch below (which abandons the game -> finished).
+  if (!isHostLeaving && room.phase === 'paused') {
+    const snapshot = await buildSnapshot(svc, room.id, actor.session_id);
+    return { ok: true, state: snapshot, version: snapshot.room?.version ?? 0 };
+  }
+
   await svc.from('room_players')
     .delete()
     .eq('room_id', room.id)
     .eq('session_id', target);
-
-  // The "host left" branch only applies when the host is leaving themselves.
-  const isHostLeaving = target === room.host_session_id;
 
   // If the host leaves, the room is closed for everyone — no host transfer.
   // Other clients see room.phase = 'finished' and clear their active-room
