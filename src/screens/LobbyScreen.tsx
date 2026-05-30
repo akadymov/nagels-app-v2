@@ -159,7 +159,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
 
   // ── Paused room indicator ─────────────────────────────────────
-  type PausedRoomInfo = { room_id: string; code: string; paused_at: string };
+  type PausedRoomInfo = { room_id: string; code: string; paused_at: string; back: number; total: number };
   const [pausedRoom, setPausedRoom] = useState<PausedRoomInfo | null>(null);
   const [ttlTick, setTtlTick] = useState(0); // bumped every 30s to refresh countdown
 
@@ -167,7 +167,20 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
     try {
       const active = await gameClient.getMyActiveRoom();
       if (active?.phase === 'paused' && active.paused_at) {
-        setPausedRoom({ room_id: active.room_id, code: active.code, paused_at: active.paused_at });
+        let back = 0, total = 0;
+        try {
+          const { getSupabaseClient } = await import('../lib/supabase/client');
+          const { data: snap } = await getSupabaseClient().rpc('get_room_state', { p_room_id: active.room_id });
+          const lineup: string[] = ((snap as any)?.room?.paused_lineup ?? []) as string[];
+          const players: Array<{ session_id: string; last_seen_at: string }> = ((snap as any)?.players ?? []) as any[];
+          const LIVE_MS = 30_000;
+          total = lineup.length;
+          back = lineup.filter((sid) => {
+            const p = players.find((x) => x.session_id === sid);
+            return !!p && (Date.now() - Date.parse(p.last_seen_at)) < LIVE_MS;
+          }).length;
+        } catch { /* counter is best-effort; 0/0 hides the line */ }
+        setPausedRoom({ room_id: active.room_id, code: active.code, paused_at: active.paused_at, back, total });
       } else {
         setPausedRoom(null);
       }
@@ -191,9 +204,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   // Countdown tick every 30s while mounted
   useEffect(() => {
     if (!pausedRoom) return;
-    const id = setInterval(() => setTtlTick((n) => n + 1), 30_000);
+    const id = setInterval(() => { setTtlTick((n) => n + 1); void fetchPausedRoom(); }, 30_000);
     return () => clearInterval(id);
-  }, [pausedRoom]);
+  }, [pausedRoom, fetchPausedRoom]);
 
   const pausedRoomTimeStr = (() => {
     if (!pausedRoom) return '';
@@ -505,6 +518,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             <Text style={[styles.pausedCardSub, { color: colors.textMuted }]}>
               {t('freeze.autoCloseIn', { time: pausedRoomTimeStr })}
             </Text>
+            {pausedRoom.total > 0 && (
+              <Text style={[styles.pausedCardSub, { color: colors.textMuted }]}>
+                {t('freeze.returnedCount', { n: pausedRoom.back, total: pausedRoom.total })}
+              </Text>
+            )}
           </Pressable>
         )}
 
