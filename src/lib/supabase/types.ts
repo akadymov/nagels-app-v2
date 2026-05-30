@@ -263,6 +263,8 @@ export type Database = {
           id: string
           max_cards: number
           mode: string
+          paused_at: string | null
+          paused_lineup: string[] | null
           phase: string
           player_count: number
           updated_at: string
@@ -276,6 +278,8 @@ export type Database = {
           id?: string
           max_cards?: number
           mode?: string
+          paused_at?: string | null
+          paused_lineup?: string[] | null
           phase?: string
           player_count: number
           updated_at?: string
@@ -289,6 +293,8 @@ export type Database = {
           id?: string
           max_cards?: number
           mode?: string
+          paused_at?: string | null
+          paused_lineup?: string[] | null
           phase?: string
           player_count?: number
           updated_at?: string

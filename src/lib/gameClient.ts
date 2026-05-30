@@ -240,6 +240,12 @@ export const gameClient = {
   startGame: (room_id: string) =>
     postAction(null, { kind: 'start_game', room_id }),
 
+  pauseGame: (room_id: string) =>
+    postAction(null, { kind: 'pause_game', room_id }),
+
+  resumeGame: (room_id: string) =>
+    postAction(null, { kind: 'resume_game', room_id }),
+
   setMinCardsPerHand: async (room_id: string, min: number) => {
     const supabase = getSupabaseClient();
     const { error } = await supabase.rpc('set_min_cards_per_hand', {
@@ -283,7 +289,7 @@ export const gameClient = {
   },
 
   getMyActiveRoom: async (): Promise<
-    | { room_id: string; code: string; phase: 'waiting' | 'playing' | 'scoring'; role: 'player' | 'spectator' }
+    | { room_id: string; code: string; phase: 'waiting' | 'playing' | 'paused' | 'scoring'; role: 'player' | 'spectator'; paused_at?: string | null }
     | null
   > => {
     const supabase = getSupabaseClient();
