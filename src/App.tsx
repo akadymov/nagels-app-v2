@@ -11,6 +11,7 @@ import i18n from './i18n/config';
 import { useTheme } from './hooks/useTheme';
 import { useSettingsStore } from './store/settingsStore';
 import { OAuthCollisionModal } from './components/OAuthCollisionModal';
+import { ConfirmRoot } from './lib/confirmDialog';
 
 function AppContent() {
   const { colors } = useTheme();
@@ -22,6 +23,7 @@ function AppContent() {
         backgroundColor={colors.statusBarBg}
       />
       <AppNavigator />
+      <ConfirmRoot />
     </SafeAreaView>
   );
 }
