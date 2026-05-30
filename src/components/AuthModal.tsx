@@ -28,7 +28,7 @@ import {
   signInWithEmail,
   signUpWithEmail,
   linkEmailToAnonymous,
-  signOut,
+  logout,
 } from '../lib/supabase/authService';
 import { getGuestSession } from '../lib/supabase/auth';
 import { useAuthStore } from '../store/authStore';
@@ -135,7 +135,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ visible, onClose }) => {
     setIsLoading(true);
     setError(null);
     try {
-      await signOut();
+      await logout();
       // Create fresh anonymous session
       const session = await getGuestSession();
       if (session) {

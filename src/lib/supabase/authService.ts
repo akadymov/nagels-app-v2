@@ -292,6 +292,23 @@ export async function signOut(scope: 'global' | 'local' = 'global'): Promise<voi
 }
 
 /**
+ * User-facing logout: wipe ALL user-scoped client state (active-room cache,
+ * room/chat/rating stores, guest nickname) BEFORE signing out, then sign out.
+ * Use this for every "Sign out" button — NOT raw signOut() — so a logged-out
+ * user is never dragged back into their old room as a fresh guest, and stale
+ * room/identity state can't drive game-action calls that 401.
+ */
+export async function logout(scope: 'global' | 'local' = 'global'): Promise<void> {
+  try {
+    const { clearUserScopedState } = await import('../activeRoom');
+    await clearUserScopedState();
+  } catch (e) {
+    console.warn('[AuthService] logout cleanup partial:', e);
+  }
+  await signOut(scope);
+}
+
+/**
  * Subscribe to auth state changes.
  * Returns an unsubscribe function — call it on component unmount.
  */

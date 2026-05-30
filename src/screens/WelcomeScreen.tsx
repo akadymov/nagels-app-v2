@@ -18,7 +18,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
 import i18n, { languages } from '../i18n/config';
-import { signOut } from '../lib/supabase/authService';
+import { logout } from '../lib/supabase/authService';
 import { UserAvatar } from '../components/UserAvatar';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -155,7 +155,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
               )}
             </View>
             <Pressable
-              onPress={async () => { try { await signOut(); } catch { /* surface errors via re-render */ } }}
+              onPress={async () => { try { await logout(); } catch { /* surface errors via re-render */ } }}
               hitSlop={8}
               style={[styles.profileSignOutBtn, { borderColor: colors.error }]}
               testID="btn-welcome-signout"

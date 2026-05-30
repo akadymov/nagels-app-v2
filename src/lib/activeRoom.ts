@@ -47,6 +47,36 @@ export async function clearActiveRoom(): Promise<void> {
   } catch {}
 }
 
+/**
+ * Wipe ALL user-scoped client state. Call this on logout BEFORE signing out so
+ * a fresh (guest) session can't inherit the previous user's room or caches —
+ * otherwise the cached active-room id survives logout and the rejoin path
+ * (get_my_active_room / restore) drags the now-anonymous user back into the
+ * room they just left (and game-action calls fire with a stale identity → 401).
+ *
+ * Every step is independently guarded: a storage failure must not block the
+ * store resets, and none of this must block the actual signOut that follows.
+ */
+export async function clearUserScopedState(): Promise<void> {
+  await clearActiveRoom();
+  try {
+    useRoomStore.getState().reset();
+    useRoomStore.getState().setMyPlayerId(null);
+    useRoomStore.getState().setIsSpectator(false);
+  } catch {}
+  try {
+    const { useChatStore } = await import('../store/chatStore');
+    useChatStore.getState().reset();
+  } catch {}
+  try {
+    const { useRatingStore } = await import('../store/ratingStore');
+    useRatingStore.setState({ balance: null, events: [] });
+  } catch {}
+  try {
+    await AsyncStorage.removeItem('player_name');
+  } catch {}
+}
+
 export async function getActiveRoom(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(ACTIVE_ROOM_KEY);

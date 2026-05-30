@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useRatingStore } from '../store/ratingStore';
 import { canPlayForRating } from '../utils/ratingEligibility';
-import { signOut, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
+import { logout, updateUserMetadata, resendConfirmationEmail } from '../lib/supabase/authService';
 import { linkGoogle, unlinkGoogle, hasGoogleIdentity } from '../lib/auth/google';
 import { GoogleButton } from '../components/GoogleButton';
 import { UserAvatar } from '../components/UserAvatar';
@@ -86,7 +86,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       onBack();
     } catch (err) {
       console.error('Logout failed:', err);
