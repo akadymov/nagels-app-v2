@@ -54,6 +54,7 @@ import { OnboardingTip } from '../components/OnboardingTip';
 import { gameClient } from '../lib/gameClient';
 import { leaveWithConfirm } from '../lib/leaveWithConfirm';
 import { freezeWithConfirm } from '../lib/freezeWithConfirm';
+import { confirm } from '../lib/confirmDialog';
 import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { HostLeftBanner } from '../components/HostLeftBanner';
 import { isHostAbsent } from '../lib/hostAbsent';
@@ -222,9 +223,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     // Single-player bot game: ask once, then drop the local game state and exit.
     if (!isMultiplayer) {
       const msg = String(t('game.leaveBotGameConfirm', 'Leave this game? Your progress will be lost.'));
-      const accept = typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm(msg)
-        : true;
+      const accept = await confirm({
+        title: t('multiplayer.leaveConfirmTitle'),
+        body: msg,
+        confirmLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
       if (!accept) return;
       try { sp.reset(); } catch {}
       onExit?.();
@@ -252,9 +257,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   const handleLogoLeave = useCallback(async () => {
     if (!isMultiplayer) {
       const msg = String(t('game.leaveBotGameConfirm', 'Leave this game? Your progress will be lost.'));
-      const accept = typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm(msg)
-        : true;
+      const accept = await confirm({
+        title: t('multiplayer.leaveConfirmTitle'),
+        body: msg,
+        confirmLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
       if (!accept) return;
       try { sp.reset(); } catch {}
       onExit?.();

@@ -32,6 +32,7 @@ import { useChatStore } from '../../store/chatStore';
 import { gameClient } from '../../lib/gameClient';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { freezeWithConfirm } from '../../lib/freezeWithConfirm';
+import { confirm } from '../../lib/confirmDialog';
 import { ChatPanel } from '../ChatPanel';
 import { PlayerChatTooltip } from '../PlayerChatTooltip';
 import { useChatTooltipListener } from '../../hooks/useChatTooltipListener';
@@ -328,9 +329,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   const handleLogoLeave = useCallback(async () => {
     if (!isMultiplayer) {
       const msg = String(t('game.leaveBotGameConfirm', 'Leave this game? Your progress will be lost.'));
-      const accept = typeof window !== 'undefined' && typeof window.confirm === 'function'
-        ? window.confirm(msg)
-        : true;
+      const accept = await confirm({
+        title: t('multiplayer.leaveConfirmTitle'),
+        body: msg,
+        confirmLabel: t('common.confirm'),
+        cancelLabel: t('common.cancel'),
+        danger: true,
+      });
       if (!accept) return;
       try { sp.reset(); } catch {}
       onClose?.();
