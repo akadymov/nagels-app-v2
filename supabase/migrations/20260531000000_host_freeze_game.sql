@@ -79,6 +79,24 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.get_my_active_room() TO authenticated;
 
+-- True iff any seated player in the room is an anonymous guest. Used by
+-- pause_game to block freezing rooms whose guests can't reliably return.
+CREATE OR REPLACE FUNCTION public.room_has_guest(p_room_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.room_players rp
+    JOIN public.room_sessions rs ON rs.id = rp.session_id
+    JOIN auth.users au ON au.id = rs.auth_user_id
+    WHERE rp.room_id = p_room_id AND au.is_anonymous = true
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.room_has_guest(uuid) TO service_role;
+
 -- Redefine get_room_state to carry paused_at + paused_lineup in the room object.
 CREATE OR REPLACE FUNCTION public.get_room_state(p_room_id uuid)
 RETURNS jsonb
@@ -102,7 +120,8 @@ AS $$
       'avatar',       au.raw_user_meta_data->>'avatar',
       'avatar_url',   au.raw_user_meta_data->>'avatar_url',
       'avatar_color', au.raw_user_meta_data->>'avatar_color',
-      'opt_in_stake', rp.opt_in_stake
+      'opt_in_stake', rp.opt_in_stake,
+      'is_guest',     COALESCE(au.is_anonymous, false)
     ) ORDER BY rp.seat_index) AS list
     FROM public.room_players rp
     JOIN public.room_sessions rs ON rs.id = rp.session_id

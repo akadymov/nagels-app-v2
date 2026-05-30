@@ -718,8 +718,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 )}
               </Pressable>
             )}
-            {/* Freeze button: host-only, only during active play */}
-            {isMultiplayer && isViewerHost && mpRoom?.phase === 'playing' && (
+            {/* Freeze button: host-only, only during active play, only when no guest is seated */}
+            {isMultiplayer && isViewerHost && mpRoom?.phase === 'playing' && !mpRoomPlayers.some((p: any) => p.is_guest) && (
               <Pressable
                 onPress={async () => { if (mpRoom) await gameClient.pauseGame(mpRoom.id); }}
                 style={[

@@ -1243,8 +1243,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 )}
               </Pressable>
             )}
-            {/* Freeze button: host-only, only during active play */}
-            {isHost && room?.phase === 'playing' && (
+            {/* Freeze button: host-only, only during active play, only when no guest is seated */}
+            {isHost && room?.phase === 'playing' && !mpPlayers.some((p) => (p as any).is_guest) && (
               <Pressable
                 hitSlop={8}
                 onPress={async () => { if (room) await gameClient.pauseGame(room.id); }}

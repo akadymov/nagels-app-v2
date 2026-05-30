@@ -30,6 +30,15 @@ export async function pauseGame(
   if (room.phase !== 'playing')
     return { ok: false, error: 'not_in_play', state: empty(), version: 0 };
 
+  // Block freezing when any seated player is an anonymous guest — their identity
+  // is too fragile to reliably return and satisfy paused_lineup on resume.
+  // Fail CLOSED: if the guest check errors, decline the freeze (retriable) rather
+  // than risk freezing a guest room into a permanently unresumable pause.
+  const { data: hasGuest, error: guestErr } = await svc.rpc('room_has_guest', { p_room_id: room.id });
+  if (guestErr || hasGuest === true) {
+    return { ok: false, error: guestErr ? 'internal_error' : 'guests_present', state: empty(), version: 0 };
+  }
+
   const { data: rps } = await svc
     .from('room_players')
     .select('session_id')

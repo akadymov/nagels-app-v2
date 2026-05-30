@@ -89,6 +89,7 @@ export interface RoomSnapshot {
     /** User-chosen avatar color hex (#RRGGBB). Null → seat-based default. */
     avatar_color?: string | null;
     opt_in_stake: boolean;
+    is_guest?: boolean;
   }>;
   spectators: Spectator[];
   current_hand: {
