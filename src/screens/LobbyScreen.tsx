@@ -16,6 +16,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -156,6 +157,53 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const navigation = useNavigation<any>();
   const [isJoining, setIsJoining] = useState(false);
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
+
+  // ── Paused room indicator ─────────────────────────────────────
+  type PausedRoomInfo = { room_id: string; code: string; paused_at: string };
+  const [pausedRoom, setPausedRoom] = useState<PausedRoomInfo | null>(null);
+  const [ttlTick, setTtlTick] = useState(0); // bumped every 30s to refresh countdown
+
+  const fetchPausedRoom = useCallback(async () => {
+    try {
+      const active = await gameClient.getMyActiveRoom();
+      if (active?.phase === 'paused' && active.paused_at) {
+        setPausedRoom({ room_id: active.room_id, code: active.code, paused_at: active.paused_at });
+      } else {
+        setPausedRoom(null);
+      }
+    } catch {
+      // Non-fatal: silently skip if network is unavailable
+    }
+  }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    void fetchPausedRoom();
+  }, [fetchPausedRoom]);
+
+  // Re-fetch when the lobby comes back into focus (e.g. user navigated away and returned)
+  useFocusEffect(
+    useCallback(() => {
+      void fetchPausedRoom();
+    }, [fetchPausedRoom]),
+  );
+
+  // Countdown tick every 30s while mounted
+  useEffect(() => {
+    if (!pausedRoom) return;
+    const id = setInterval(() => setTtlTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, [pausedRoom]);
+
+  const pausedRoomTimeStr = (() => {
+    if (!pausedRoom) return '';
+    const ttlMs = Date.parse(pausedRoom.paused_at) + 48 * 3600_000 - Date.now();
+    const hh = Math.max(0, Math.floor(ttlMs / 3600_000));
+    const mm = Math.max(0, Math.floor((ttlMs % 3600_000) / 60_000));
+    return `${hh}h ${mm}m`;
+  })();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void ttlTick; // consumed only to trigger re-render
 
   useEffect(() => {
     if (playerName && playerName !== 'Guest') {
@@ -418,6 +466,47 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         </View>
 
         {afterNickname}
+
+        {/* Paused room indicator — shown when the user has a frozen game */}
+        {pausedRoom && (
+          <Pressable
+            testID="lobby-paused-card"
+            onPress={async () => {
+              const { setActiveRoom } = await import('../lib/activeRoom');
+              const { subscribeRoom } = await import('../lib/realtimeBroadcast');
+              const { getSupabaseClient } = await import('../lib/supabase/client');
+              const { useRoomStore: roomStore } = await import('../store/roomStore');
+              try {
+                const supabase = getSupabaseClient();
+                const { data } = await supabase.rpc('get_room_state', { p_room_id: pausedRoom.room_id });
+                if (data) {
+                  const snap = data as any;
+                  roomStore.getState().applySnapshot(snap, Number(snap?.room?.version ?? 0));
+                }
+                await setActiveRoom(pausedRoom.room_id, pausedRoom.code, 'player');
+                subscribeRoom(pausedRoom.room_id);
+              } catch {
+                // Non-fatal: navigate anyway; GameTableScreen will resync
+              }
+              navigation.navigate('GameTable', { isMultiplayer: true });
+            }}
+            style={({ pressed }) => [
+              styles.pausedCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.accent,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <Text style={[styles.pausedCardTitle, { color: colors.textPrimary }]}>
+              ⏸ {t('freeze.lobbyCard', { code: pausedRoom.code })}
+            </Text>
+            <Text style={[styles.pausedCardSub, { color: colors.textMuted }]}>
+              {t('freeze.autoCancelIn', { time: pausedRoomTimeStr })}
+            </Text>
+          </Pressable>
+        )}
 
         {/* Sign In / Create Account — visible to anonymous guests only.
             Desktop wrappers set hideAuthCta to suppress this CTA since the
@@ -711,6 +800,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Paused room card
+  pausedCard: {
+    borderWidth: 1.5,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: 4,
+  },
+  pausedCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  pausedCardSub: {
+    fontSize: 13,
   },
   // Confirm banner
   confirmBanner: {
