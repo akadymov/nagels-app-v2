@@ -30,8 +30,12 @@ export const PausedOverlay: React.FC<PausedOverlayProps> = ({
   return (
     <View style={[styles.backdrop, { backgroundColor: 'rgba(0,0,0,0.78)' }]} testID="paused-overlay">
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.accent }]}>
-        <Text style={[styles.title, { color: colors.accent }]}>{t('freeze.pausedTitle')}</Text>
-        <Text style={[styles.body, { color: colors.textSecondary }]}>{t('freeze.pausedBody')}</Text>
+        <Text style={[styles.title, { color: colors.accent }]}>
+          {t(isHost ? 'freeze.pausedTitleHost' : 'freeze.pausedTitle')}
+        </Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
+          {t(isHost ? 'freeze.pausedBodyHost' : 'freeze.pausedBody')}
+        </Text>
         {!canResume && (
           <Text style={[styles.waiting, { color: colors.textMuted }]}>
             {t('freeze.waitingFor', { names: missingNames.join(', ') })}
