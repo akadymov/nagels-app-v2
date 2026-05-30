@@ -458,5 +458,17 @@
     "allowTelegram": "Puede anunciar en Telegram",
     "allowTelegramHint": "Permite que el interruptor «Anunciar en Telegram» del usuario dispare la notificación al canal público.",
     "toggleTelegramError": "No se pudo actualizar el permiso de Telegram"
+  },
+  "freeze": {
+    "button": "Congelar partida",
+    "resume": "Reanudar partida",
+    "kill": "Finalizar partida",
+    "toLobby": "Al vestíbulo",
+    "pausedTitle": "Partida congelada por el anfitrión",
+    "pausedBody": "Aléjate y vuelve cuando quieras. El anfitrión reanuda cuando estén todos.",
+    "waitingFor": "Esperando a: {{names}}",
+    "lobbyCard": "Partida congelada {{code}}",
+    "autoCancelIn": "Se cancela en {{time}}",
+    "resumeDisabled": "Deben estar todos para reanudar"
   }
 }

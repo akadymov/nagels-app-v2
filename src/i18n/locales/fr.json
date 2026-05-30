@@ -455,5 +455,17 @@
     "allowTelegram": "Peut annoncer dans Telegram",
     "allowTelegramHint": "Permet au bouton create-room de cet utilisateur de déclencher la notification du canal public.",
     "toggleTelegramError": "Impossible de mettre à jour la permission Telegram"
+  },
+  "freeze": {
+    "button": "Geler la partie",
+    "resume": "Reprendre la partie",
+    "kill": "Terminer la partie",
+    "toLobby": "Au salon",
+    "pausedTitle": "Partie gelée par l'hôte",
+    "pausedBody": "Éloignez-vous et revenez quand vous voulez. L'hôte reprend quand tout le monde est là.",
+    "waitingFor": "En attente de : {{names}}",
+    "lobbyCard": "Partie gelée {{code}}",
+    "autoCancelIn": "Annulation auto dans {{time}}",
+    "resumeDisabled": "Tout le monde doit être là pour reprendre"
   }
 }

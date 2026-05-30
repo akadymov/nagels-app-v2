@@ -458,5 +458,17 @@
     "allowTelegram": "Can announce in Telegram",
     "allowTelegramHint": "Allows this user's create-room toggle to fire the public-channel notification.",
     "toggleTelegramError": "Could not update Telegram permission"
+  },
+  "freeze": {
+    "button": "Freeze game",
+    "resume": "Resume game",
+    "kill": "End game",
+    "toLobby": "To lobby",
+    "pausedTitle": "Game frozen by host",
+    "pausedBody": "Step away and come back any time. The host resumes when everyone is back.",
+    "waitingFor": "Waiting for: {{names}}",
+    "lobbyCard": "Frozen game {{code}}",
+    "autoCancelIn": "Auto-cancels in {{time}}",
+    "resumeDisabled": "Everyone must be back to resume"
   }
 }
