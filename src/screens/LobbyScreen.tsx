@@ -145,7 +145,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
   const [activeTab, setActiveTab] = useState<LobbyTab>('bots');
   const [nameInput, setNameInput] = useState(playerName || playerName);
-  const [playerCount, setPlayerCount] = useState<number | null>(null);
+  const [playerCount, setPlayerCount] = useState<number | null>(4);
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
