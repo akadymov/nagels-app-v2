@@ -221,6 +221,28 @@
     Текст "0 игрока" над селектором кол-ва игроков для игры с ботами выглядит странно. Надо либо заменить его на нейтральное "Выберите кол-во игроков", либо по умолчанию выбирать 4 игрока как default-state.
     ```
 
+### Хост: «Покинуть комнату» после конца игры возвращает в комнату, а не в лобби (Akula via feedback, 2026-05-30)
+
+  - defaultExpanded: false
+    ```md
+    После завершения партии хост нажимает «Покинуть комнату», но попадает обратно в комнату вместо лобби. Ожидается: по окончании игры нажатие Leave у хоста ведёт в Lobby.
+
+    Отличается от соседних пунктов: «Post-game scoreboard + Play again on host exit» — про сам пост-игровой scoreboard / Play Again; «Host leaves WaitingRoom → kick everyone to lobby» (Done) — pre-game сценарий. Здесь именно пост-игровой Leave хоста, который ошибочно ре-входит в комнату вместо навигации в лобби.
+
+    Где смотреть: обработчик Leave на пост-игровом экране (ScoreboardModal `onLeaveRoom` / GameTableScreen `handleLogoLeave`) при `room.phase='finished'` — после `leaveRoom` нужна навигация в Lobby, а не повторный вход/остаток в комнате.
+    ```
+
+### Никнейм анонима из лобби не применяется в комнате до «Done» в настройках (Akula via feedback, 2026-05-30)
+
+  - defaultExpanded: false
+    ```md
+    Аноним (или только что зарегистрированный, ещё не залогиненный) вводит никнейм в лобби и заходит в комнату — но остальным участникам он показывается старым/дефолтным до тех пор, пока игрок не откроет настройки и не нажмёт «Done» у display-никнейма (что триггерит edge-action `set_display_name`). То есть в настройках имя есть, а в игре — нет, пока вручную не подтвердишь.
+
+    Ожидается: никнейм, введённый в лобби, сразу применяется к `room_sessions.display_name` при join и виден всем.
+
+    Связано с «Guests can change visible nickname during the game» (Done) — там пробросили settings-save через `set_display_name`, но join-time имя из лобби по-прежнему не попадает в `room_sessions`. Fix: при join подставлять лоббийный никнейм в `display_name` (или сразу после join дёргать тот же `set_display_name`), без ручного Done.
+    ```
+
 ## In Progress
 
 ### WaitingRoom — preserve membership across page refresh (Akula via feedback, 2026-05-20)
