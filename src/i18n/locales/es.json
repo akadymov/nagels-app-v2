@@ -124,7 +124,7 @@
       "noTrump": "Sin triunfo esta mano",
       "first": "{{first}} apuesta y sale primero.",
       "dealsBadge": "reparte",
-      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} salió primero",
+      "firstReminder": "{{trump}} · ▶ {{first}} salió primero",
       "rulesToggle": "Reglas rápidas"
     },
     "rules": {

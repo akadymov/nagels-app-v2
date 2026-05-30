@@ -122,9 +122,9 @@
       "deal": "Раздаёт {{dealer}}, по {{count}} на руки — сдавайте по одной по кругу, начиная с {{first}}.",
       "trump": "Козырь этой раздачи: {{glyph}} {{suit}}",
       "noTrump": "Без козыря в этой раздаче",
-      "first": "Первой ставку делает и ходит {{first}}.",
+      "first": "{{first}} делает первую ставку и первый ход.",
       "dealsBadge": "раздаёт",
-      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} ходила первой",
+      "firstReminder": "{{trump}} · ▶ ходит {{first}}",
       "rulesToggle": "Краткие правила"
     },
     "rules": {

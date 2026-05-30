@@ -55,7 +55,7 @@ export const OfflineHandBriefing: React.FC = () => {
     [players, hand],
   );
 
-  if (!room || room.mode !== 'scorekeeper' || !hand) return null;
+  if (!room || room.mode !== 'scorekeeper' || !hand || players.length === 0) return null;
 
   const trump = (hand.trump_suit ?? 'notrump') as TrumpSuit;
   const first = order[0];

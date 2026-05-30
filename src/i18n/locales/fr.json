@@ -124,7 +124,7 @@
       "noTrump": "Sans atout cette donne",
       "first": "{{first}} mise et entame en premier.",
       "dealsBadge": "distribue",
-      "firstReminder": "{{glyph}} {{suit}} · ▶ {{first}} a entamé",
+      "firstReminder": "{{trump}} · ▶ {{first}} a entamé",
       "rulesToggle": "Règles en bref"
     },
     "rules": {
