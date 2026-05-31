@@ -128,7 +128,8 @@
       "noTrump": "Без козыря в этой раздаче",
       "first": "{{first}} делает первую ставку и первый ход.",
       "dealsBadge": "раздаёт",
-      "firstReminder": "{{trump}} · ▶ ходит {{first}}",
+      "trumpLabel": "Козырь",
+      "firstReminder": "▶ первой ходит {{first}}",
       "rulesToggle": "Краткие правила"
     },
     "rules": {

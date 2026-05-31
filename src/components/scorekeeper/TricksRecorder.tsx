@@ -17,6 +17,7 @@ import { useRoomStore } from '../../store/roomStore';
 import { gameClient } from '../../lib/gameClient';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
+import { getTrumpColor } from '../../constants/colors';
 import { Icon } from '../Icon';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { useSettingsUIStore } from '../../store/settingsUIStore';
@@ -50,10 +51,6 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible, onShowS
   const cardsPerPlayer = hand?.cards_per_player ?? 0;
   const handNumber = hand?.hand_number ?? 1;
   const trumpSuit = (hand?.trump_suit ?? 'notrump') as TrumpSuit;
-  const trumpDisplay =
-    trumpSuit === 'notrump'
-      ? t('offline.briefing.noTrump')
-      : `${suitGlyph(trumpSuit)} ${t(suitLabelKey(trumpSuit))}`;
   const firstName =
     players.find((p) => p.seat_index === (hand?.starting_seat ?? 0))?.display_name ?? '';
 
@@ -181,10 +178,19 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible, onShowS
           })}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]} testID="tricks-recorder-reminder">
-          {t('offline.briefing.firstReminder', {
-            trump: trumpDisplay,
-            first: firstName,
-          })}
+          {trumpSuit === 'notrump' ? (
+            t('offline.briefing.noTrump')
+          ) : (
+            <>
+              {t('offline.briefing.trumpLabel')}{' '}
+              <Text style={{ color: getTrumpColor(trumpSuit), fontWeight: '700' }}>
+                {suitGlyph(trumpSuit)}
+              </Text>
+              {' '}{t(suitLabelKey(trumpSuit))}
+            </>
+          )}
+          {' · '}
+          {t('offline.briefing.firstReminder', { first: firstName })}
         </Text>
 
         <Text

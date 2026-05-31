@@ -127,7 +127,8 @@
       "noTrump": "No trump this hand",
       "first": "{{first}} bets and leads first.",
       "dealsBadge": "deals",
-      "firstReminder": "{{trump}} · ▶ {{first}} led",
+      "trumpLabel": "Trump",
+      "firstReminder": "▶ {{first}} leads first",
       "rulesToggle": "Quick rules"
     },
     "rules": {
