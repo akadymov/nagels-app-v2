@@ -120,6 +120,8 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
           {t('scorekeeper.playInstruction')}
         </Text>
 
+        <OfflineQuickRules />
+
         {mismatch && (
           <View
             style={[styles.banner, { backgroundColor: colors.warning + '22', borderColor: colors.warning }]}
@@ -218,8 +220,6 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
             </View>
           ))}
         </View>
-
-        <OfflineQuickRules />
       </ScrollView>
     </View>
   );

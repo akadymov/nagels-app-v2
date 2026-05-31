@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useRoomStore } from '../../store/roomStore';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
+import { getTrumpColor } from '../../constants/colors';
 import { OfflineQuickRules } from './OfflineQuickRules';
 import {
   getDealerSeat,
@@ -48,9 +49,6 @@ export const OfflineHandBriefing: React.FC = () => {
   const dealer = players.find((p) => p.seat_index === dealerSeat) ?? null;
   const firstName = first?.display_name ?? '';
   const dealerName = dealer?.display_name ?? '';
-  const trumpChip = trump === 'notrump'
-    ? t('offline.briefing.noTrump')
-    : `${suitGlyph(trump)} ${t(suitLabelKey(trump))}`;
 
   return (
     <View
@@ -61,7 +59,16 @@ export const OfflineHandBriefing: React.FC = () => {
         {t('offline.briefing.header', { n: handNumber })}
       </Text>
       <Text style={[styles.summary, { color: colors.textSecondary }]} numberOfLines={1}>
-        {t('offline.briefing.summary', { trump: trumpChip, dealer: dealerName })}
+        {trump === 'notrump' ? (
+          t('offline.briefing.noTrump')
+        ) : (
+          <>
+            <Text style={{ color: getTrumpColor(trump), fontWeight: '700' }}>
+              {suitGlyph(trump)}
+            </Text>
+            {' '}{t(suitLabelKey(trump))}
+          </>
+        )}
       </Text>
 
       <Text style={[styles.line, { color: colors.textSecondary }]}>
@@ -92,7 +99,7 @@ export const OfflineHandBriefing: React.FC = () => {
       </View>
 
       <Text style={[styles.line, { color: colors.textPrimary }]}>
-        {t('offline.briefing.deal', { count: hand.cards_per_player })}
+        {t('offline.briefing.deal', { count: hand.cards_per_player, dealer: dealerName })}
       </Text>
       <Text style={[styles.line, { color: colors.textPrimary }]}>
         {t('offline.briefing.first', { first: firstName })}
