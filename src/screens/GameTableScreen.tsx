@@ -219,6 +219,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   }, [isMultiplayer, room?.id]);
 
   const isHost = isMultiplayer && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
+  const isScorekeeper = (room as { mode?: string } | null)?.mode === 'scorekeeper';
   const handleEndGame = useCallback(async () => {
     // Single-player bot game: ask once, then drop the local game state and exit.
     if (!isMultiplayer) {
@@ -1366,7 +1367,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               )}
             </Pressable>
-            {isMultiplayer && !isSpectator && !!room && (
+            {isMultiplayer && !isSpectator && !!room && !isScorekeeper && (
               <Pressable
                 testID="game-btn-share-spectator"
                 onPress={handleShareSpectator}
@@ -1742,7 +1743,17 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
         {/* Scorekeeper-mode tricks recorder — replaces the cards/trick area
             while the hand sits in 'tricks_recording' after betting. */}
         {!isSpectator && (
-          <TricksRecorder visible={vm.isTricksRecording === true} />
+          <TricksRecorder
+            visible={vm.isTricksRecording === true}
+            onShowScore={() => {
+              setIsViewingScores(true);
+              setShowScoreboard(true);
+            }}
+            onShowChat={() => {
+              setShowChat(true);
+              useChatTooltipStore.getState().dismissAll();
+            }}
+          />
         )}
 
         {/* Scoreboard Modal — also handles the game-over celebration

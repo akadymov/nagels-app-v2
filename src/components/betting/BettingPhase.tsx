@@ -843,7 +843,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
                 </View>
               )}
             </Pressable>
-            {isMultiplayer && !mpIsSpectator && !!room?.code && (
+            {isMultiplayer && !mpIsSpectator && !!room?.code && (room as { mode?: string } | null)?.mode !== 'scorekeeper' && (
               <Pressable
                 onPress={handleShareSpectator}
                 testID="betting-btn-share-spectator"

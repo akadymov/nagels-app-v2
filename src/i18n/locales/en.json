@@ -472,7 +472,7 @@
     "subtitle": "Hand {{handNumber}} · {{cards}} cards · your bet: {{bet}}",
     "playInstruction": "Play the hand out with your cards. When the hand is over, count your tricks and enter them below.",
     "yourTricks": "Tricks you took",
-    "summaryTitle": "Score",
+    "summaryTitle": "Bets",
     "notClaimedYet": "—",
     "waitingForOthers": "Waiting for other players to enter their tricks…",
     "mismatchTitle": "Sum doesn't match",

@@ -17,16 +17,25 @@ import { useRoomStore } from '../../store/roomStore';
 import { gameClient } from '../../lib/gameClient';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
+import { Icon } from '../Icon';
+import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
+import { useSettingsUIStore } from '../../store/settingsUIStore';
+import { useDesktopGameUI } from '../../screens/desktop/DesktopGameContext';
 import { suitGlyph, suitLabelKey, TrumpSuit } from '../../lib/offline/handBriefing';
 import { OfflineQuickRules } from '../offline/OfflineQuickRules';
 
 export interface TricksRecorderProps {
   visible: boolean;
+  /** Open the full scoreboard (host UI mirrors BettingPhase's trophy button). */
+  onShowScore?: () => void;
+  /** Open the chat panel (mobile mounts it on GameTableScreen). */
+  onShowChat?: () => void;
 }
 
-export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
+export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible, onShowScore, onShowChat }) => {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const desktopUI = useDesktopGameUI();
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
 
@@ -47,6 +56,29 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
       : `${suitGlyph(trumpSuit)} ${t(suitLabelKey(trumpSuit))}`;
   const firstName =
     players.find((p) => p.seat_index === (hand?.starting_seat ?? 0))?.display_name ?? '';
+
+  const room = snapshot?.room ?? null;
+  const isHost = !!myPlayerId && !!room && room.host_session_id === myPlayerId;
+
+  const openSettings = useCallback(() => {
+    if (desktopUI) desktopUI.toggleLeftPanel('settings');
+    else useSettingsUIStore.getState().open();
+  }, [desktopUI]);
+
+  const openScore = useCallback(() => {
+    if (desktopUI) desktopUI.toggleLeftPanel('scoreboard');
+    else onShowScore?.();
+  }, [desktopUI, onShowScore]);
+
+  const openChat = useCallback(() => {
+    if (desktopUI) desktopUI.toggleChat();
+    else onShowChat?.();
+  }, [desktopUI, onShowChat]);
+
+  const handleLeave = useCallback(async () => {
+    if (!room?.id) return;
+    await leaveWithConfirm(room.id, t, { isHost });
+  }, [room?.id, t, isHost]);
 
   // Local stepper value seeded from server taken_tricks (so reopens
   // show the last submitted value), capped to cards_per_player.
@@ -96,6 +128,48 @@ export const TricksRecorder: React.FC<TricksRecorderProps> = ({ visible }) => {
   return (
     <View style={[styles.overlay, { backgroundColor: colors.background }]} testID="tricks-recorder">
       <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.controlBar}>
+          <Pressable
+            onPress={openSettings}
+            hitSlop={8}
+            testID="tricks-btn-settings"
+            accessibilityLabel={t('settings.title')}
+            style={[styles.ctrlBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+          >
+            <Icon name="settings" color={colors.iconButtonText} size={20} />
+          </Pressable>
+          <Pressable
+            onPress={openScore}
+            hitSlop={8}
+            testID="tricks-btn-scores"
+            accessibilityLabel={t('game.score')}
+            style={[styles.ctrlBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+          >
+            <Icon name="trophy" color={colors.iconButtonText} size={20} />
+          </Pressable>
+          {isHost && (
+            <Pressable
+              onPress={openChat}
+              hitSlop={8}
+              testID="tricks-btn-chat"
+              accessibilityLabel={t('game.chat')}
+              style={[styles.ctrlBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+            >
+              <Icon name="chat" color={colors.iconButtonText} size={20} />
+            </Pressable>
+          )}
+          {isHost && (
+            <Pressable
+              onPress={handleLeave}
+              hitSlop={8}
+              testID="tricks-leave"
+              accessibilityLabel={t('game.exit')}
+              style={[styles.ctrlBtn, { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight }]}
+            >
+              <Icon name="door" color={colors.iconButtonText} size={20} />
+            </Pressable>
+          )}
+        </View>
         <Text style={[styles.title, { color: colors.textPrimary }]}>
           {t('scorekeeper.title')}
         </Text>
@@ -234,6 +308,19 @@ const styles = StyleSheet.create({
   scroll: {
     padding: Spacing.lg,
     gap: Spacing.md,
+  },
+  controlBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Spacing.sm,
+  },
+  ctrlBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 22,
