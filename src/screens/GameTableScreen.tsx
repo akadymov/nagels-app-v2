@@ -1134,15 +1134,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
       >
         {/* Top Bar */}
         <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.glassLight }]}>
-          <View style={styles.topBarRow1}>
+          <View style={styles.topBarRowTop}>
             <GameLogo
               size="xs"
               onPress={handleLogoLeave}
               testID="app-logo-button"
               accessibilityLabel={t('multiplayer.leaveConfirmTitle')}
             />
-          </View>
-          <View style={styles.topBarRow2}>
             <Text style={[styles.handInfo, { color: colors.textPrimary }]}>
               {t('game.hand')} {vm.handNumber}/{vm.totalHands}
             </Text>
@@ -1673,14 +1671,14 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </Pressable>
         ) : (
           vm.myPlayer && (
-            <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.42 }]}>
+            <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.36 }]}>
               <View testID="my-hand">
                 <CardHand
                   cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
                   selectedCards={selectedCard ? [selectedCard] : []}
                   playableCards={playableCards.map((c: any) => c.id)}
                   onCardPress={handleCardPress}
-                  size={isTrueDesktop ? 'huge' : 'small'}
+                  size={isTrueDesktop ? 'huge' : 'tiny'}
                   horizontal={false}
                 />
               </View>
@@ -1971,16 +1969,17 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 3,
   },
-  topBarRow1: {
-    alignItems: 'center',
-    paddingVertical: 2,
-  },
-  topBarRow2: {
+  // Single compact top row: logo (left) · Hand X/20 (+ turn timer) ·
+  // trump badge (right), spread with space-between. Merged from the old
+  // two-row layout (standalone logo row + hand/trump row) to reclaim
+  // ~30 px of vertical space for the table band.
+  topBarRowTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.lg,
-    paddingBottom: 2,
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
   },
   trumpBadgeGame: {
     flexDirection: 'row',
@@ -2073,8 +2072,8 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
-    width: '92%',
-    height: '82%',
+    width: '94%',
+    height: '86%',
     zIndex: 1,
   },
   tableEdge: {
@@ -2284,7 +2283,10 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.accent,
     paddingHorizontal: Spacing.xs,
     paddingTop: Spacing.xs,
-    paddingBottom: 80,
+    // Was 80 — a full-width dead band that only existed to keep the
+    // bottom-right card clear of the floating feedback FAB (48 px,
+    // bottom-right). 24 clears it without starving the table.
+    paddingBottom: Spacing.lg,
     backgroundColor: '#ffffff',
   },
   modalOverlay: {
