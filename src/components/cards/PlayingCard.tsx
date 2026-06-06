@@ -115,7 +115,6 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       : colors.cardBorder;
 
   const cardBorderStyle = { borderColor, borderWidth, margin: selected ? 0 : 2 };
-  const cardOpacity = disabled ? 0.4 : 1;
 
   const renderFaceUp = () => (
     <View
@@ -178,8 +177,21 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const solidCardStyle = [
     styles.solidCard,
     cardBorderStyle,
-    { backgroundColor: cardBackgroundColor, opacity: cardOpacity },
+    { backgroundColor: cardBackgroundColor },
   ];
+
+  // Dimmed/disabled cards are darkened with an OPAQUE-backed overlay rather
+  // than by lowering the card's own opacity. A translucent card let the
+  // overlapping neighbour (cards are fanned with negative margin) bleed
+  // through its edges and spawned a new stacking context that scrambled the
+  // layer order. The card stays fully opaque; the overlay just tints it
+  // uniformly, and solidCard's `overflow: hidden` clips it to the rounded rect.
+  const cardInner = (
+    <View style={solidCardStyle}>
+      {cardContent}
+      {disabled && <View pointerEvents="none" style={styles.dimOverlay} />}
+    </View>
+  );
 
   if (onPress && !disabled) {
     const handlePress = () => {
@@ -198,18 +210,14 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         ]}
         testID={testID}
       >
-        <View style={solidCardStyle}>
-          {cardContent}
-        </View>
+        {cardInner}
       </Pressable>
     );
   }
 
   return (
     <View style={[styles.container, style]} testID={testID}>
-      <View style={solidCardStyle}>
-        {cardContent}
-      </View>
+      {cardInner}
     </View>
   );
 };
@@ -287,6 +295,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  // Uniform tint for dimmed/unplayable cards. Opaque-backed (the card under
+  // it stays solid), so it never reveals the fanned neighbour behind it.
+  dimOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(22, 25, 35, 0.5)',
+    borderRadius: Radius.lg,
   },
 });
 
