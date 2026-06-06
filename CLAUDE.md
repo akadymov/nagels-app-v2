@@ -84,7 +84,7 @@ Full rule: `docs/principles.md` §8 "Test side-effect hygiene".
 
 ## Sources of Truth
 - [Legacy codebase](https://github.com/akadymov/nagels-app) — original Svelte/Firebase implementation
-- [Product roadmap spreadsheet](https://docs.google.com/spreadsheets/d/117oYt6tzSbarLFpdtWTk-ohP1Usm7WvgBH-RtXKfbB4/edit?gid=1424757228#gid=1424757228)
+- Product roadmap spreadsheet — private Google Sheet (ask Akula for access; link kept out of the repo deliberately)
 
 ## Workflow
 Akula (User) provides strategic direction. Specialized agents in `.claude/agents/` handle domain-specific tasks. See `.claude/rules/` for immutable constraints.
