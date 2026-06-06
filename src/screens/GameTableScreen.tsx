@@ -1677,6 +1677,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
                   selectedCards={selectedCard ? [selectedCard] : []}
                   playableCards={playableCards.map((c: any) => c.id)}
+                  dimUnplayable={isMyTurnPlaying}
                   onCardPress={handleCardPress}
                   size={isTrueDesktop ? 'huge' : 'tiny'}
                   horizontal={false}

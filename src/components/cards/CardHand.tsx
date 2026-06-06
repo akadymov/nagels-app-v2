@@ -24,6 +24,13 @@ export interface CardHandProps extends ScrollViewProps {
   cards: Card[];
   selectedCards?: string[];
   playableCards?: string[];
+  /**
+   * When true, cards whose id is NOT in `playableCards` are faded out and
+   * made non-tappable, so the legally playable cards stand out at a glance.
+   * Intended to be set only during the player's own turn; off-turn (default
+   * false) the whole hand renders normally.
+   */
+  dimUnplayable?: boolean;
   onCardPress?: (cardId: string) => void;
   /**
    * Card overlap in pixels OR number of cards (for dynamic calculation).
@@ -62,6 +69,7 @@ export const CardHand: React.FC<CardHandProps> = ({
   cards,
   selectedCards = [],
   playableCards = [],
+  dimUnplayable = false,
   onCardPress,
   cardOverlap,
   size = 'medium',
@@ -98,7 +106,10 @@ export const CardHand: React.FC<CardHandProps> = ({
 
   const renderCard = (card: Card, index: number) => {
     const isSelected = selectedCards.includes(card.id);
-    const isPlayable = playableCards.includes(card.id);
+    // Fade + disable cards that can't be legally played this turn so the
+    // tappable ones are obvious. Gated by `dimUnplayable` (the caller passes
+    // it only when it's actually this player's turn), so off-turn nothing dims.
+    const isDimmed = dimUnplayable && !playableCards.includes(card.id);
 
     return (
       <View
@@ -111,6 +122,7 @@ export const CardHand: React.FC<CardHandProps> = ({
           faceDown={card.faceDown}
           selected={isSelected}
           playable={false}
+          disabled={isDimmed}
           size={size}
           onPress={() => onCardPress?.(card.id)}
           testID={`card-${card.suit}-${card.rank}`}
