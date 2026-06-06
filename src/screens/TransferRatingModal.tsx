@@ -72,6 +72,11 @@ export function TransferRatingModal({ visible, onClose }: Props) {
     setBusy(true);
     try {
       const res = await gameClient.lookupRatingRecipient(email.trim());
+      if (!('found' in res)) {
+        // Only the rate-limited variant lacks `found`.
+        setLookupError(t('profile.transferRating.error.rateLimited'));
+        return;
+      }
       if (!res.found) {
         setLookupError(t('profile.transferRating.error.recipientNotFound'));
         return;

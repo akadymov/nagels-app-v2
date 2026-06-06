@@ -20,32 +20,11 @@
     `supabase/migrations/20260524000000_switch_role.sql:142` грантит EXECUTE на `switch_role` для роли `anon`. Защищено внутренним `auth.uid() IS NULL → auth_failed`, но это формальный регресс относительно других RPC (transfer_rating, get_my_active_room, can_announce_telegram — все `TO authenticated` только). Fix: миграция с `REVOKE EXECUTE ON FUNCTION public.switch_role(...) FROM anon;`.
     ```
 
-### [tech][security][HIGH] Rate-limit lookup_rating_recipient (2026-05-26)
-
-  - defaultExpanded: false
-    ```md
-    `supabase/migrations/20260525000000_rating_transfers.sql:22-86`. Любой залогиненный юзер может в цикле проверять, существует ли email в Nägels — RPC возвращает `{found:true|false}` без троттлинга. Email-oracle. Fix: добавить лёгкую таблицу `rpc_throttle(user_id, fn_name, called_at)` + проверку «не более 30 вызовов за 10 минут» в теле функции. Возвращать `{ok:false, error:'rate_limited'}`.
-    ```
-
 ### [tech][security][HIGH] Stop logging user email in authService (2026-05-26)
 
   - defaultExpanded: false
     ```md
     `src/lib/supabase/authService.ts:96, 128, 155` — `console.log('[AuthService] Signed in as', data.user.email)`. PII в браузерных devtools и любых remote log sinks. Fix: либо логать только `data.user.id`, либо маскировать local-part: `email.replace(/(.).+(@)/, '$1***$2')`.
-    ```
-
-### [tech][security][MEDIUM] CORS wildcard on game-action (2026-05-26)
-
-  - defaultExpanded: false
-    ```md
-    `supabase/functions/_shared/cors.ts:2` — `Access-Control-Allow-Origin: *`. JWT-верификация защищает мутации (нет cookie → low CSRF), но defense-in-depth ослаблен. Fix: эхо-список разрешённых origin'ов (`https://nigels.online`, `https://*.vercel.app`, `http://localhost:8081`) и Vary: Origin.
-    ```
-
-### [tech][security][MEDIUM] Feedback table accepts anon inserts + forgeable player_id (2026-05-26)
-
-  - defaultExpanded: false
-    ```md
-    `supabase/migrations/20260516185139_remote_schema_baseline.sql:1412` — `feedback_insert_anyone WITH CHECK (true)`. Спам-вектор + можно подставить чужой `player_id` UUID. Fix: `WITH CHECK (player_id IS NULL OR player_id = auth.uid())` + триггер-throttle по IP/session.
     ```
 
 ### [tech][security][MEDIUM] adminGrantTelegram: validate target_user_id exists (2026-05-26)
@@ -95,13 +74,6 @@
   - defaultExpanded: false
     ```md
     Сейчас: server мутация → `{event:'state_changed', version}` → каждый клиент делает `gameClient.refreshSnapshot(room_id)` = 2 RPC roundtrip × N игроков. Target (cheap): broadcast несёт `{version, state}` в payload, не-actor'ы делают `applySnapshot` напрямую. `my_hand` re-fetch можно пропускать для большинства action'ов. Effort: 0.5 дня. Pay-off: -150-400мс perceived latency, ~3× меньше snapshot-чтений.
-    ```
-
-### [tech][arch][cleanup] Drop supabase/migrations.legacy/ (2026-05-26)
-
-  - defaultExpanded: false
-    ```md
-    26 файлов больше не применяются — baseline (20260516185139) содержит всё. Только сбивают с толку. Fix: удалить или переместить в `docs/history/`.
     ```
 
 ### [tech][arch][cleanup] Console.* (98 вызовов) → logger.ts (2026-05-26)
@@ -256,6 +228,18 @@
     ```
 
 ## Done
+
+### Pre-post security pass: CORS allowlist, feedback RLS, email-oracle throttle, drop legacy migrations (2026-06-06)
+
+  - defaultExpanded: false
+    ```md
+    Четыре находки из аудита 2026-05-26 закрыты одним заходом перед публичным постом.
+    (1) CORS: `_shared/cors.ts` теперь эхо-список разрешённых origin'ов (`nigels.online`, `localhost:8081/8082`, `*.vercel.app`) + `Vary: Origin` вместо `*`; неизвестный origin откатывается к prod-origin. `req` пробрасывается явно через локальные `respond`/`preflight` в трёх index (module-level мутабельный origin небезопасен под Fluid Compute).
+    (2) Feedback RLS: миграция `20260606000000_feedback_insert_policy.sql` — `feedback_insert_anyone WITH CHECK (true)` → `feedback_insert_own WITH CHECK (player_id IS NULL OR player_id = auth.uid())`. Закрывает подмену чужого player_id. IP/session-throttle оставлен как отдельный follow-up.
+    (3) Email-oracle: миграция `20260606000100_rpc_throttle.sql` — таблица `rpc_throttle` (RLS on, без политик) + хелпер `rpc_throttle_check(fn,max,window)`; `lookup_rating_recipient` переведён STABLE→VOLATILE и ограничен 30 вызовов/10 мин, возвращает `{ok:false,error:'rate_limited'}`. Клиент: новый i18n-ключ `transferRating.error.rateLimited` (en/ru/es/fr) + обработка в `TransferRatingModal`.
+    (4) Удалён `supabase/migrations.legacy/` (26 файлов) — всё в baseline, только сбивал с толку.
+    ⚠️ Бэкенд-эффект только после деплоя: `supabase db push` (2 миграции) + `supabase functions deploy game-action push-subscribe push-unsubscribe` (CORS). До деплоя находки на проде ещё открыты.
+    ```
 
 ### Инструкции для оффлайн игры (Akula, shipped 2026-05-31)
 

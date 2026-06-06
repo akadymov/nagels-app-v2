@@ -44,21 +44,25 @@ const GAMEPLAY_WHILE_PAUSED_BLOCKED = new Set([
 ]);
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return handleOptions();
-  if (req.method !== 'POST')   return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405);
+  // Origin-aware CORS bound to this request (see _shared/cors.ts).
+  const respond = (body: unknown, status = 200) => jsonResponse(body, status, req);
+  const preflight = () => handleOptions(req);
+
+  if (req.method === 'OPTIONS') return preflight();
+  if (req.method !== 'POST')   return respond({ ok: false, error: 'method_not_allowed' }, 405);
 
   let body: { display_name?: string; action: Action };
   try {
     body = await req.json();
   } catch {
-    return jsonResponse({ ok: false, error: 'invalid_json' }, 400);
+    return respond({ ok: false, error: 'invalid_json' }, 400);
   }
 
   let actor: ActorContext;
   try {
     actor = await authenticate(req, body.display_name ?? null);
   } catch {
-    return jsonResponse({ ok: false, error: 'auth_failed' }, 401);
+    return respond({ ok: false, error: 'auth_failed' }, 401);
   }
 
   const svc = makeServiceClient();
@@ -71,32 +75,32 @@ Deno.serve(async (req: Request) => {
     try {
       if (action.kind === 'admin_check') {
         const r = await adminCheck(svc, actor);
-        return jsonResponse(r, 200);
+        return respond(r, 200);
       }
       if (action.kind === 'admin_search_users') {
         const r = await adminSearchUsers(svc, actor, action);
-        return jsonResponse(r, r.ok ? 200 : 403);
+        return respond(r, r.ok ? 200 : 403);
       }
       if (action.kind === 'admin_reset_rating') {
         const r = await adminResetRating(svc, actor, action);
-        return jsonResponse(r, r.ok ? 200 : 403);
+        return respond(r, r.ok ? 200 : 403);
       }
       if (action.kind === 'admin_reset_all_ratings') {
         const r = await adminResetAllRatings(svc, actor);
-        return jsonResponse(r, r.ok ? 200 : 403);
+        return respond(r, r.ok ? 200 : 403);
       }
       if (action.kind === 'admin_grant_telegram') {
         const r = await adminGrantTelegram(svc, actor, action);
-        return jsonResponse(r, r.ok ? 200 : 403);
+        return respond(r, r.ok ? 200 : 403);
       }
       if (action.kind === 'admin_revoke_telegram') {
         const r = await adminRevokeTelegram(svc, actor, action);
-        return jsonResponse(r, r.ok ? 200 : 403);
+        return respond(r, r.ok ? 200 : 403);
       }
-      return jsonResponse({ ok: false, error: 'unknown_action' }, 400);
+      return respond({ ok: false, error: 'unknown_action' }, 400);
     } catch (err) {
       console.error('[game-action] admin handler threw:', err);
-      return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+      return respond({ ok: false, error: 'internal_error' }, 500);
     }
   }
 
@@ -127,7 +131,7 @@ Deno.serve(async (req: Request) => {
       isPaused = r?.phase === 'paused';
     }
     if (isPaused) {
-      return jsonResponse(
+      return respond(
         prev
           ? { ok: false, error: 'game_paused', state: prev, version: prev.room?.version ?? 0 }
           : { ok: false, error: 'game_paused' },
@@ -167,7 +171,7 @@ Deno.serve(async (req: Request) => {
     }
   } catch (err) {
     console.error('[game-action] handler threw:', err);
-    return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+    return respond({ ok: false, error: 'internal_error' }, 500);
   }
 
   if (result.ok && room_id) {
@@ -191,5 +195,5 @@ Deno.serve(async (req: Request) => {
 
   // Always include the actor's session_id so the client can identify itself
   // in the players list (auth.users.id ≠ room_sessions.id).
-  return jsonResponse({ ...result, me_session_id: actor.session_id });
+  return respond({ ...result, me_session_id: actor.session_id });
 });

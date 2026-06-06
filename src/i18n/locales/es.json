@@ -382,7 +382,8 @@
         "selfTransfer": "No puedes transferirte a ti mismo",
         "recipientNotFound": "No hay jugador con ese email",
         "insufficientBalance": "Puntos de clasificación insuficientes",
-        "unknown": "La transferencia falló. Inténtalo de nuevo."
+        "unknown": "La transferencia falló. Inténtalo de nuevo.",
+        "rateLimited": "Demasiadas búsquedas. Espera un momento e inténtalo de nuevo."
       }
     },
     "history": {

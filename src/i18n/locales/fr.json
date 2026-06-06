@@ -377,7 +377,8 @@
         "selfTransfer": "Tu ne peux pas transférer à toi-même",
         "recipientNotFound": "Aucun joueur avec cet e-mail",
         "insufficientBalance": "Pas assez de points",
-        "unknown": "Transfert échoué. Réessaie."
+        "unknown": "Transfert échoué. Réessaie.",
+        "rateLimited": "Trop de recherches. Patiente un instant et réessaie."
       }
     },
     "history": {

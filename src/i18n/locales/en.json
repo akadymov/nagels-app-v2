@@ -382,7 +382,8 @@
         "selfTransfer": "You can't transfer to yourself",
         "recipientNotFound": "No player with that email",
         "insufficientBalance": "Not enough rating points",
-        "unknown": "Transfer failed. Try again."
+        "unknown": "Transfer failed. Try again.",
+        "rateLimited": "Too many lookups. Wait a moment and try again."
       }
     },
     "history": {

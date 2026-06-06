@@ -15,6 +15,7 @@ export type RatingEvent = {
 
 export type LookupRecipientResult =
   | { found: false }
+  | { ok: false; error: 'rate_limited' }
   | { found: true; is_self: true }
   | {
       found: true;

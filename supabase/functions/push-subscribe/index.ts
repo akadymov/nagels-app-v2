@@ -11,21 +11,24 @@ interface SubscribeBody {
 const ALLOWED_LANGS = new Set(['en', 'ru', 'es']);
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return handleOptions();
-  if (req.method !== 'POST')   return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405);
+  const respond = (body: unknown, status = 200) => jsonResponse(body, status, req);
+  const preflight = () => handleOptions(req);
+
+  if (req.method === 'OPTIONS') return preflight();
+  if (req.method !== 'POST')   return respond({ ok: false, error: 'method_not_allowed' }, 405);
 
   let body: SubscribeBody;
   try { body = await req.json(); }
-  catch { return jsonResponse({ ok: false, error: 'invalid_json' }, 400); }
+  catch { return respond({ ok: false, error: 'invalid_json' }, 400); }
 
   if (!body.endpoint || !body.p256dh || !body.auth_secret) {
-    return jsonResponse({ ok: false, error: 'invalid_body' }, 400);
+    return respond({ ok: false, error: 'invalid_body' }, 400);
   }
   const lang = body.lang && ALLOWED_LANGS.has(body.lang) ? body.lang : 'en';
 
   let actor;
   try { actor = await authenticate(req, null); }
-  catch { return jsonResponse({ ok: false, error: 'auth_failed' }, 401); }
+  catch { return respond({ ok: false, error: 'auth_failed' }, 401); }
 
   const svc = makeServiceClient();
   const { error } = await svc.from('push_subscriptions').upsert({
@@ -39,7 +42,7 @@ Deno.serve(async (req: Request) => {
 
   if (error) {
     console.warn(`[push-subscribe] upsert failed: code=${error.code ?? '<none>'}`);
-    return jsonResponse({ ok: false, error: 'internal_error' }, 500);
+    return respond({ ok: false, error: 'internal_error' }, 500);
   }
 
   // Claim the endpoint: drop rows owned by other users for the same browser.
@@ -55,5 +58,5 @@ Deno.serve(async (req: Request) => {
     console.warn(`[push-subscribe] claim cleanup failed: code=${claimErr.code ?? '<none>'}`);
   }
 
-  return jsonResponse({ ok: true });
+  return respond({ ok: true });
 });
