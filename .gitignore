@@ -78,3 +78,6 @@ deno.lock
 /tmp_*.sql
 /tmp_*.txt
 /tmp_*.md
+
+# Local Claude Code settings (may contain project ref / keys)
+.claude/settings.local.json
