@@ -28,6 +28,7 @@ import { getGuestSession } from '../lib/supabase/auth';
 import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
 import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
 import { DesktopGameLayout } from '../screens/desktop/DesktopGameLayout';
@@ -439,6 +440,7 @@ const NavigatorGuard: React.FC = () => {
  * Tracks the current route so submissions include screen context.
  */
 const GlobalFeedbackOverlay: React.FC = () => {
+  const isDiscord = useIsDiscordActivity();
   const [routeName, setRouteName] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -454,6 +456,7 @@ const GlobalFeedbackOverlay: React.FC = () => {
     };
   }, []);
 
+  if (isDiscord) return null;
   return <FeedbackButton screenName={routeName} />;
 };
 
