@@ -164,6 +164,11 @@
 
 ### Discord integration
 
+First playable Activity test DONE (2026-06-14, branch `feat/discord-activity`, app id `1515717699928588458`): loads + playable in Discord (desktop, bots verified). Remaining follow-up work:
+
+- **Hide in-game chat in Discord** — redundant with the channel's own voice/text; gate chat UI on `isDiscordActivity()`. Also frees vertical space (helps the layout item below). Small.
+- **Layout / card-visibility adaptation** — Discord's viewport differs (even on desktop); fixed safe-area insets + offsets clip the cards. Add a `useIsDiscordActivity` hook (mirror `useIsDesktop`) threaded through `App.tsx` (drop top safe-area inset, suppress PWA/push prompts), `AppNavigator` (hide feedback FAB), `GameTableScreen` (top-bar relayout + recompute hand-section height for the real Activity viewport). Needs measurement on a real device. Medium.
+- **Auth — stop the double login** — user is already authenticated in Discord but we still show our own auth. Quick level: Embedded SDK `authorize()` → `authenticate()`, play as guest with Discord nick+avatar (additive over the anonymous Supabase session). Full level (separate, bigger): link Discord identity to a persistent game account (store `discord_id` ↔ account, rating continuity). Most important per Akula.
 
 ### Sound effects — card played, bonus earned, turn notification
 
