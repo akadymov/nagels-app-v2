@@ -4,5 +4,16 @@
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors https://discord.com https://*.discord.com https://*.discordsays.com"
+        }
+      ]
+    }
   ]
 }
