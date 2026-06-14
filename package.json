@@ -43,6 +43,7 @@
     "test:sp:prod": "set -a; [ -f .env.local ] && . ./.env.local; set +a; DEMO_URL=\"${APP_URL:-$EXPO_PUBLIC_APP_URL}\" playwright test tests/e2e/sp-game.spec.js"
   },
   "dependencies": {
+    "@discord/embedded-app-sdk": "^2.5.0",
     "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",
