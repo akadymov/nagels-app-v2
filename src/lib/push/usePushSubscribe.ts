@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getSupabaseClient } from '../supabase/client';
 import { getPushPlatformState } from './iosGate';
+import { isDiscordActivity } from '../discord/context';
 
 export type PushState =
   | 'unsupported' | 'ios-needs-pwa'
@@ -57,6 +58,7 @@ export function usePushSubscribe(): UsePushSubscribe {
   }, [i18n.language]);
 
   const enable = useCallback(async () => {
+    if (isDiscordActivity()) return; // no web-push prompt inside a Discord Activity
     if (!VAPID_PUB) { console.warn('[push] EXPO_PUBLIC_VAPID_PUBLIC_KEY missing'); return; }
     if (state === 'unsupported' || state === 'ios-needs-pwa') return;
     setState('pending');
