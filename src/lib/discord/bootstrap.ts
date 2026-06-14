@@ -15,6 +15,9 @@ const SDK_READY_TIMEOUT_MS = 8000;
 
 let patched = false;
 let sdkReady = false;
+// SDK instance; typed any to avoid a static import of the browser-only SDK
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let discordSdk: any = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -51,6 +54,7 @@ async function initDiscordSdk(): Promise<void> {
   }
   const { DiscordSDK } = await import('@discord/embedded-app-sdk');
   const sdk = new DiscordSDK(clientId);
+  discordSdk = sdk;
   await withTimeout(sdk.ready(), SDK_READY_TIMEOUT_MS, 'sdk.ready()');
   sdkReady = true;
   console.log('[Discord] SDK ready');
@@ -64,4 +68,12 @@ export async function bootstrapDiscord(): Promise<void> {
   if (!isDiscordActivity()) return;
   await applyDiscordUrlMappings();
   await initDiscordSdk();
+}
+
+/**
+ * Returns the initialized DiscordSDK instance, or null if not yet initialized
+ * (outside Discord Activity, or before bootstrapDiscord() has been called).
+ */
+export function getDiscordSdk() {
+  return discordSdk;
 }
