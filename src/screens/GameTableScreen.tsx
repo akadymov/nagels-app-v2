@@ -1675,7 +1675,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           </Pressable>
         ) : (
           vm.myPlayer && (
-            <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * 0.36 }]}>
+            <View style={[styles.handSection, { backgroundColor: colors.surface, borderTopColor: colors.accent, maxHeight: SCREEN_HEIGHT * (isDiscord ? 0.20 : 0.36) }]}>
               <View testID="my-hand">
                 <CardHand
                   cards={vm.myPlayer.hand.map((c) => ({ id: c.id, suit: c.suit, rank: c.rank })) as any}
@@ -1683,8 +1683,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   playableCards={playableCards.map((c: any) => c.id)}
                   dimUnplayable={isMyTurnPlaying}
                   onCardPress={handleCardPress}
-                  size={isTrueDesktop ? 'huge' : 'tiny'}
-                  horizontal={false}
+                  size={isDiscord ? 'tiny' : (isTrueDesktop ? 'huge' : 'tiny')}
+                  horizontal={isDiscord}
+                  cardOverlap={isDiscord ? vm.myPlayer.hand.length : undefined}
                 />
               </View>
             </View>
