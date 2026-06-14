@@ -10,7 +10,16 @@ export interface LocationLike {
   hostname: string;
 }
 
-/** Pure detection — testable without a real `window`. */
+/**
+ * Pure detection — testable without a real `window`.
+ *
+ * Either signal is treated as sufficient (OR), matching how the SDK itself
+ * keys off `frame_id`. In a real Activity both are present (served from
+ * `*.discordsays.com` with a `frame_id`), so this is robust. The tradeoff:
+ * a hand-crafted/shared link carrying `?frame_id=...` on a non-Discord host
+ * would mis-detect — an obscure footgun we accept for reliable detection
+ * during the first Activity test.
+ */
 export function detectDiscordActivity(loc: LocationLike): boolean {
   try {
     const params = new URLSearchParams(loc.search);

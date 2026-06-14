@@ -7,15 +7,33 @@
 import { isDiscordActivity } from './context';
 import { buildDiscordMappings } from './mappings';
 
+// Discord's iframe parent occasionally never dispatches the READY event
+// (slow/flaky mobile clients, parent crash). `sdk.ready()` has no internal
+// timeout, so without this the app would hang on the splash forever. On
+// timeout we reject, which the App root catches and opens the gate anyway.
+const SDK_READY_TIMEOUT_MS = 8000;
+
 let patched = false;
 let sdkReady = false;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`[Discord] ${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
 
 async function applyDiscordUrlMappings(): Promise<void> {
   if (patched) return;
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
   const mappings = buildDiscordMappings(supabaseUrl);
   if (mappings.length === 0) {
-    console.warn('[Discord] No Supabase URL — skipping URL mappings');
+    // Without mappings every Supabase request (REST + Realtime WS) goes
+    // straight to *.supabase.co, which the Discord sandbox CSP blocks —
+    // the app will open but all multiplayer calls will fail.
+    console.warn('[Discord] No Supabase URL — Supabase calls will fail inside Discord');
     return;
   }
   const { patchUrlMappings } = await import('@discord/embedded-app-sdk');
@@ -33,7 +51,7 @@ async function initDiscordSdk(): Promise<void> {
   }
   const { DiscordSDK } = await import('@discord/embedded-app-sdk');
   const sdk = new DiscordSDK(clientId);
-  await sdk.ready();
+  await withTimeout(sdk.ready(), SDK_READY_TIMEOUT_MS, 'sdk.ready()');
   sdkReady = true;
   console.log('[Discord] SDK ready');
 }
