@@ -2,8 +2,8 @@
  * Nägels Online - Main App Component
  */
 
-import React, { useEffect } from 'react';
-import { StatusBar, StatusBarStyle, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StatusBar, StatusBarStyle, StyleSheet, Platform, View, ActivityIndicator } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppNavigator } from './navigation';
@@ -12,6 +12,8 @@ import { useTheme } from './hooks/useTheme';
 import { useSettingsStore } from './store/settingsStore';
 import { OAuthCollisionModal } from './components/OAuthCollisionModal';
 import { ConfirmRoot } from './lib/confirmDialog';
+import { bootstrapDiscord } from './lib/discord/bootstrap';
+import { isDiscordActivity } from './lib/discord/context';
 
 function AppContent() {
   const { colors } = useTheme();
@@ -30,6 +32,18 @@ function AppContent() {
 
 export default function App() {
   const hydrate = useSettingsStore((s) => s.hydrate);
+
+  // In a Discord Activity we must finish the SDK ready() handshake and URL
+  // mapping before any networked screen mounts. Outside Discord the gate is
+  // already open, so normal web/PWA behavior is unchanged.
+  const [ready, setReady] = useState(!isDiscordActivity());
+
+  useEffect(() => {
+    if (!isDiscordActivity()) return; // gate already open
+    bootstrapDiscord()
+      .catch((e) => console.error('[Discord] bootstrap failed', e))
+      .finally(() => setReady(true));
+  }, []);
 
   useEffect(() => {
     hydrate();
@@ -253,7 +267,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <I18nextProvider i18n={i18n}>
-        <AppContent />
+        {ready ? (
+          <AppContent />
+        ) : (
+          <View style={styles.splash}>
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        )}
         <OAuthCollisionModal />
       </I18nextProvider>
     </SafeAreaProvider>
@@ -263,5 +283,11 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0b0b0f',
   },
 });
