@@ -44,6 +44,7 @@ import { PlayingCard, CardHand } from '../components/cards';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
+import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useAuthStore } from '../store/authStore';
@@ -121,6 +122,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Strict mouse-driven check used only for huge cards — keeps
   // iPad Safari (touch, no hover) on the mobile card scale.
   const isTrueDesktop = useIsTrueDesktop();
+  const isDiscord = useIsDiscordActivity();
   // Live viewport — iOS Safari recomputes innerHeight after Modal opens
   // (URL bar collapse). Capturing it once at module load left the table /
   // hand sections sized to a stale value, leaking blank space below.
@@ -1324,6 +1326,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </Text>
               )}
             </Pressable>
+            {!isDiscord && (
             <Pressable
               onPress={() => {
                 if (!isMultiplayer) return;
@@ -1365,7 +1368,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               )}
             </Pressable>
-            {isMultiplayer && !isSpectator && !!room && !isScorekeeper && (
+            )}
+            {!isDiscord && isMultiplayer && !isSpectator && !!room && !isScorekeeper && (
               <Pressable
                 testID="game-btn-share-spectator"
                 onPress={handleShareSpectator}
@@ -1383,7 +1387,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 )}
               </Pressable>
             )}
-            {spectators.length > 0 && (
+            {!isDiscord && spectators.length > 0 && (
               <Pressable
                 testID="spectator-count"
                 onPress={() => setShowSpectators(true)}
@@ -1614,7 +1618,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                         },
                       ]}
                     >
-                      <PlayingCard suit={played.card.suit} rank={played.card.rank} size="tiny" />
+                      <PlayingCard suit={played.card.suit} rank={played.card.rank} size="tiny" testID="trick-card" />
                     </View>
                   );
                 })}
@@ -1689,7 +1693,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
         {/* Chat panel — multiplayer only; SP has no peers to chat with.
             Desktop wrappers set hideChat=true and mount their own side-pane chat. */}
-        {isMultiplayer && !hideChat && (() => {
+        {isMultiplayer && !hideChat && !isDiscord && (() => {
           const me = mpPlayers.find((p) => p.session_id === myPlayerId) ?? null;
           const sp = !me && isSpectator && myPlayerId
             ? spectators.find((s: any) => s.session_id === myPlayerId) ?? null
