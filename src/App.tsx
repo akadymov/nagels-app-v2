@@ -14,12 +14,14 @@ import { OAuthCollisionModal } from './components/OAuthCollisionModal';
 import { ConfirmRoot } from './lib/confirmDialog';
 import { bootstrapDiscord } from './lib/discord/bootstrap';
 import { isDiscordActivity } from './lib/discord/context';
+import { useIsDiscordActivity } from './hooks/useIsDiscordActivity';
 
 function AppContent() {
   const { colors } = useTheme();
+  const isDiscord = useIsDiscordActivity();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isDiscord ? [] : ['top']}>
       <StatusBar
         barStyle={colors.statusBarStyle as StatusBarStyle}
         backgroundColor={colors.statusBarBg}
@@ -232,9 +234,11 @@ export default function App() {
 
       // Capture beforeinstallprompt early so the install modal can later
       // trigger the native prompt without re-listening.
-      void import('./lib/pwaInstall').then(({ setupPwaInstallListener }) => {
-        setupPwaInstallListener();
-      });
+      if (!isDiscordActivity()) {
+        void import('./lib/pwaInstall').then(({ setupPwaInstallListener }) => {
+          setupPwaInstallListener();
+        });
+      }
     }
   }, [hydrate]);
 
