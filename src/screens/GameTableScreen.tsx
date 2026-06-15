@@ -1326,22 +1326,23 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </Text>
               )}
             </Pressable>
-            {!isDiscord && (
+            {/* In Discord the chat icon stays visible but disabled (greyed) —
+                chat itself is redundant inside a Discord voice channel. */}
             <Pressable
               onPress={() => {
-                if (!isMultiplayer) return;
+                if (!isMultiplayer || isDiscord) return;
                 if (desktopUI) desktopUI.toggleChat();
                 else {
                   setShowChat(true);
                   useChatTooltipStore.getState().dismissAll();
                 }
               }}
-              disabled={!isMultiplayer}
+              disabled={!isMultiplayer || isDiscord}
               style={[
                 isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
                 { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
-                !isMultiplayer && { opacity: 0.3 },
-                desktopUI?.chatVisible && isMultiplayer && { backgroundColor: colors.accent, borderColor: colors.accent },
+                (!isMultiplayer || isDiscord) && { opacity: 0.3 },
+                desktopUI?.chatVisible && isMultiplayer && !isDiscord && { backgroundColor: colors.accent, borderColor: colors.accent },
               ]}
               testID="game-btn-chat"
             >
@@ -1368,7 +1369,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 </View>
               )}
             </Pressable>
-            )}
             {!isDiscord && isMultiplayer && !isSpectator && !!room && !isScorekeeper && (
               <Pressable
                 testID="game-btn-share-spectator"
