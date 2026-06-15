@@ -46,6 +46,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
 import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import { getDiscordProfile } from '../lib/discord/bootstrap';
+import { useDiscordParticipantSync } from '../lib/discord/participants';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useAuthStore } from '../store/authStore';
@@ -162,6 +163,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   // Force a fresh snapshot when the tab returns to foreground / online.
   useReconnectOnFocus();
+  useDiscordParticipantSync();
 
   const room = snapshot?.room ?? null;
   const mpPlayers = snapshot?.players ?? [];

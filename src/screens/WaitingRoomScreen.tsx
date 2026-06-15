@@ -32,6 +32,7 @@ import { subscribeRoom, unsubscribeRoom } from '../lib/realtimeBroadcast';
 import { useHeartbeat } from '../lib/heartbeat';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { useReconnectOnFocus } from '../lib/reconnectOnFocus';
+import { useDiscordParticipantSync } from '../lib/discord/participants';
 import { buildInviteLink } from '../utils/inviteLink';
 import { avatarColorFor } from '../utils/avatarColor';
 import { UserAvatar } from '../components/UserAvatar';
@@ -172,6 +173,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
 
   // Force a fresh snapshot when the tab returns to foreground / online.
   useReconnectOnFocus();
+  useDiscordParticipantSync();
 
   // Polling fallback while waiting for players. Realtime Broadcast is
   // best-effort: if a peer joins before our channel finishes its SUBSCRIBE
