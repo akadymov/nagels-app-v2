@@ -13,6 +13,7 @@ import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
+import { useIsDiscordActivity } from '../../hooks/useIsDiscordActivity';
 import { WaitingRoomScreen, type WaitingRoomScreenProps } from '../WaitingRoomScreen';
 import { ChatPanel } from '../../components/ChatPanel';
 import { SettingsBody } from '../../components/SettingsBody';
@@ -22,6 +23,7 @@ type Props = WaitingRoomScreenProps;
 
 export const DesktopWaitingRoom: React.FC<Props> = (props) => {
   const { colors } = useTheme();
+  const isDiscord = useIsDiscordActivity();
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const isSpectator = useRoomStore((s) => s.isSpectator);
@@ -49,9 +51,9 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
     // The other context fields aren't used in the pre-game room; keep them
     // as inert no-ops so the same context type works.
     showScoreboard: () => {},
-    chatVisible: true,
+    chatVisible: !isDiscord,
     toggleChat: () => {},
-  }), [leftPanel]);
+  }), [leftPanel, isDiscord]);
 
   return (
     <DesktopGameUIContext.Provider value={ui}>
@@ -76,24 +78,26 @@ export const DesktopWaitingRoom: React.FC<Props> = (props) => {
           </View>
         </View>
 
-        <View
-          style={[
-            styles.sidePane,
-            styles.right,
-            { backgroundColor: colors.surface, borderColor: colors.glassLight },
-          ]}
-        >
-          <ChatPanel
-            mode="inline"
-            visible
-            // WaitingRoom desktop has no toggle to re-open the chat,
-            // so hide the ✕ instead of wiring a one-way close.
-            hideCloseButton
-            onClose={() => {}}
-            sender={sender}
-            testIdPrefix="chat"
-          />
-        </View>
+        {!isDiscord && (
+          <View
+            style={[
+              styles.sidePane,
+              styles.right,
+              { backgroundColor: colors.surface, borderColor: colors.glassLight },
+            ]}
+          >
+            <ChatPanel
+              mode="inline"
+              visible
+              // WaitingRoom desktop has no toggle to re-open the chat,
+              // so hide the ✕ instead of wiring a one-way close.
+              hideCloseButton
+              onClose={() => {}}
+              sender={sender}
+              testIdPrefix="chat"
+            />
+          </View>
+        )}
       </View>
     </DesktopGameUIContext.Provider>
   );

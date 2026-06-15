@@ -17,6 +17,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
+import { useIsDiscordActivity } from '../../hooks/useIsDiscordActivity';
 import { leaveWithConfirm } from '../../lib/leaveWithConfirm';
 import { Radius, Spacing } from '../../constants';
 import { useRoomStore } from '../../store/roomStore';
@@ -90,6 +91,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const isMultiplayer = props.isMultiplayer ?? false;
+  const isDiscord = useIsDiscordActivity();
 
   // ── Multiplayer data sources ──
   const snapshot = useRoomStore((s) => s.snapshot);
@@ -122,8 +124,8 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   } : null;
 
   const [leftPanel, setLeftPanel] = useState<LeftPanel | null>('scoreboard');
-  // Multiplayer rooms default chat ON; SP has no chat at all.
-  const [chatVisible, setChatVisible] = useState(isMultiplayer);
+  // Multiplayer rooms default chat ON; SP has no chat at all; Discord never shows chat.
+  const [chatVisible, setChatVisible] = useState(isMultiplayer && !isDiscord);
   const ui = useMemo(() => ({
     leftPanel,
     toggleLeftPanel: (next: LeftPanel) =>
@@ -344,7 +346,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
           </View>
         </View>
 
-        {isMultiplayer && chatVisible && (
+        {isMultiplayer && chatVisible && !isDiscord && (
           <View
             style={[
               styles.sidePane,

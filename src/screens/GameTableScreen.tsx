@@ -1387,31 +1387,6 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 )}
               </Pressable>
             )}
-            {isDiscord && isMultiplayer && !isSpectator && !!room && !isScorekeeper && (
-              <Pressable
-                testID="game-btn-discord-invite"
-                onPress={async () => {
-                  try {
-                    const { getDiscordSdk } = await import('../lib/discord/bootstrap');
-                    await getDiscordSdk()?.commands.openInviteDialog();
-                  } catch (e) {
-                    console.warn('[Discord] openInviteDialog failed', e);
-                  }
-                }}
-                accessibilityLabel="Invite"
-                style={[
-                  isDesktop ? styles.iconBtnLabeled : styles.iconBtn,
-                  { backgroundColor: colors.iconButtonBg, borderColor: colors.glassLight },
-                ]}
-              >
-                <Text style={{ fontSize: 18, color: colors.iconButtonText }}>➕</Text>
-                {isDesktop && (
-                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.iconBtnLabel, { color: colors.iconButtonText }]}>
-                    Invite
-                  </Text>
-                )}
-              </Pressable>
-            )}
             {!isDiscord && spectators.length > 0 && (
               <Pressable
                 testID="spectator-count"

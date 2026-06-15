@@ -29,6 +29,7 @@ import { GoogleButton } from './GoogleButton';
 import { setPlayerName as setPlayerNameInStorage } from '../lib/supabase/auth';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import i18n, { languages } from '../i18n/config';
 import { usePushSubscribe } from '../lib/push/usePushSubscribe';
 import { PwaInstallModal } from './PwaInstallModal';
@@ -88,7 +89,8 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const showSaveProgress = only === undefined;
   const showIdentity = only !== 'preferences';
   const showPreferences = only !== 'identity';
-  const showLogout = only !== 'identity'; // logout lives with preferences
+  const isDiscord = useIsDiscordActivity();
+  const showLogout = only !== 'identity' && !isDiscord; // logout lives with preferences; no-op in Discord (identity is Discord-bound)
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const navigation = useNavigation<any>();
