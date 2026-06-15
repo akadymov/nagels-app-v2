@@ -1,3 +1,12 @@
+// Mock the hook's transitive deps so jest doesn't choke on react-native /
+// Expo modules (this test only exercises the pure diffParticipants function).
+jest.mock('../../../store/roomStore', () => ({ useRoomStore: jest.fn() }));
+jest.mock('../../gameClient', () => ({ gameClient: { refreshSnapshot: jest.fn() } }));
+jest.mock('../../supabase/client', () => ({ getSupabaseClient: jest.fn(() => ({ rpc: jest.fn() })) }));
+jest.mock('../context', () => ({ isDiscordActivity: jest.fn(() => false) }));
+jest.mock('../bootstrap', () => ({ getDiscordSdk: jest.fn(() => null) }));
+jest.mock('react', () => ({ useEffect: jest.fn(), useRef: jest.fn(() => ({ current: 0 })) }));
+
 import { diffParticipants } from '../participants';
 
 describe('diffParticipants', () => {
