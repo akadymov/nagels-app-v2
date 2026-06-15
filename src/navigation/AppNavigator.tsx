@@ -29,6 +29,7 @@ import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
+import { getDiscordProfile } from '../lib/discord/bootstrap';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
 import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
 import { DesktopGameLayout } from '../screens/desktop/DesktopGameLayout';
@@ -139,7 +140,15 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Subscribe to auth state changes (Supabase fires this on mount with current session)
     const unsubscribe = onAuthStateChange(async (user, isGuest, event) => {
-      setUser(user, isGuest);
+      // In a Discord Activity, force the Discord identity (name + avatar) onto
+      // the user here — this listener is the last/central writer of authStore.user
+      // and otherwise clobbers the avatar that bootstrap set. getDiscordProfile()
+      // is null outside Discord, so web/PWA is unchanged.
+      const dp = getDiscordProfile();
+      const mergedUser = (dp && user)
+        ? { ...user, user_metadata: { ...(user.user_metadata ?? {}), display_name: dp.display_name, avatar_url: dp.avatar_url ?? user.user_metadata?.avatar_url ?? null } }
+        : user;
+      setUser(mergedUser, isGuest);
 
       // PASSWORD_RECOVERY event — navigate to reset password screen
       if (event === 'PASSWORD_RECOVERY') {

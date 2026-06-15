@@ -103,9 +103,22 @@ async function runAuth(): Promise<void> {
       const { getSupabaseClient } = await import('../supabase/client');
       const { data: { user: freshUser } } = await getSupabaseClient().auth.getUser();
       if (freshUser) {
-        // Discord users are never anonymous (they authenticated via the
-        // discord-auth edge function which signs them in with a password).
-        useAuthStore.getState().setUser(freshUser, false);
+        // Force the Discord name + avatar into user_metadata from the profile
+        // we already hold, rather than trusting the fetched metadata to carry
+        // it — the in-game identity (scoreboard/seats) reads
+        // `authStore.user.user_metadata.avatar_url`. Discord users are never
+        // anonymous (signed in via the discord-auth edge function).
+        const merged = {
+          ...freshUser,
+          user_metadata: {
+            ...(freshUser.user_metadata ?? {}),
+            display_name: discordProfile.display_name,
+            avatar_url: discordProfile.avatar_url ?? freshUser.user_metadata?.avatar_url ?? null,
+          },
+        };
+        useAuthStore.getState().setUser(merged as typeof freshUser, false);
+      } else {
+        console.warn('[Discord] getUser returned no user after auth; avatar/name may be missing');
       }
     } catch (e) {
       console.warn('[Discord] failed to refresh user after auth; avatar may be missing', e);
