@@ -45,6 +45,7 @@ import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
 import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
+import { getDiscordProfile } from '../lib/discord/bootstrap';
 import { useGameStore } from '../store';
 import { useRoomStore } from '../store/roomStore';
 import { useAuthStore } from '../store/authStore';
@@ -578,7 +579,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     // The human always has !p.isBot; pull their avatar from auth metadata
     // so a Google-signed-in player sees their own picture vs. bots.
     const meta = authUserMeta ?? {};
-    const myAvatarUrl = (meta.avatar_url as string | undefined) ?? null;
+    // Fall back to the Discord profile directly — inside a Discord Activity the
+    // auth-store user_metadata can be clobbered by the auth-state listener, but
+    // getDiscordProfile() is a stable module value set during bootstrap.
+    const myAvatarUrl = (meta.avatar_url as string | undefined) ?? getDiscordProfile()?.avatar_url ?? null;
     const myAvatar = (meta.avatar as string | undefined) ?? null;
     const myAvatarColor = (meta.avatar_color as string | undefined) ?? null;
     const players: VMPlayer[] = sp.players.map((p, i) => ({
