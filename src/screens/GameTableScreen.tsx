@@ -353,9 +353,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
     sp.setBotDifficulty(botDifficulty);
     sp.initGame(gamePlayers, 'player-0');
     setTimeout(() => sp.startBetting(), 500);
-    return () => {
-      sp.reset();
-    };
+    // No unmount cleanup: a layout swap (useIsDesktop breakpoint flip when the
+    // Discord chat shrinks the Activity, or a browser resize) unmounts this
+    // screen, and resetting here wiped the in-memory game. Real exits reset via
+    // handleExit / handleLogoLeave instead.
   }, [isMultiplayer]);
 
   // Single-player: start betting when game is ready
