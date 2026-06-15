@@ -11,5 +11,8 @@ returns uuid language sql security definer set search_path = '' as $$
   select id from auth.users where raw_user_meta_data->>'discord_id' = p_discord_id limit 1;
 $$;
 
-revoke execute on function public.find_user_id_by_email(text) from anon, authenticated;
-revoke execute on function public.find_user_id_by_discord(text) from anon, authenticated;
+-- Supabase grants EXECUTE to PUBLIC by default on new public-schema functions;
+-- revoke from PUBLIC too, else these SECURITY DEFINER auth.users readers stay
+-- callable. service_role retains EXECUTE (not revoked).
+revoke execute on function public.find_user_id_by_email(text) from anon, authenticated, public;
+revoke execute on function public.find_user_id_by_discord(text) from anon, authenticated, public;

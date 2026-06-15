@@ -25,7 +25,7 @@ export interface DiscordAuthDeps {
 export async function runDiscordAuth(deps: DiscordAuthDeps): Promise<DiscordProfile | null> {
   try {
     const { code } = await deps.sdk.commands.authorize({
-      client_id: process.env.EXPO_PUBLIC_DISCORD_CLIENT_ID,
+      client_id: process.env.EXPO_PUBLIC_DISCORD_CLIENT_ID || '',
       response_type: 'code',
       scope: ['identify', 'email'],
       prompt: 'none',

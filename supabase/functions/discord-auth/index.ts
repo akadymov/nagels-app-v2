@@ -10,6 +10,17 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return handleOptions(req);
   if (req.method !== 'POST') return jsonResponse({ ok: false, error: 'method_not_allowed' }, 405, req);
 
+  // Fail fast if any secret is absent — a blank signing secret would degrade the
+  // mint HMAC to an empty key, and a blank client secret fails opaquely.
+  const REQUIRED_ENV = [
+    'EXPO_PUBLIC_DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DISCORD_AUTH_SIGNING_SECRET',
+    'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
+  ];
+  const missing = REQUIRED_ENV.filter((k) => !Deno.env.get(k));
+  if (missing.length) {
+    console.error('[discord-auth] missing env:', missing.join(', '));
+    return jsonResponse({ ok: false, error: 'misconfigured' }, 500, req);
+  }
   const clientId = Deno.env.get('EXPO_PUBLIC_DISCORD_CLIENT_ID')!;
   const clientSecret = Deno.env.get('DISCORD_CLIENT_SECRET')!;
   const signingSecret = Deno.env.get('DISCORD_AUTH_SIGNING_SECRET')!;
@@ -55,14 +66,21 @@ Deno.serve(async (req: Request) => {
   const usableEmail = profile.email && profile.verified ? profile.email : null;
   let userByEmail: { id: string } | null = null;
   if (usableEmail) {
-    const { data } = await admin.rpc('find_user_id_by_email', { p_email: usableEmail });
+    const { data, error } = await admin.rpc('find_user_id_by_email', { p_email: usableEmail });
+    if (error) return jsonResponse({ ok: false, error: 'lookup_failed' }, 500, req);
     if (data) userByEmail = { id: data as string };
   }
-  const { data: discordHit } = await admin.rpc('find_user_id_by_discord', { p_discord_id: profile.discord_id });
+  const { data: discordHit, error: discordErr } = await admin.rpc('find_user_id_by_discord', { p_discord_id: profile.discord_id });
+  if (discordErr) return jsonResponse({ ok: false, error: 'lookup_failed' }, 500, req);
   const userByDiscord = discordHit ? { id: discordHit as string } : null;
 
   // 4. Decide and execute.
   const decision = decideResolution(profile, { userByEmail, userByDiscord });
+  if (decision.kind === 'link' && userByDiscord && userByDiscord.id !== decision.userId) {
+    // Best-effort unification: the verified-email user wins and the prior
+    // discord-keyed account is orphaned. Log so it's visible in Supabase logs.
+    console.warn(`[discord-auth] orphaning discord user ${userByDiscord.id}; email match wins (${decision.userId})`);
+  }
   const meta = {
     display_name: profile.display_name,
     avatar_url: profile.avatar_url,
@@ -86,15 +104,21 @@ Deno.serve(async (req: Request) => {
 
   // 5. Mint a session: set the deterministic password, sign in server-side.
   const password = await derivePassword(userId, signingSecret);
-  await admin.auth.admin.updateUserById(userId, { password });
-  const { data: meUser } = await admin.auth.admin.getUserById(userId);
-  const email = meUser?.user?.email;
-  if (!email) {
+  const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password });
+  if (pwErr) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
+
+  // Determine the sign-in email. The `reuse` path doesn't carry it, so read it;
+  // bail on a read error rather than risk overwriting a real email with a
+  // synthetic one.
+  const { data: meUser, error: getErr } = await admin.auth.admin.getUserById(userId);
+  if (getErr || !meUser?.user) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
+  let signEmail = meUser.user.email ?? null;
+  if (!signEmail) {
     // emailless users can't password-sign-in; give them a synthetic internal email.
-    const synthetic = `discord_${profile.discord_id}@users.nagels.internal`;
-    await admin.auth.admin.updateUserById(userId, { email: synthetic, email_confirm: true });
+    signEmail = `discord_${profile.discord_id}@users.nagels.internal`;
+    const { error: synErr } = await admin.auth.admin.updateUserById(userId, { email: signEmail, email_confirm: true });
+    if (synErr) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
   }
-  const signEmail = email ?? `discord_${profile.discord_id}@users.nagels.internal`;
   const anon = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
   const { data: session, error: signErr } = await anon.auth.signInWithPassword({ email: signEmail, password });
   if (signErr || !session.session) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);

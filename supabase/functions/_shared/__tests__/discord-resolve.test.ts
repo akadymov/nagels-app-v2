@@ -36,3 +36,8 @@ Deno.test('unverified email is ignored (not used for linking)', () => {
   );
   assertEquals(r, { kind: 'create', email: null });
 });
+
+Deno.test('email user and discord user both found but different → email wins (discord orphaned)', () => {
+  const r = decideResolution(profile, { userByEmail: { id: 'u1' }, userByDiscord: { id: 'u2' } });
+  assertEquals(r, { kind: 'link', userId: 'u1' });
+});

@@ -77,6 +77,10 @@ async function runAuth(): Promise<void> {
       headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
       body: JSON.stringify({ code }),
     });
+    if (!r.ok) {
+      console.warn('[Discord] discord-auth exchange http error', r.status);
+      return { ok: false };
+    }
     return r.json();
   };
   const setSession = async (s: { access_token: string; refresh_token: string }) => {
