@@ -25,16 +25,18 @@ function AppContent() {
   // Safe-area handling differs by surface:
   // - normal web/PWA: respect the top inset (notch) as before.
   // - Discord DESKTOP: Discord pads the top itself → drop our inset.
-  // - Discord MOBILE: the device status bar / home indicator stay, and Discord
-  //   dims the edges, so respect all device insets + a small horizontal pad.
+  // - Discord MOBILE: env(safe-area-inset) doesn't reach the Activity webview,
+  //   so SafeAreaView edges add nothing. Use explicit padding to clear Discord's
+  //   top dimming (which covers the logo + trump), the home indicator, and the
+  //   side dimming. Values are first-pass; tune on-device.
   return (
     <SafeAreaView
       style={[
         styles.safeArea,
         { backgroundColor: colors.background },
-        isDiscord && !isDesktop ? { paddingHorizontal: 8 } : null,
+        isDiscord && !isDesktop ? { paddingTop: 48, paddingBottom: 8, paddingHorizontal: 8 } : null,
       ]}
-      edges={!isDiscord ? ['top'] : (isDesktop ? [] : ['top', 'bottom', 'left', 'right'])}
+      edges={isDiscord ? [] : ['top']}
     >
       <StatusBar
         barStyle={colors.statusBarStyle as StatusBarStyle}
