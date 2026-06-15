@@ -91,6 +91,25 @@ async function runAuth(): Promise<void> {
   if (discordProfile) {
     const { useAuthStore } = await import('../../store/authStore');
     useAuthStore.getState().setDisplayName(discordProfile.display_name);
+
+    // Propagate the Discord avatar URL into the local auth store so it is
+    // immediately available to GameTableScreen (which reads
+    // `authStore.user?.user_metadata?.avatar_url`) before the normal
+    // onAuthStateChange callback fires. We fetch the fresh user object from
+    // Supabase — it already has `avatar_url` in `user_metadata` because the
+    // discord-auth edge function called `admin.auth.admin.updateUserById`
+    // with that value before minting the session tokens.
+    try {
+      const { getSupabaseClient } = await import('../supabase/client');
+      const { data: { user: freshUser } } = await getSupabaseClient().auth.getUser();
+      if (freshUser) {
+        // Discord users are never anonymous (they authenticated via the
+        // discord-auth edge function which signs them in with a password).
+        useAuthStore.getState().setUser(freshUser, false);
+      }
+    } catch (e) {
+      console.warn('[Discord] failed to refresh user after auth; avatar may be missing', e);
+    }
   }
 }
 
