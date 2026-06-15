@@ -1743,7 +1743,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           <BettingPhase
             visible={vm.phase === 'betting'}
             isMultiplayer={isMultiplayer}
-            onClose={onExit}
+            onClose={() => { if (!isMultiplayer) { try { sp.reset(); } catch {} } onExit?.(); }}
             onShowScore={() => {
               setIsViewingScores(true);
               setShowScoreboard(true);

@@ -22,6 +22,7 @@ export function diffParticipants(prev: Set<string>, nextIds: string[]): { next: 
 // Discord SDK event for instance participant changes. Verified live in a later
 // manual task; the constant is isolated here for easy correction.
 const PARTICIPANTS_UPDATE = 'ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE';
+const PARTICIPANT_RESYNC_DEBOUNCE_MS = 1_000;
 
 /**
  * While in a room inside a Discord Activity, watch the voice-channel
@@ -44,7 +45,7 @@ export function useDiscordParticipantSync(): void {
 
     const resync = () => {
       const now = Date.now();
-      if (now - lastResync.current < 1000) return; // debounce churn
+      if (now - lastResync.current < PARTICIPANT_RESYNC_DEBOUNCE_MS) return; // debounce churn
       lastResync.current = now;
       const supabase = getSupabaseClient();
       Promise.resolve(supabase.rpc('heartbeat', { p_room_id: roomId })).catch(() => {});
@@ -61,11 +62,17 @@ export function useDiscordParticipantSync(): void {
       if (left.length > 0) resync();
     };
 
-    // Seed the initial set, then subscribe.
+    // Seed the initial set, THEN subscribe — subscribing first risks an update
+    // arriving before the seed resolves, which would diff against an empty set
+    // and treat every current participant as "left" (a spurious resync on join).
     Promise.resolve(sdk.commands.getInstanceConnectedParticipants())
-      .then((p: any) => { if (active) prev = new Set(toIds(p)); })
+      .then((p: any) => {
+        if (!active) return;
+        prev = new Set(toIds(p));
+        try { sdk.subscribe(PARTICIPANTS_UPDATE, onUpdate); }
+        catch (e) { console.warn('[Discord] participant subscribe failed', e); }
+      })
       .catch(() => {});
-    try { sdk.subscribe(PARTICIPANTS_UPDATE, onUpdate); } catch (e) { console.warn('[Discord] participant subscribe failed', e); }
 
     return () => {
       active = false;

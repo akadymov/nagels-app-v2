@@ -29,4 +29,10 @@ describe('diffParticipants', () => {
     expect(r.left).toEqual([]);
     expect([...r.next]).toEqual(['a']);
   });
+
+  it('reports everyone as left when the new list is empty', () => {
+    const r = diffParticipants(new Set(['a', 'b']), []);
+    expect(r.left.sort()).toEqual(['a', 'b']);
+    expect([...r.next]).toEqual([]);
+  });
 });
