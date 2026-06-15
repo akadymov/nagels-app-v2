@@ -6,6 +6,7 @@
 
 import { isDiscordActivity } from './context';
 import { buildDiscordMappings } from './mappings';
+import { runDiscordAuth, type DiscordProfile } from './auth';
 
 // Discord's iframe parent occasionally never dispatches the READY event
 // (slow/flaky mobile clients, parent crash). `sdk.ready()` has no internal
@@ -18,6 +19,11 @@ let sdkReady = false;
 // SDK instance; typed any to avoid a static import of the browser-only SDK
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let discordSdk: any = null;
+let discordProfile: DiscordProfile | null = null;
+
+export function getDiscordProfile(): DiscordProfile | null {
+  return discordProfile;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -60,6 +66,30 @@ async function initDiscordSdk(): Promise<void> {
   console.log('[Discord] SDK ready');
 }
 
+async function runAuth(): Promise<void> {
+  const sdk = getDiscordSdk();
+  if (!sdk) return;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+  const exchange = async (code: string) => {
+    const r = await fetch(`${supabaseUrl}/functions/v1/discord-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+      body: JSON.stringify({ code }),
+    });
+    return r.json();
+  };
+  const setSession = async (s: { access_token: string; refresh_token: string }) => {
+    const { getSupabaseClient } = await import('../supabase/client');
+    return getSupabaseClient().auth.setSession(s);
+  };
+  discordProfile = await runDiscordAuth({ sdk: sdk as any, exchange, setSession });
+  if (discordProfile) {
+    const { useAuthStore } = await import('../../store/authStore');
+    useAuthStore.getState().setDisplayName(discordProfile.display_name);
+  }
+}
+
 /**
  * Run once from the app root. Resolves immediately (no-op) outside Discord.
  * Inside Discord: maps URLs, then awaits the SDK handshake.
@@ -68,6 +98,11 @@ export async function bootstrapDiscord(): Promise<void> {
   if (!isDiscordActivity()) return;
   await applyDiscordUrlMappings();
   await initDiscordSdk();
+  try {
+    await runAuth();
+  } catch (e) {
+    console.warn('[Discord] runAuth failed, continuing without auth', e);
+  }
 }
 
 /**
