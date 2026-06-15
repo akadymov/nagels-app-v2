@@ -34,7 +34,7 @@ function AppContent() {
       style={[
         styles.safeArea,
         { backgroundColor: colors.background },
-        isDiscord && !isDesktop ? { paddingTop: 48, paddingBottom: 8, paddingHorizontal: 8 } : null,
+        isDiscord && !isDesktop ? { paddingTop: 48, paddingBottom: 24, paddingHorizontal: 8 } : null,
       ]}
       edges={isDiscord ? [] : ['top']}
     >

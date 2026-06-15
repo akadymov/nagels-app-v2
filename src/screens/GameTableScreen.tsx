@@ -1103,9 +1103,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           onToLobby={() => onExit?.()}
         />
       )}
-      {/* Round the turn-pulse frame on phones so its corners follow the
-          device's rounded screen instead of being clipped square. */}
-      <ActiveTurnPulseBorder active={isMyTurnPlaying} borderRadius={isDesktop ? 0 : 28} />
+      <ActiveTurnPulseBorder active={isMyTurnPlaying} />
       {/* First-time onboarding tips. Tips self-gate on
           settingsStore.shownTips so once dismissed they never show again.
           We also chain the trump-related tip after the bidding tip: it
