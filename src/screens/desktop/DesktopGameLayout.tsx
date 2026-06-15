@@ -30,6 +30,8 @@ import { ScoreboardModal, type PlayerScore } from '../ScoreboardModal';
 import { RatingSettlementModal } from '../RatingSettlementModal';
 import { gameClient } from '../../lib/gameClient';
 import { useChatTooltipStore } from '../../store/chatTooltipStore';
+import { useAuthStore } from '../../store/authStore';
+import { getDiscordProfile } from '../../lib/discord/bootstrap';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
 
 type Props = GameTableScreenProps;
@@ -146,6 +148,14 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
     </View>
   );
 
+  // The local human's avatar for the single-player scoreboard. sp.players are
+  // built bare (no avatar), so — like GameTableScreen — pull it from the auth
+  // metadata, falling back to the Discord profile inside an Activity.
+  const myMeta = useAuthStore((s) => s.user?.user_metadata ?? null) as Record<string, unknown> | null;
+  const myAvatarUrl = (myMeta?.avatar_url as string | undefined) ?? getDiscordProfile()?.avatar_url ?? null;
+  const myAvatar = (myMeta?.avatar as string | undefined) ?? null;
+  const myAvatarColor = (myMeta?.avatar_color as string | undefined) ?? null;
+
   // Build PlayerScore[] for the embedded ScoreboardModal. Mirrors
   // the construction in GameTableScreen so the same renderer can be
   // reused without an intermediate adapter.
@@ -202,9 +212,9 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
             lastBonus: bonus,
             lastPoints: won + bonus,
             madeBet,
-            avatar: (p as any).avatar ?? null,
-            avatarUrl: (p as any).avatarUrl ?? null,
-            avatarColor: (p as any).avatarColor ?? null,
+            avatar: p.isBot ? null : myAvatar,
+            avatarUrl: p.isBot ? null : myAvatarUrl,
+            avatarColor: p.isBot ? null : myAvatarColor,
             seatIndex: i,
           };
         })
