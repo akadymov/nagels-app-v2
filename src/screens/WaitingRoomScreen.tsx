@@ -41,6 +41,7 @@ import { ChatPanel } from '../components/ChatPanel';
 import { PlayerChatTooltip } from '../components/PlayerChatTooltip';
 import { useChatTooltipListener } from '../hooks/useChatTooltipListener';
 import { useChatTooltipStore } from '../store/chatTooltipStore';
+import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import { StakeSelector } from '../components/stakes/StakeSelector';
 import { canPlayForRating } from '../utils/ratingEligibility';
 import { useAuthStore } from '../store/authStore';
@@ -119,6 +120,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
   const selfEligible = canPlayForRating(authUser, authIsGuest);
   // Non-host: host-eligibility is irrelevant to the selector's chip state.
   const hostEligible = isHost ? selfEligible : true;
+  const isDiscord = useIsDiscordActivity();
   const [showChat, setShowChat] = useState(false);
   useChatTooltipListener({
     selfSessionId: myPlayerId,
@@ -428,11 +430,13 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
         <View style={{ flexDirection: 'row', gap: 6 }}>
           <Pressable
             onPress={() => {
+              if (isDiscord) return;
               setShowChat(true);
               useChatTooltipStore.getState().dismissAll();
             }}
+            disabled={isDiscord}
             hitSlop={8}
-            style={styles.settingsBtn}
+            style={[styles.settingsBtn, isDiscord && { opacity: 0.3 }]}
             testID="waiting-btn-chat"
           >
             <Text style={{ fontSize: 18 }}>💬</Text>
