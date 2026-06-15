@@ -15,13 +15,27 @@ import { ConfirmRoot } from './lib/confirmDialog';
 import { bootstrapDiscord } from './lib/discord/bootstrap';
 import { isDiscordActivity } from './lib/discord/context';
 import { useIsDiscordActivity } from './hooks/useIsDiscordActivity';
+import { useIsDesktop } from './hooks/useIsDesktop';
 
 function AppContent() {
   const { colors } = useTheme();
   const isDiscord = useIsDiscordActivity();
+  const isDesktop = useIsDesktop();
 
+  // Safe-area handling differs by surface:
+  // - normal web/PWA: respect the top inset (notch) as before.
+  // - Discord DESKTOP: Discord pads the top itself → drop our inset.
+  // - Discord MOBILE: the device status bar / home indicator stay, and Discord
+  //   dims the edges, so respect all device insets + a small horizontal pad.
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={isDiscord ? [] : ['top']}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: colors.background },
+        isDiscord && !isDesktop ? { paddingHorizontal: 8 } : null,
+      ]}
+      edges={!isDiscord ? ['top'] : (isDesktop ? [] : ['top', 'bottom', 'left', 'right'])}
+    >
       <StatusBar
         barStyle={colors.statusBarStyle as StatusBarStyle}
         backgroundColor={colors.statusBarBg}
