@@ -48,6 +48,7 @@ import { canPlayForRating } from '../utils/ratingEligibility';
 import { useAuthStore } from '../store/authStore';
 import { useDesktopGameUI } from './desktop/DesktopGameContext';
 import { HostLeftBanner } from '../components/HostLeftBanner';
+import { DiscordInviteButton } from '../components/DiscordInviteButton';
 import { isHostAbsent } from '../lib/hostAbsent';
 import { useHostAbsentTicker } from '../lib/useHostAbsentTicker';
 
@@ -522,6 +523,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                 </Text>
               </Pressable>
             )}
+            <DiscordInviteButton />
           </GlassCard>
         )}
 

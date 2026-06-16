@@ -77,6 +77,7 @@ import {
 import type { PlayerScore } from './ScoreboardModal';
 import { avatarColorFor } from '../utils/avatarColor';
 import { UserAvatar } from '../components/UserAvatar';
+import { DiscordInviteButton } from '../components/DiscordInviteButton';
 import { bonusEarnedHaptic, gameWonHaptic } from '../utils/haptics';
 
 
@@ -1394,6 +1395,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                 )}
               </Pressable>
             )}
+            <DiscordInviteButton />
             {!isDiscord && spectators.length > 0 && (
               <Pressable
                 testID="spectator-count"
