@@ -61,6 +61,10 @@ export interface LobbyScreenProps {
    *  Mobile still wants the dark page-background color, so default
    *  stays false. */
   transparentBackground?: boolean;
+  /** Hide the lobby's own nickname row. Desktop wraps this screen
+   *  next to the Profile pane, which already owns the nickname, so
+   *  the lobby copy would be a duplicate. */
+  hideNickname?: boolean;
   /** Slot rendered right after the nickname row. Desktop welcome uses
    *  this to surface the identity cluster (avatar / password / Google)
    *  inline next to the nickname. */
@@ -84,6 +88,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   hideAuthCta = false,
   hideLogoHeader = false,
   transparentBackground = false,
+  hideNickname = false,
   afterNickname,
   afterCtas,
   centerContent = false,
@@ -457,7 +462,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Nickname */}
+        {/* Nickname — hidden on desktop, where the Profile pane owns it */}
+        {!hideNickname && (
         <View style={[styles.nicknameRow, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <View style={{ marginRight: Spacing.sm }}>
             <UserAvatar
@@ -482,6 +488,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
             testID="input-player-name"
           />
         </View>
+        )}
 
         {afterNickname}
 
