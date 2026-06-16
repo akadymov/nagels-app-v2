@@ -44,7 +44,7 @@ export const DesktopLobbyScreen: React.FC<Props> = (props) => {
             { backgroundColor: colors.surface, borderColor: colors.glassLight },
           ]}
         >
-          <LobbyScreen {...lobbyProps} hideAuthCta hideLogoHeader transparentBackground />
+          <LobbyScreen {...lobbyProps} hideAuthCta hideLogoHeader transparentBackground hideNickname />
         </View>
         <View
           style={[
