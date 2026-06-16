@@ -130,6 +130,7 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const [avatarColor] = useState(() => user?.user_metadata?.avatar_color || AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [editingNickname, setEditingNickname] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -314,37 +315,63 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                 size={56}
                 textSize={28}
               />
-              {isLoggedIn && (
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.emailText, { color: colors.textMuted }]}>{user?.email}</Text>
-                  {!user?.email_confirmed_at && (
-                    <Pressable onPress={handleResendConfirmation}>
-                      <Text style={[styles.resendLink, { color: colors.warning }]}>
-                        ⚠ {t('auth.resendConfirmation', 'Resend confirmation')}
-                      </Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
-            </View>
-
-            {!hideNickname && (
-              <View style={styles.nicknameRow}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
-                  value={nickname}
-                  onChangeText={setNickname}
-                  maxLength={20}
-                  autoCapitalize="words"
-                  placeholder={String(t('profile.editNickname', 'Nickname'))}
-                  placeholderTextColor={colors.textMuted}
-                  testID="settings-nickname"
-                />
-                <Pressable style={[styles.saveBtn, { backgroundColor: colors.accent }]} onPress={handleSaveProfile} testID="settings-save">
-                  <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
-                </Pressable>
+              <View style={{ flex: 1 }}>
+                {!hideNickname && (
+                  <>
+                    <Text style={[styles.identityLabel, { color: colors.textMuted }]}>
+                      {t('profile.gameNickname', 'Game nickname')}
+                    </Text>
+                    {editingNickname ? (
+                      <View style={styles.nicknameRow}>
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
+                          value={nickname}
+                          onChangeText={setNickname}
+                          maxLength={20}
+                          autoCapitalize="words"
+                          autoFocus
+                          placeholder={String(t('profile.editNickname', 'Nickname'))}
+                          placeholderTextColor={colors.textMuted}
+                          testID="settings-nickname"
+                        />
+                        <Pressable
+                          style={[styles.saveBtn, { backgroundColor: colors.accent }]}
+                          onPress={async () => { await handleSaveProfile(); setEditingNickname(false); }}
+                          testID="settings-save"
+                        >
+                          <Text style={styles.saveBtnText}>{t('common.done', 'Save')}</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Pressable
+                        style={styles.nameViewRow}
+                        onPress={() => setEditingNickname(true)}
+                        testID="btn-edit-nickname"
+                        accessibilityRole="button"
+                        accessibilityLabel={String(t('profile.editNickname', 'Nickname'))}
+                      >
+                        <Text style={[styles.nameText, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {nickname || displayName || String(t('profile.editNickname', 'Nickname'))}
+                        </Text>
+                        <Text style={[styles.editPencil, { color: colors.accent }]}>✎</Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
+                {isLoggedIn && (
+                  <>
+                    <Text style={[styles.emailText, { color: colors.textMuted, marginTop: 4 }]}>{user?.email}</Text>
+                    {!user?.email_confirmed_at && (
+                      <Pressable onPress={handleResendConfirmation}>
+                        <Text style={[styles.resendLink, { color: colors.warning }]}>
+                          ⚠ {t('auth.resendConfirmation', 'Resend confirmation')}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </>
+                )}
               </View>
-            )}
+            </View>
 
             {/* Hide the emoji picker for Google-linked accounts — their
              *  avatar comes from the Google profile picture, so an
@@ -707,13 +734,17 @@ const styles = StyleSheet.create({
   sectionTitle: { ...TextStyles.h3, marginBottom: Spacing.sm },
   sectionSubtitle: { fontSize: 13, marginTop: Spacing.md, marginBottom: Spacing.sm },
   sectionDesc: { ...TextStyles.caption, marginBottom: Spacing.md, lineHeight: 20 },
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+  avatarRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, marginBottom: Spacing.md },
   avatarCircle: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { fontSize: 24, fontWeight: '700', color: '#ffffff' },
   avatarEmoji: { fontSize: 28 },
   emailText: { fontSize: 13 },
   resendLink: { fontSize: 12, fontWeight: '600', marginTop: 2 },
   nicknameRow: { flexDirection: 'row', gap: Spacing.sm },
+  identityLabel: { fontSize: 12, fontWeight: '600', marginBottom: 2 },
+  nameViewRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minHeight: 44 },
+  nameText: { flex: 1, fontSize: 16, fontWeight: '600' },
+  editPencil: { fontSize: 16 },
   input: { height: 44, borderRadius: Radius.md, borderWidth: 1, paddingHorizontal: Spacing.md, fontSize: 15 },
   saveBtn: { height: 44, paddingHorizontal: Spacing.lg, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   saveBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
