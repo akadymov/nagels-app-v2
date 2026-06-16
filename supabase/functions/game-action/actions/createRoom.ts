@@ -96,6 +96,7 @@ export async function createRoom(
         max_cards: action.max_cards ?? 10,
         mode: action.mode ?? 'standard',
         phase: 'waiting',
+        discord_instance_id: action.discord_instance_id ?? null,
       })
       .select('id, version, code')
       .single();
