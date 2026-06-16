@@ -29,6 +29,7 @@ import { useAuthStore } from '../store/authStore';
 import { useRoomStore } from '../store/roomStore';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
+import { useDiscordAutoJoin } from '../hooks/useDiscordAutoJoin';
 import { getDiscordProfile } from '../lib/discord/bootstrap';
 import { DesktopLobbyScreen } from '../screens/desktop/DesktopLobbyScreen';
 import { DesktopWelcomeAuth } from '../screens/desktop/DesktopWelcomeAuth';
@@ -343,6 +344,7 @@ export interface AppNavigatorProps {
  * and rejoin logic after auth initializes.
  */
 const NavigatorGuard: React.FC = () => {
+  useDiscordAutoJoin();
   const navigation = useNavigation<any>();
   const { isInitialized, isLoading, user } = useAuthStore();
   const guardRan = useRef(false);
