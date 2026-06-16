@@ -503,5 +503,10 @@
     "resumeDisabled": "Deben estar todos para reanudar",
     "confirmTitle": "¿Congelar la partida?",
     "confirmBody": "La partida se pausa. Todos pueden alejarse y volver; reanudas cuando esté todo el grupo. La sala congelada queda en tu vestíbulo y se cierra automáticamente tras 48 horas si no se reanuda."
+  },
+  "room": {
+    "inviteDiscord": "Invitar amigos",
+    "inviteDiscordFailed": "No se pudo abrir la invitación de Discord — quizá no tienes permiso para invitar aquí.",
+    "joinedAsSpectator": "Partida en curso — entraste como espectador."
   }
 }

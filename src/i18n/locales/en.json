@@ -503,5 +503,10 @@
     "resumeDisabled": "Everyone must be back to resume",
     "confirmTitle": "Freeze the game?",
     "confirmBody": "The game pauses. Everyone can step away and come back; you resume once the full lineup is back. The frozen room stays in your lobby and auto-closes after 48 hours if not resumed."
+  },
+  "room": {
+    "inviteDiscord": "Invite friends",
+    "inviteDiscordFailed": "Couldn't open the Discord invite — you may not have permission to invite here.",
+    "joinedAsSpectator": "Game in progress — you joined as a spectator."
   }
 }

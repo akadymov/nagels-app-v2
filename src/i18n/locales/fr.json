@@ -498,5 +498,10 @@
     "resumeDisabled": "Tout le monde doit être là pour reprendre",
     "confirmTitle": "Geler la partie ?",
     "confirmBody": "La partie se met en pause. Chacun peut s'éloigner et revenir ; vous reprenez quand tout le monde est là. Le salon gelé reste dans votre lobby et se ferme automatiquement au bout de 48 heures s'il n'est pas repris."
+  },
+  "room": {
+    "inviteDiscord": "Inviter des amis",
+    "inviteDiscordFailed": "Impossible d'ouvrir l'invitation Discord — tu n'as peut-être pas la permission d'inviter ici.",
+    "joinedAsSpectator": "Partie en cours — tu as rejoint en spectateur."
   }
 }
