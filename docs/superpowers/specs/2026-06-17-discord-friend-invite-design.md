@@ -56,9 +56,12 @@ nothing changes.
 
 **A3. Lookup RPC.** New `get_active_room_for_instance(p_instance_id text)`
 returns the single current open room for that instance: filter
-`discord_instance_id = p_instance_id AND phase NOT IN ('finished','closed')`,
-order by `created_at DESC`, limit 1. Returns null when none (so a stale /
-finished instance room never auto-joins).
+`discord_instance_id = p_instance_id AND phase NOT IN ('finished','paused')`,
+order by `created_at DESC`, limit 1. Returns null when none (so a stale,
+finished, or host-frozen `paused` instance room never auto-joins — a paused
+room is "parked", per `activeRoom.ts`). (Room phases are
+`waiting | playing | paused | finished`; an earlier draft said `'closed'`,
+which is a hand phase, not a room phase.)
 
 **A4. Auto-join hook.** A hook that runs **once per Activity launch**, after
 Discord auth resolves and before the user settles in the lobby:
@@ -133,8 +136,15 @@ spectator").
 - **Race: two friends arrive together.** Both attempt to seat; the server
   rejects the loser of the last seat, and that client falls back to a spectator
   join (A4 step 4). No client-side seat reservation.
-- **Stale mapping.** Lookup excludes finished/closed rooms; a new room in the
+- **Stale mapping.** Lookup excludes finished/paused rooms; a new room in the
   same instance supersedes by `created_at DESC`.
+- **Known hardening follow-ups (from final review, not blocking).** (1) The
+  "don't yank back a leaver" guard reads only local `getActiveRoom()`; a fresh
+  webview with cleared storage but a server-side seat could re-run join — could
+  also consult `getMyActiveRoom()`. (2) `useDiscordAutoJoin` and the
+  `NavigatorGuard` rejoin effect both navigate without a shared "already
+  navigated this launch" flag — no double-nav observed, but worth a shared
+  guard if one surfaces.
 - **Gate:** `npm run smoke` before "ready"; `npm run test:lint` if testIDs
   change. Manual: in a real Discord Activity, invite a second account → it
   lands in the same room (player if seat free, else spectator).
