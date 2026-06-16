@@ -50,6 +50,11 @@ export interface SettingsBodyProps {
   /** Hide the Profile-section nickname row. Lobby provides its
    *  own nickname input — duplicating it here is just noise. */
   hideNickname?: boolean;
+  /** Host visibility. The mobile SettingsModal keeps SettingsBody
+   *  mounted (RN <Modal> hides rather than unmounts), so we need the
+   *  closed signal to drop nickname edit mode. Always-open desktop
+   *  panes omit it. */
+  visible?: boolean;
 }
 
 const AVATAR_PRESETS = ['🦈', '🐺', '🦊', '🐻', '🐱', '🎯', '🎲', '🃏', '👑', '💎', '🔥', '⭐', '🏆'];
@@ -85,7 +90,7 @@ const pillStyles = StyleSheet.create({
   pillText: { fontSize: 14, fontWeight: '500' },
 });
 
-export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideNickname = false }) => {
+export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideNickname = false, visible }) => {
   const showSaveProgress = only === undefined;
   const showIdentity = only !== 'preferences';
   const showPreferences = only !== 'identity';
@@ -134,6 +139,20 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
   const [newPassword, setNewPassword] = useState('');
   const [showConfirmAlert, setShowConfirmAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+
+  // Keep the view-mode nickname tracking the source of truth, but never
+  // clobber an in-progress edit. This also discards an abandoned edit
+  // buffer once editing ends (e.g. the modal closed without saving).
+  useEffect(() => {
+    if (!editingNickname) setNickname(displayName || '');
+  }, [displayName, editingNickname]);
+
+  // Closing the Settings modal must drop edit mode — RN <Modal> keeps
+  // SettingsBody mounted when hidden, so editingNickname would otherwise
+  // persist and reopen mid-edit. Always-open panes pass no `visible`.
+  useEffect(() => {
+    if (visible === false) setEditingNickname(false);
+  }, [visible]);
 
   const hasEmailIdentity = (user?.identities ?? []).some((i: any) => i.provider === 'email');
 

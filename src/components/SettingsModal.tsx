@@ -40,7 +40,7 @@ export const SettingsModal: React.FC = () => {
               <Text style={[styles.closeX, { color: colors.textMuted }]}>✕</Text>
             </Pressable>
           </View>
-          <SettingsBody onClose={close} />
+          <SettingsBody onClose={close} visible={visible} />
         </View>
       </View>
     </Modal>
