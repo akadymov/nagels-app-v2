@@ -349,6 +349,7 @@
   "profile": {
     "title": "Perfil",
     "editNickname": "Apodo",
+    "gameNickname": "Apodo de juego",
     "chooseAvatar": "Elegir avatar",
     "avatarOptional": "Opcional — por defecto muestra tu inicial",
     "saved": "Perfil guardado",

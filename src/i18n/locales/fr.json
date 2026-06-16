@@ -344,6 +344,7 @@
   "profile": {
     "title": "Profil",
     "editNickname": "Pseudo",
+    "gameNickname": "Pseudo de jeu",
     "chooseAvatar": "Choisir un avatar",
     "avatarOptional": "Optionnel — par défaut, c'est ton initiale",
     "saved": "Profil enregistré",

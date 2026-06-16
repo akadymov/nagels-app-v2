@@ -349,6 +349,7 @@
   "profile": {
     "title": "Profile",
     "editNickname": "Nickname",
+    "gameNickname": "Game nickname",
     "chooseAvatar": "Choose Avatar",
     "avatarOptional": "Optional — default shows your initial",
     "saved": "Profile saved",
