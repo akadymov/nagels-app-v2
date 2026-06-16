@@ -148,3 +148,11 @@ export async function bootstrapDiscord(): Promise<void> {
 export function getDiscordSdk() {
   return discordSdk;
 }
+
+/**
+ * The Discord Activity instance id, shared by every participant of the same
+ * launched Activity. Null outside Discord or before the SDK is ready.
+ */
+export function getDiscordInstanceId(): string | null {
+  return discordSdk?.instanceId ?? null;
+}

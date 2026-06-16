@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabase/client';
 import { useRoomStore } from '../store/roomStore';
+import { getDiscordInstanceId } from './discord/bootstrap';
 import type {
   Action, ActionResult, RoomSnapshot,
 } from '../../supabase/functions/_shared/types.ts';
@@ -179,10 +180,28 @@ export const gameClient = {
       // See docs/principles.md §8 "Test side-effect hygiene".
       silent: shouldSilenceTelegram(),
       announce,
+      discord_instance_id: getDiscordInstanceId(),
     }),
 
   joinRoom: (displayName: string, code: string) =>
     postAction(displayName, { kind: 'join_room', display_name: displayName, code }),
+
+  /** Look up the current open room for a Discord Activity instance. */
+  getActiveRoomForInstance: async (
+    instanceId: string,
+  ): Promise<
+    | { room_id: string; code: string; phase: string; player_count: number; seats_taken: number }
+    | null
+  > => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_active_room_for_instance', {
+      p_instance_id: instanceId,
+    });
+    if (error || !data) return null;
+    return data as {
+      room_id: string; code: string; phase: string; player_count: number; seats_taken: number;
+    };
+  },
 
   leaveRoom: async (room_id: string, target_session_id?: string) => {
     const result = await postAction(null, { kind: 'leave_room', room_id, target_session_id });
