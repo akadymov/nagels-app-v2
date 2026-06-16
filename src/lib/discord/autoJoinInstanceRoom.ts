@@ -59,6 +59,10 @@ export async function maybeAutoJoinInstanceRoom(displayName: string): Promise<Au
   if (!spec.ok) return { joined: false, reason: 'failed' };
   useRoomStore.getState().applySnapshot(spec.state, Number((spec.state as any)?.room?.version ?? 0));
   useRoomStore.getState().setIsSpectator(true);
+  // joinRoomAsSpectator is a raw RPC (unlike joinRoom→postAction) so it does
+  // not populate myPlayerId itself. Set it here, mirroring the canonical
+  // spectator consumer in AppNavigator, or chat/own-row lookups break.
+  useRoomStore.getState().setMyPlayerId(spec.session_id);
   await setActiveRoom(room.room_id, room.code, 'spectator');
   subscribeRoom(room.room_id);
   return { joined: true, room_id: room.room_id, code: room.code, role: 'spectator', phase: room.phase };

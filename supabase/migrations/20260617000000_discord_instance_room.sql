@@ -8,8 +8,10 @@ create index if not exists idx_rooms_discord_instance
   where discord_instance_id is not null;
 
 -- Returns the current open room for a Discord Activity instance (latest,
--- non-finished), or null. SECURITY DEFINER so it works regardless of RLS;
--- read-only, so anon/authenticated may call it.
+-- not finished and not paused), or null. A 'paused' (host-frozen) room is
+-- "parked" — it must never auto-join, matching activeRoom.ts. SECURITY
+-- DEFINER so it works regardless of RLS; read-only, so anon/authenticated
+-- may call it.
 create or replace function public.get_active_room_for_instance(p_instance_id text)
 returns jsonb
 language sql security definer set search_path to 'public', 'pg_catalog' as $$
@@ -22,7 +24,7 @@ language sql security definer set search_path to 'public', 'pg_catalog' as $$
   )
   from public.rooms r
   where r.discord_instance_id = p_instance_id
-    and r.phase <> 'finished'
+    and r.phase not in ('finished', 'paused')
   order by r.created_at desc
   limit 1;
 $$;
