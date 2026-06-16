@@ -343,7 +343,11 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                     {editingNickname ? (
                       <View style={styles.nicknameRow}>
                         <TextInput
-                          style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1 }]}
+                          // minWidth:0 lets flexShrink actually shrink the
+                          // input below its content width — without it the
+                          // field keeps its text's min-content width and the
+                          // Save button overflows the narrow avatar column.
+                          style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.textPrimary, borderColor: colors.glassLight, flex: 1, minWidth: 0 }]}
                           value={nickname}
                           onChangeText={setNickname}
                           maxLength={20}

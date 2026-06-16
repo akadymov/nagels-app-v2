@@ -43,11 +43,14 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) =>
   const isLoggedIn = !!user && !isGuest && !!user.email;
 
   // Right-pane content for logged-in users: Lobby with profile
-  // sections spliced in. Identity (avatar / password / Google) sits
-  // right after the nickname; preferences (theme / deck / language /
-  // notifications / sign-out) live below the lobby CTAs.
+  // sections spliced in. The lobby's own nickname row is hidden
+  // (hideNickname) — the identity slot owns the labeled, editable
+  // nickname so it isn't duplicated. Identity (avatar / nickname /
+  // email / password / Google) sits where the nickname row was;
+  // preferences (theme / deck / language / sign-out) live below the
+  // lobby CTAs.
   const identitySlot = isLoggedIn ? (
-    <SettingsBody onClose={() => {}} only="identity" hideNickname />
+    <SettingsBody onClose={() => {}} only="identity" />
   ) : null;
   const preferencesSlot = isLoggedIn ? (
     <SettingsBody onClose={() => {}} only="preferences" />
@@ -73,6 +76,7 @@ export const DesktopWelcomeAuth: React.FC<Props> = ({ welcome, auth, lobby }) =>
               hideLogoHeader
               transparentBackground
               centerContent
+              hideNickname
               afterNickname={identitySlot}
               afterCtas={preferencesSlot}
             />
