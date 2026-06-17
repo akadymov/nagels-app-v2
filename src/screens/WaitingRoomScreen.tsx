@@ -502,16 +502,21 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
           <GlassCard style={styles.roomCodeCard}>
             <Text style={[styles.roomCodeLabel, { color: colors.textSecondary }]}>{t('multiplayer.roomCode')}</Text>
             <Text style={[styles.roomCode, { color: colors.accent }]} testID="room-code">{room.code}</Text>
-            <Pressable
-              style={styles.shareButton}
-              onPress={handleShare}
-              hitSlop={8}
-            >
-              <Text style={[styles.shareButtonText, { color: colors.textPrimary }]}>
-                📤 {t('multiplayer.shareCode')}
-              </Text>
-            </Pressable>
-            {!isSpectator && (
+            {/* Share links: web only. In Discord the native "Invite friends"
+                dialog already covers sharing a link, so these are hidden —
+                the two sets are mutually exclusive. */}
+            {!isDiscord && (
+              <Pressable
+                style={styles.shareButton}
+                onPress={handleShare}
+                hitSlop={8}
+              >
+                <Text style={[styles.shareButtonText, { color: colors.textPrimary }]}>
+                  📤 {t('multiplayer.shareCode')}
+                </Text>
+              </Pressable>
+            )}
+            {!isDiscord && !isSpectator && (
               <Pressable
                 testID="btn-share-spectator"
                 onPress={handleShareSpectator}
