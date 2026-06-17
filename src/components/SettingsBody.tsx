@@ -425,7 +425,12 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
               </>
             )}
 
-            {isLoggedIn && (
+            {/* Account-management (password + Google link/unlink) is web-only.
+                In a Discord Activity identity comes from Discord (auto-unified
+                with a matching Google account by verified email), and OAuth
+                popups can't open in the iframe — so hide the cluster and point
+                the user to the web instead. */}
+            {isLoggedIn && !isDiscord && (
               <>
                 {hasEmailIdentity ? (
                   <>
@@ -482,6 +487,11 @@ export const SettingsBody: React.FC<SettingsBodyProps> = ({ onClose, only, hideN
                   style={{ marginTop: Spacing.sm }}
                 />
               </>
+            )}
+            {isLoggedIn && isDiscord && (
+              <Text style={[styles.sectionSubtitle, { color: colors.textMuted, marginTop: Spacing.sm }]}>
+                {t('profile.manageAccountOnWeb', 'Manage your account on nigels.online')}
+              </Text>
             )}
             {ratingEligible && (
               <View style={[styles.ratingRow, { borderTopColor: colors.glassLight }]} testID="profile-rating-row">
