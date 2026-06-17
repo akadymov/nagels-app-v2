@@ -7,6 +7,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { resolveSupabaseUrl } from './resolveUrl';
 
 // ============================================================
 // ENVIRONMENT CONFIGURATION
@@ -36,7 +37,7 @@ export function getSupabaseClient(): SupabaseClient {
       throw new Error('Supabase environment variables not set');
     }
 
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    supabaseClient = createClient(resolveSupabaseUrl(), supabaseAnonKey, {
       auth: {
         persistSession: true,          // Survive browser refresh / app restart
         autoRefreshToken: true,        // Keep JWT fresh automatically
