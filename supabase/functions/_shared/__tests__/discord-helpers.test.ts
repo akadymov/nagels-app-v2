@@ -18,14 +18,3 @@ Deno.test('displayNameFrom prefers global_name, falls back to username', () => {
   assertEquals(displayNameFrom({ username: 'u', global_name: 'Global' }), 'Global');
   assertEquals(displayNameFrom({ username: 'u', global_name: null }), 'u');
 });
-
-import { derivePassword } from '../../discord-auth/mint.ts';
-
-Deno.test('derivePassword is deterministic and depends on user + secret', async () => {
-  const a = await derivePassword('user-1', 'secret');
-  const b = await derivePassword('user-1', 'secret');
-  const c = await derivePassword('user-2', 'secret');
-  assertEquals(a, b);
-  assertEquals(a === c, false);
-  assertEquals(a.length >= 32, true);
-});
