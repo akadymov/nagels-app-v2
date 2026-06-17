@@ -7,6 +7,7 @@
 import { isDiscordActivity } from './context';
 import { buildDiscordMappings } from './mappings';
 import { runDiscordAuth, type DiscordProfile } from './auth';
+import { resolveSupabaseUrl } from '../supabase/resolveUrl';
 
 // Discord's iframe parent occasionally never dispatches the READY event
 // (slow/flaky mobile clients, parent crash). `sdk.ready()` has no internal
@@ -69,7 +70,7 @@ async function initDiscordSdk(): Promise<void> {
 async function runAuth(): Promise<void> {
   const sdk = getDiscordSdk();
   if (!sdk) return;
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+  const supabaseUrl = resolveSupabaseUrl();
   const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
   const exchange = async (code: string) => {
     const r = await fetch(`${supabaseUrl}/functions/v1/discord-auth`, {
