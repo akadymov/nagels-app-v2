@@ -2,7 +2,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { handleOptions, jsonResponse } from '../_shared/cors.ts';
 import { tokenRequestBody, discordAvatarUrl, displayNameFrom, type DiscordUser } from './discord.ts';
 import { decideResolution, type ResolveProfile } from './resolve.ts';
-import { derivePassword } from './mint.ts';
 
 const DISCORD_API = 'https://discord.com/api';
 
@@ -13,7 +12,7 @@ Deno.serve(async (req: Request) => {
   // Fail fast if any secret is absent — a blank signing secret would degrade the
   // mint HMAC to an empty key, and a blank client secret fails opaquely.
   const REQUIRED_ENV = [
-    'EXPO_PUBLIC_DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DISCORD_AUTH_SIGNING_SECRET',
+    'EXPO_PUBLIC_DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET',
     'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
   ];
   const missing = REQUIRED_ENV.filter((k) => !Deno.env.get(k));
@@ -23,7 +22,6 @@ Deno.serve(async (req: Request) => {
   }
   const clientId = Deno.env.get('EXPO_PUBLIC_DISCORD_CLIENT_ID')!;
   const clientSecret = Deno.env.get('DISCORD_CLIENT_SECRET')!;
-  const signingSecret = Deno.env.get('DISCORD_AUTH_SIGNING_SECRET')!;
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -102,10 +100,10 @@ Deno.serve(async (req: Request) => {
     await admin.auth.admin.updateUserById(userId, { user_metadata: meta });
   }
 
-  // 5. Mint a session: set the deterministic password, sign in server-side.
-  const password = await derivePassword(userId, signingSecret);
-  const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password });
-  if (pwErr) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
+  // 5. Mint a session WITHOUT touching the user's password. The old flow reset
+  // the password to a deterministic HMAC on every login, which clobbered web
+  // email/password sign-in. Instead, generate a magic-link OTP server-side and
+  // verify it — yields a real session and leaves the password untouched.
 
   // Determine the sign-in email. The `reuse` path doesn't carry it, so read it;
   // bail on a read error rather than risk overwriting a real email with a
@@ -114,13 +112,20 @@ Deno.serve(async (req: Request) => {
   if (getErr || !meUser?.user) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
   let signEmail = meUser.user.email ?? null;
   if (!signEmail) {
-    // emailless users can't password-sign-in; give them a synthetic internal email.
+    // Emailless users can't be targeted by generateLink; give them a synthetic
+    // internal email (they never sign in via email anyway).
     signEmail = `discord_${profile.discord_id}@users.nagels.internal`;
     const { error: synErr } = await admin.auth.admin.updateUserById(userId, { email: signEmail, email_confirm: true });
     if (synErr) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
   }
+  const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email: signEmail });
+  if (linkErr || !linkData?.properties?.email_otp) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
   const anon = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
-  const { data: session, error: signErr } = await anon.auth.signInWithPassword({ email: signEmail, password });
+  const { data: session, error: signErr } = await anon.auth.verifyOtp({
+    email: signEmail,
+    token: linkData.properties.email_otp,
+    type: 'email',
+  });
   if (signErr || !session.session) return jsonResponse({ ok: false, error: 'mint_failed' }, 500, req);
 
   return jsonResponse({
