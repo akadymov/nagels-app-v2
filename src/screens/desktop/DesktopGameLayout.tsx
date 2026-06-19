@@ -492,7 +492,7 @@ function buildLeftPaneData(args: {
 const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   centerWrap: { flex: 1, minWidth: 0, alignItems: 'center' },
-  center: { flex: 1, width: '100%', maxWidth: 1200 },
+  center: { flex: 1, width: '100%' },
   sidePane: {
     width: 400,
     margin: Spacing.md,
