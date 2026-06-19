@@ -159,8 +159,28 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
   const effectiveHistory: HandResult[] =
     scoreHistory && scoreHistory.length > 0 ? scoreHistory : derivedHistory;
 
-  // Sort players by score
-  const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
+  // Cumulative "made-bet" bonus count per player, derived from the
+  // authoritative hand history (same server snapshot for every client).
+  // This is the tie-break key for the game winner — see engine Rule 7
+  // (`determineWinner` in supabase/functions/_shared/engine/rules.ts):
+  // equal total score → the player with more bonuses ranks first.
+  const bonusCountById = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const h of effectiveHistory) {
+      for (const r of h.results) {
+        if (r.bonus > 0) counts[r.playerId] = (counts[r.playerId] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [effectiveHistory]);
+
+  // Sort players by score, then by cumulative bonus count (Rule 7 tie-break).
+  // When both are equal the stable sort preserves seat order.
+  const sortedPlayers = [...players].sort(
+    (a, b) =>
+      b.totalScore - a.totalScore ||
+      (bonusCountById[b.id] ?? 0) - (bonusCountById[a.id] ?? 0),
+  );
   const leader = sortedPlayers[0];
 
   // Base stake visibility: only players who opted into rating see the
