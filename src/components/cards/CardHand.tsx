@@ -39,6 +39,9 @@ export interface CardHandProps extends ScrollViewProps {
    */
   cardOverlap?: number;
   size?: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
+  /** Uniform multiplier for card size + overlap, forwarded to PlayingCard.
+   *  Used to double card size on very wide screens (≥1800px). Default 1. */
+  scale?: number;
   horizontal?: boolean;
   maxHeight?: number;
 }
@@ -73,13 +76,14 @@ export const CardHand: React.FC<CardHandProps> = ({
   onCardPress,
   cardOverlap,
   size = 'medium',
+  scale = 1,
   horizontal = true,
   maxHeight,
   style,
   contentContainerStyle,
   ...scrollViewProps
 }) => {
-  const cardWidth = getCardWidth(size);
+  const cardWidth = getCardWidth(size) * scale;
 
   // Dynamic overlap calculation based on number of cards
   const calculateOverlap = (): number => {
@@ -96,7 +100,7 @@ export const CardHand: React.FC<CardHandProps> = ({
     return 20; // Default overlap
   };
 
-  const actualOverlap = calculateOverlap();
+  const actualOverlap = calculateOverlap() * scale;
   const effectiveCardWidth = Math.max(cardWidth - actualOverlap, cardWidth * 0.4);
 
   // Calculate total content width to ensure scrolling works
@@ -114,7 +118,7 @@ export const CardHand: React.FC<CardHandProps> = ({
     return (
       <View
         key={card.id}
-        style={styles.cardWrapper}
+        style={[styles.cardWrapper, { marginRight: -25 * scale }]}
       >
         <PlayingCard
           suit={card.suit}
@@ -124,6 +128,7 @@ export const CardHand: React.FC<CardHandProps> = ({
           playable={false}
           disabled={isDimmed}
           size={size}
+          scale={scale}
           onPress={() => onCardPress?.(card.id)}
           testID={`card-${card.suit}-${card.rank}`}
         />

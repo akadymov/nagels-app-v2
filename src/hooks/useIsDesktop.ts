@@ -15,9 +15,26 @@ import { useWindowDimensions } from 'react-native';
 
 export const DESKTOP_MIN_WIDTH = 1024;
 
+/**
+ * Very-wide screen threshold. At/above this width (large external monitors,
+ * Discord desktop maximized) the table has so much room that the default
+ * card sizes look tiny, so callers double every card's `scale`.
+ */
+export const WIDE_DESKTOP_MIN_WIDTH = 1800;
+
 export function useIsDesktop(): boolean {
   const { width } = useWindowDimensions();
   return width >= DESKTOP_MIN_WIDTH;
+}
+
+/**
+ * True on very wide viewports (>= WIDE_DESKTOP_MIN_WIDTH). Width-only — a
+ * screen this wide is a large display regardless of pointer type, so trick
+ * and last-trick cards (which have no desktop gating) scale up too.
+ */
+export function useIsWideDesktop(): boolean {
+  const { width } = useWindowDimensions();
+  return width >= WIDE_DESKTOP_MIN_WIDTH;
 }
 
 /**

@@ -26,6 +26,10 @@ export interface PlayingCardProps {
   playable?: boolean;
   disabled?: boolean;
   size?: 'tiny' | 'small' | 'medium' | 'large' | 'huge';
+  /** Multiplier applied to every dimension (width/height/fonts/corner
+   *  insets). Used to up-scale all cards on very wide screens (≥1800px)
+   *  so the table fills the extra room. Default 1. */
+  scale?: number;
   onPress?: () => void;
   style?: any;
   testID?: string;
@@ -52,6 +56,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   playable = false,
   disabled = false,
   size = 'medium',
+  scale = 1,
   onPress,
   style,
   testID,
@@ -62,46 +67,33 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const rankLabel = getRankLabel(rank);
 
   const getSizeConfig = () => {
-    switch (size) {
-      case 'tiny':
-        return {
-          width: 60,
-          height: 84,
-          cornerSize: 12,
-          centerSuitSize: 24,
-        };
-      case 'small':
-        return {
-          width: 66,
-          height: 92,
-          cornerSize: 13,
-          centerSuitSize: 26,
-        };
-      case 'large':
-        return {
-          width: 100,
-          height: 140,
-          cornerSize: 18,
-          centerSuitSize: 40,
-        };
-      // ~2x of "small" — for desktop betting / play where there's
-      // plenty of horizontal room and the player wants to read
-      // suits and ranks at a glance.
-      case 'huge':
-        return {
-          width: 140,
-          height: 196,
-          cornerSize: 24,
-          centerSuitSize: 56,
-        };
-      default: // medium
-        return {
-          width: 80,
-          height: 112,
-          cornerSize: 14,
-          centerSuitSize: 32,
-        };
-    }
+    const base = (() => {
+      switch (size) {
+        case 'tiny':
+          return { width: 60, height: 84, cornerSize: 12, centerSuitSize: 24 };
+        case 'small':
+          return { width: 66, height: 92, cornerSize: 13, centerSuitSize: 26 };
+        case 'large':
+          return { width: 100, height: 140, cornerSize: 18, centerSuitSize: 40 };
+        // ~2x of "small" — for desktop betting / play where there's
+        // plenty of horizontal room and the player wants to read
+        // suits and ranks at a glance.
+        case 'huge':
+          return { width: 140, height: 196, cornerSize: 24, centerSuitSize: 56 };
+        default: // medium
+          return { width: 80, height: 112, cornerSize: 14, centerSuitSize: 32 };
+      }
+    })();
+    // `scale` up-scales every dimension uniformly (≥1800px wide screens).
+    // The corner inset (6px in the static styles) scales too so the
+    // rank/suit doesn't crowd the corner on doubled cards.
+    return {
+      width: base.width * scale,
+      height: base.height * scale,
+      cornerSize: base.cornerSize * scale,
+      centerSuitSize: base.centerSuitSize * scale,
+      cornerInset: 6 * scale,
+    };
   };
 
   const sizeConfig = getSizeConfig();
@@ -124,7 +116,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       ]}
     >
       {/* Top corner — Rank + Suit */}
-      <View style={[styles.corner, styles.topCorner]}>
+      <View style={[styles.corner, styles.topCorner, { top: sizeConfig.cornerInset, left: sizeConfig.cornerInset }]}>
         <Text style={[
           styles.cornerText,
           { color: suitColor, fontSize: sizeConfig.cornerSize, lineHeight: sizeConfig.cornerSize * 1.2 },
@@ -144,7 +136,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       </View>
 
       {/* Bottom corner (rotated) */}
-      <View style={[styles.corner, styles.bottomCorner]}>
+      <View style={[styles.corner, styles.bottomCorner, { bottom: sizeConfig.cornerInset, right: sizeConfig.cornerInset }]}>
         <Text style={[
           styles.cornerText,
           { color: suitColor, fontSize: sizeConfig.cornerSize, lineHeight: sizeConfig.cornerSize * 1.2 },

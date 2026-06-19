@@ -23,7 +23,7 @@ import { buildInviteLink } from '../../utils/inviteLink';
 import { Colors, Spacing, Radius, TextStyles } from '../../constants';
 import { Icon } from '../Icon';
 import { useTheme } from '../../hooks/useTheme';
-import { useIsDesktop, useIsTrueDesktop } from '../../hooks/useIsDesktop';
+import { useIsDesktop, useIsTrueDesktop, useIsWideDesktop } from '../../hooks/useIsDesktop';
 import { useDesktopGameUI } from '../../screens/desktop/DesktopGameContext';
 import { GameLogo } from '../GameLogo';
 import { useRoomStore } from '../../store/roomStore';
@@ -87,6 +87,8 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Strict mouse-driven desktop check used only for huge cards —
   // avoids blowing them up on iPad Safari in landscape.
   const isTrueDesktop = useIsTrueDesktop();
+  // Very wide viewport (>= 1800px): double the betting-hand cards too.
+  const cardScale = useIsWideDesktop() ? 2 : 1;
   // Wired by DesktopGameLayout — drives the left-pane toggles.
   // Null on mobile / non-desktop wrappers; we fall back to modals.
   const desktopUI = useDesktopGameUI();
@@ -975,6 +977,7 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
             <CardHand
               cards={sortedHandCards as any}
               size={isTrueDesktop ? 'huge' : 'tiny'}
+              scale={cardScale}
               // Desktop: render in a 5-per-row grid so the whole hand
               // is visible at once (Akula: "нельзя заставлять угадывать
               // про горизонтальный скролл"). Mobile keeps the

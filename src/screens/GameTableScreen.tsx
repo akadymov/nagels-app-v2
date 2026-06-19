@@ -43,7 +43,7 @@ import { useChatStore } from '../store/chatStore';
 import { PlayingCard, CardHand } from '../components/cards';
 import { Colors, Spacing, Radius, TextStyles, SuitSymbols } from '../constants';
 import { useTheme } from '../hooks/useTheme';
-import { useIsDesktop, useIsTrueDesktop } from '../hooks/useIsDesktop';
+import { useIsDesktop, useIsTrueDesktop, useIsWideDesktop } from '../hooks/useIsDesktop';
 import { useIsDiscordActivity } from '../hooks/useIsDiscordActivity';
 import { getDiscordProfile } from '../lib/discord/bootstrap';
 import { useDiscordParticipantSync } from '../lib/discord/participants';
@@ -125,6 +125,9 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Strict mouse-driven check used only for huge cards — keeps
   // iPad Safari (touch, no hover) on the mobile card scale.
   const isTrueDesktop = useIsTrueDesktop();
+  // Very wide viewport (>= 1800px): double every card so the table fills
+  // the extra room. Width-only, so it also lifts the trick/last-trick cards.
+  const cardScale = useIsWideDesktop() ? 2 : 1;
   const isDiscord = useIsDiscordActivity();
   // Live viewport — iOS Safari recomputes innerHeight after Modal opens
   // (URL bar collapse). Capturing it once at module load left the table /
@@ -1627,7 +1630,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                         },
                       ]}
                     >
-                      <PlayingCard suit={played.card.suit} rank={played.card.rank} size="tiny" testID="trick-card" />
+                      <PlayingCard suit={played.card.suit} rank={played.card.rank} size="tiny" scale={cardScale} testID="trick-card" />
                     </View>
                   );
                 })}
@@ -1693,6 +1696,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   dimUnplayable={isMyTurnPlaying}
                   onCardPress={handleCardPress}
                   size={isDiscord ? 'tiny' : (isTrueDesktop ? 'huge' : 'tiny')}
+                  scale={cardScale}
                   horizontal={isDiscord}
                   cardOverlap={isDiscord ? vm.myPlayer.hand.length : undefined}
                 />
@@ -1870,6 +1874,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                               suit={played.card.suit as any}
                               rank={played.card.rank as any}
                               size={useLarge ? 'small' : 'tiny'}
+                              scale={cardScale}
                             />
                             <Text style={[styles.lastTrickPlayerName, { color: colors.textSecondary }]} numberOfLines={1}>
                               {player?.name || '?'}

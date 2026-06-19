@@ -33,6 +33,7 @@ import { useChatTooltipStore } from '../../store/chatTooltipStore';
 import { useAuthStore } from '../../store/authStore';
 import { getDiscordProfile } from '../../lib/discord/bootstrap';
 import { DesktopGameUIContext, type LeftPanel } from './DesktopGameContext';
+import { useIsWideDesktop } from '../../hooks/useIsDesktop';
 
 type Props = GameTableScreenProps;
 
@@ -94,6 +95,10 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   const { t } = useTranslation();
   const isMultiplayer = props.isMultiplayer ?? false;
   const isDiscord = useIsDiscordActivity();
+  // Very wide viewport (>= 1800px): double the last-trick cards in the
+  // left pane, in step with the table. The pane is a vertical list so
+  // taller cards just scroll — no horizontal overflow.
+  const cardScale = useIsWideDesktop() ? 2 : 1;
 
   // ── Multiplayer data sources ──
   const snapshot = useRoomStore((s) => s.snapshot);
@@ -316,7 +321,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
                 <Text style={[styles.scoreName, { color: colors.textPrimary }]} numberOfLines={1}>
                   {c.playerName}{c.isWinner ? ' 👑' : ''}
                 </Text>
-                <PlayingCard suit={c.suit} rank={c.rank} size="small" />
+                <PlayingCard suit={c.suit} rank={c.rank} size="small" scale={cardScale} />
               </View>
             ))}
           </ScrollView>
