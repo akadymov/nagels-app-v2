@@ -211,10 +211,44 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
 
   if (!visible) return null;
 
-  const renderWinnerBanner = () => {
+  const renderWinnerBanner = (compact = false) => {
     const winner = sortedPlayers[0];
     if (!winner) return null;
     const avatarBg = winner.avatarColor || avatarColorFor(winner.id);
+    // Compact horizontal banner for the detailed/history view, where the
+    // tall celebration card would otherwise push the hand list off-screen.
+    if (compact) {
+      return (
+        <Animated.View
+          testID="scoreboard-winner-banner"
+          style={[
+            styles.winnerBannerCompact,
+            { backgroundColor: 'rgba(48,133,82,0.12)', borderColor: colors.success,
+              opacity: bannerOpacity, transform: [{ scale: bannerScale }] },
+          ]}
+        >
+          <UserAvatar
+            avatarUrl={winner.avatarUrl}
+            emoji={winner.avatar}
+            fallback={(winner.name?.[0] ?? '?').toUpperCase()}
+            backgroundColor={avatarBg}
+            size={36}
+            textSize={18}
+          />
+          <View style={styles.winnerCompactText}>
+            <Text style={[styles.winnerCompactName, { color: colors.success }]} numberOfLines={1}>
+              🏆 {winner.name}
+            </Text>
+            <Text style={[styles.winnerCompactLabel, { color: colors.textMuted }]} numberOfLines={1}>
+              {t('scoreboard.gameOver')}
+            </Text>
+          </View>
+          <Text style={[styles.winnerCompactScore, { color: colors.success }]} numberOfLines={1}>
+            {winner.totalScore} {t('scoreboard.points', 'pts')}
+          </Text>
+        </Animated.View>
+      );
+    }
     return (
       <Animated.View
         testID="scoreboard-winner-banner"
@@ -549,7 +583,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
     return (
       <View style={[styles.embeddedRoot, { backgroundColor: colors.background }]}>
         {renderViewToggle()}
-        {isGameOver && renderWinnerBanner()}
+        {isGameOver && renderWinnerBanner(showFull && effectiveHistory.length > 0)}
         {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
         {/* Game-over Play Again button stays even when embedded —
             the host needs an explicit action to restart the room.
@@ -610,7 +644,7 @@ export const ScoreboardModal: React.FC<ScoreboardModalProps> = ({
             {/* Game-over winner banner — animated celebration card that
                 lands at the top of the scoreboard so the winner shot and
                 the rankings are visible together in a single modal. */}
-            {isGameOver && renderWinnerBanner()}
+            {isGameOver && renderWinnerBanner(showFull && effectiveHistory.length > 0)}
 
             {/* Content */}
             {showFull && effectiveHistory.length > 0 ? renderFullTable() : renderCompact()}
@@ -782,6 +816,34 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     marginTop: 4,
+  },
+  winnerBannerCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    borderRadius: Radius.lg,
+    borderWidth: 2,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  winnerCompactText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  winnerCompactName: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  winnerCompactLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  winnerCompactScore: {
+    fontSize: 18,
+    fontWeight: '800',
   },
   // Compact mode
   compactContainer: {
