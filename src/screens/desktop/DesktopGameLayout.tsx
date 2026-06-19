@@ -98,7 +98,7 @@ export const DesktopGameLayout: React.FC<Props> = (props) => {
   // Very wide viewport (>= 1800px): double the last-trick cards in the
   // left pane, in step with the table. The pane is a vertical list so
   // taller cards just scroll — no horizontal overflow.
-  const cardScale = useIsWideDesktop() ? 2 : 1;
+  const cardScale = useIsWideDesktop() ? 1.5 : 1;
 
   // ── Multiplayer data sources ──
   const snapshot = useRoomStore((s) => s.snapshot);

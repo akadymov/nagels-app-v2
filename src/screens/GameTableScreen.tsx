@@ -125,9 +125,12 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
   // Strict mouse-driven check used only for huge cards — keeps
   // iPad Safari (touch, no hover) on the mobile card scale.
   const isTrueDesktop = useIsTrueDesktop();
-  // Very wide viewport (>= 1800px): double every card so the table fills
+  // Very wide viewport (>= 1800px): enlarge every card so the table fills
   // the extra room. Width-only, so it also lifts the trick/last-trick cards.
-  const cardScale = useIsWideDesktop() ? 2 : 1;
+  // 1.5× (not 2×) keeps the hand within handSection's maxHeight so the
+  // playing screen still fits the viewport without vertical scroll.
+  const isWideDesktop = useIsWideDesktop();
+  const cardScale = isWideDesktop ? 1.5 : 1;
   const isDiscord = useIsDiscordActivity();
   // Live viewport — iOS Safari recomputes innerHeight after Modal opens
   // (URL bar collapse). Capturing it once at module load left the table /
@@ -1697,8 +1700,13 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
                   onCardPress={handleCardPress}
                   size={isDiscord ? 'tiny' : (isTrueDesktop ? 'huge' : 'tiny')}
                   scale={cardScale}
-                  horizontal={isDiscord}
-                  cardOverlap={isDiscord ? vm.myPlayer.hand.length : undefined}
+                  // Wide desktop (≥1800px) uses a single overlapping row
+                  // instead of the 2-row grid: the grid is an un-scrolled
+                  // View that overflows handSection's maxHeight and spills
+                  // past the viewport (vertical page scroll). One row stays
+                  // a single card tall and fits the capped handSection.
+                  horizontal={isDiscord || isWideDesktop}
+                  cardOverlap={(isDiscord || isWideDesktop) ? vm.myPlayer.hand.length : undefined}
                 />
               </View>
             </View>

@@ -87,8 +87,10 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
   // Strict mouse-driven desktop check used only for huge cards —
   // avoids blowing them up on iPad Safari in landscape.
   const isTrueDesktop = useIsTrueDesktop();
-  // Very wide viewport (>= 1800px): double the betting-hand cards too.
-  const cardScale = useIsWideDesktop() ? 2 : 1;
+  // Very wide viewport (>= 1800px): enlarge the betting-hand cards too.
+  // 1.5× (not 2×) so the whole betting screen fits the viewport height.
+  const isWideDesktop = useIsWideDesktop();
+  const cardScale = isWideDesktop ? 1.5 : 1;
   // Wired by DesktopGameLayout — drives the left-pane toggles.
   // Null on mobile / non-desktop wrappers; we fall back to modals.
   const desktopUI = useDesktopGameUI();
@@ -627,7 +629,11 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
       )}
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        // Desktop reserves far less bottom space than mobile's 160px
+        // (which clears the browser/PWA chrome on phones). On wide desktop
+        // the trimmed padding keeps the whole betting screen inside the
+        // viewport so it doesn't scroll vertically.
+        contentContainerStyle={[styles.scrollContent, isTrueDesktop && { paddingBottom: Spacing.lg }]}
         showsVerticalScrollIndicator
         refreshControl={
           isMultiplayer ? <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} /> : undefined
@@ -982,7 +988,13 @@ export const BettingPhase: React.FC<BettingPhaseProps> = ({
               // is visible at once (Akula: "нельзя заставлять угадывать
               // про горизонтальный скролл"). Mobile keeps the
               // overlapping single-row scroller to save space.
-              horizontal={!isTrueDesktop}
+              // Very wide screens (≥1800px) fall back to the single
+              // overlapping row too: at 1.5× the fanned hand fits the
+              // viewport width without horizontal scroll, and staying one
+              // card tall (instead of a 2-row grid) keeps the whole
+              // betting screen within the viewport height — no vertical
+              // scroll.
+              horizontal={!isTrueDesktop || isWideDesktop}
               cardOverlap={myHandCards.length}
             />
           </View>
