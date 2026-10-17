@@ -554,6 +554,7 @@
     "nextHand": "Donne suivante",
     "showBoard": "Table",
     "reconnecting": "Reconnexion…",
+    "waitingTour": "En attente du tour {{n}}",
     "takenOver": "La saisie a été reprise par un autre téléphone",
     "takeBack": "Reprendre",
     "tableNotInTour": "La table {{n}} n'est pas dans le tour {{tour}}",

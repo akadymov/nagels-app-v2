@@ -562,6 +562,7 @@
     "nextHand": "Следующая раздача",
     "showBoard": "Стол",
     "reconnecting": "Переподключение…",
+    "waitingTour": "Ожидание тура {{n}}",
     "takenOver": "Запись перехвачена другим телефоном",
     "takeBack": "Забрать обратно",
     "tableNotInTour": "Стола {{n}} нет в туре {{tour}}",

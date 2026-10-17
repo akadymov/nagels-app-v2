@@ -9,6 +9,7 @@ import { NavigationContainer, useNavigation, createNavigationContainerRef } from
 import { createStackNavigator } from '@react-navigation/stack';
 import { FeedbackButton } from '../components/FeedbackButton';
 import { SettingsModal } from '../components/SettingsModal';
+import { TournamentSetupScreen, TournamentRecorderScreen, TournamentTvScreen } from '../screens/tournament';
 import { CrossDeviceRejoinGuard } from '../components/CrossDeviceRejoinGuard';
 import { useSettingsUIStore } from '../store/settingsUIStore';
 import {
@@ -66,6 +67,10 @@ export type RootStackParamList = {
   Profile: undefined;
   EmailConfirmed: undefined;
   ResetPassword: undefined;
+  TournamentNew: undefined;
+  TournamentAdmin: { code?: string; k?: string; t?: string | number };
+  TournamentTable: { code?: string; n?: string | number; k?: string };
+  TournamentTv: { code?: string; k?: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -117,6 +122,10 @@ const linking = {
     screens: {
       EmailConfirmed: 'auth/callback',
       ResetPassword: 'reset-password',
+      TournamentNew: 'tournament/new',
+      TournamentAdmin: 'tournament/:code/admin',
+      TournamentTable: 'tournament/:code/table/:n',
+      TournamentTv: 'tournament/:code/tv',
     },
   },
 };
@@ -467,7 +476,7 @@ const GlobalFeedbackOverlay: React.FC = () => {
     };
   }, []);
 
-  if (isDiscord) return null;
+  if (isDiscord || routeName === 'TournamentTv') return null;
   return <FeedbackButton screenName={routeName} />;
 };
 
@@ -585,6 +594,39 @@ export const AppNavigator: React.FC<AppNavigatorProps> = () => {
                   playerName={props.route?.params?.playerName}
                   onExit={() => (props.navigation as any).goBack()}
                 />
+              )}
+            </Stack.Screen>
+
+            <Stack.Screen name="TournamentNew">
+              {(props) => (
+                <TournamentSetupScreen
+                  onCreated={({ code, secret, tableCount }) =>
+                    (props.navigation as any).navigate('TournamentAdmin', { code, k: secret, t: tableCount })}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="TournamentAdmin">
+              {(props) => (
+                <TournamentSetupScreen
+                  code={props.route?.params?.code}
+                  secret={props.route?.params?.k}
+                  initialTableCount={Number(props.route?.params?.t) || undefined}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="TournamentTable">
+              {(props) => (
+                <TournamentRecorderScreen
+                  code={props.route?.params?.code as string}
+                  tableNumber={Number(props.route?.params?.n)}
+                  secret={props.route?.params?.k as string}
+                  onExit={() => (props.navigation as any).navigate('Lobby')}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="TournamentTv">
+              {(props) => (
+                <TournamentTvScreen code={props.route?.params?.code} secret={props.route?.params?.k} />
               )}
             </Stack.Screen>
 
