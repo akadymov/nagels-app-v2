@@ -31,6 +31,7 @@
 3. **Wrong bet entered for the last bidder, noticed after phase flipped to tricks_recording** → undo still works. Pinned in Task 2 (SQL test for undo in `tricks_recording`).
 4. **Admin session lost (guest cleared, different phone)** → the admin link `?k=` still controls the tournament. Pinned in Task 4 (admin authorization accepts the secret).
 5. **Stale `roomStore` version when the recorder moves to another table or tour** → the new table renders, not a frozen old one. Pinned in Task 7 (`useRoomStore.getState().reset()` on room change).
+6. **Another phone takes over the table** → the old phone stops showing live controls and offers **Take back**; no half-entered action is silently rejected. Pinned in Task 7 (host check on every snapshot) and Task 10 (e2e takeover step).
 
 ---
 
@@ -1710,6 +1711,8 @@ Add to `en.json` (top-level `"tournament"` object), and translate the same keys 
   "nextHand": "Next hand",
   "showBoard": "Table",
   "reconnecting": "Reconnecting…",
+  "takenOver": "Recording was taken over by another phone",
+  "takeBack": "Take back",
   "errors": {
     "no_stakes_capacity": "Too many “no money” players for the tables without stakes — make one more table stake-free.",
     "no_stakes_at_stake_table": "A “no money” player can't sit at a table with stakes.",
@@ -1722,7 +1725,7 @@ Add to `en.json` (top-level `"tournament"` object), and translate the same keys 
   }
 }
 ```
-RU wording: `"noStakes": "Без денег"`, `"stake": "Ставка"`, `"stakeUnits": "{{stake}} за очко"`, `"betsTurn": "Заказывает {{name}}"`, `"dealer": "Сдаёт"`, `"undo": "Отменить последнюю ставку"`, `"tricksTitle": "Взятки"`, `"submitTricks": "Записать раздачу"`, `"nextHand": "Следующая раздача"`, `"forbidden": "{{n}} нельзя — кто-то должен остаться недовольным"`, `"leaderboard": "Турнирная таблица"`, `"colBalance": "Баланс"`, `"shuffle": "Раскидать рассадку"`, `"startTour": "Начать тур {{n}}"`.
+RU wording: `"noStakes": "Без денег"`, `"stake": "Ставка"`, `"stakeUnits": "{{stake}} за очко"`, `"betsTurn": "Заказывает {{name}}"`, `"dealer": "Сдаёт"`, `"undo": "Отменить последнюю ставку"`, `"tricksTitle": "Взятки"`, `"submitTricks": "Записать раздачу"`, `"nextHand": "Следующая раздача"`, `"forbidden": "{{n}} нельзя — кто-то должен остаться недовольным"`, `"leaderboard": "Турнирная таблица"`, `"takenOver": "Запись перехвачена другим телефоном"`, `"takeBack": "Забрать обратно"`, `"colBalance": "Баланс"`, `"shuffle": "Раскидать рассадку"`, `"startTour": "Начать тур {{n}}"`.
 
 - [ ] **Step 3: Components**
 
@@ -1889,9 +1892,10 @@ Behaviour:
    - `phase === 'tricks_recording'` → `<RecorderTricks state={snapshot} />`;
    - `phase === 'scoring'` → compact result rows (name, bet, took, hand score) + **Next hand** → `gameClient.continueHand(room.id, hand.id)` (busy-guarded; idempotent server-side);
    - `room.phase === 'finished'` → `finished` + `<TableBoard size="phone">`.
-5. Never mounts `useHeartbeat`, `useTurnTimeout`, `useHostAbsentTicker`, `HostLeftBanner`, `PausedOverlay`, chat.
+5. **Takeover detection:** `const takenOver = !!snapshot?.room && !!myPlayerId && snapshot.room.host_session_id !== myPlayerId` (`myPlayerId` comes from `useRoomStore`, set by `postAction` from `me_session_id`). When `takenOver`, render only a full-width card `t('tournament.takenOver')` + **Take back** button (testID `recorder-take-back`), which re-runs the claim from step 1, plus the read-only `<TableBoard size="phone">`. Hide the bet pad, tricks steppers and Next hand. Also treat an action response with `error === 'not_recorder'` as takenOver (the snapshot in that response already carries the new host).
+6. Never mounts `useHeartbeat`, `useTurnTimeout`, `useHostAbsentTicker`, `HostLeftBanner`, `PausedOverlay`, chat.
 
-testIDs: `tournament-recorder`, `recorder-next-hand`, `recorder-board-toggle`.
+testIDs: `tournament-recorder`, `recorder-next-hand`, `recorder-board-toggle`, `recorder-taken-over`, `recorder-take-back`.
 
 - [ ] **Step 6: Typecheck**
 
@@ -2034,7 +2038,7 @@ git commit -m "feat(tournament): admin setup — participants, stakes, pins, shu
 
 `TournamentTvScreen({ code, secret })`:
 - `const { data, error } = useTournamentState(code)`.
-- Full-viewport dark layout, no scroll: title row (name · `tour` n · a `reconnecting` badge when the last refetch errored), then a row of `data.tables.length` equal columns, each `<TableBoard table size="tv" />`. If `!table.claimed && secret`, overlay `<TableQr url={\`${origin}/tournament/${code}/table/${n}?k=${secret}\`} size={220} />` + `scanToRecord` in that column.
+- Full-viewport dark layout, no scroll: title row (name · `tour` n · a `reconnecting` badge when the last refetch errored), then a row of `data.tables.length` equal columns, each `<TableBoard table size="tv" />`. When `secret` is present, every column shows the claim QR `<TableQr url={\`${origin}/tournament/${code}/table/${n}?k=${secret}\`} />`: large (`size={220}` + `scanToRecord`, centered over the board) while `!table.claimed`, and small (`size={96}`, top-right corner of the column, no label) once claimed, so anyone can take over at any time.
 - Bottom strip (≈30% height): `<Leaderboard state={data} />`, laid out in 2 columns when there are more than 8 participants.
 - Before the first tour, show the participants list and "waiting for tour 1".
 - Use `window.location.origin` on web (the TV is always web).
@@ -2141,7 +2145,8 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
 
   await phone.goto(`${BASE}/tournament/${code}/table/1?k=${k}`);
   await expect(phone.locator('[data-testid="tournament-recorder"]')).toBeVisible();
-  await expect(tv.locator('[data-testid="tournament-table-qr"]')).toHaveCount(0, { timeout: 5000 });
+  // After claim the QR stays, small, for takeover.
+  await expect(tv.locator('[data-testid="tournament-table-qr"]')).toHaveCount(1);
 
   // 4 bets of 0 except the last; undo once in the middle.
   await tap(phone, 'recorder-bet-0');
@@ -2159,6 +2164,15 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
 
   await expect(tv.locator('[data-testid="tournament-status-1"]')).toContainText(/scored/i, { timeout: 5000 });
   await expect(tv.locator('[data-testid="tournament-leaderboard"]')).toBeVisible();
+
+  // Takeover: a second phone claims the table; the first phone offers Take back.
+  const phone2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await phone2.goto(`${BASE}/tournament/${code}/table/1?k=${k}`);
+  await expect(phone2.locator('[data-testid="recorder-next-hand"]')).toBeVisible();
+  await expect(phone.locator('[data-testid="recorder-taken-over"]')).toBeVisible({ timeout: 5000 });
+  await tap(phone, 'recorder-take-back');
+  await expect(phone.locator('[data-testid="recorder-next-hand"]')).toBeVisible();
+  await expect(phone2.locator('[data-testid="recorder-taken-over"]')).toBeVisible({ timeout: 5000 });
 });
 ```
 The default locale under Playwright is EN, so the status text matches `Hand scored`.

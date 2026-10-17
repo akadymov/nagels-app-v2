@@ -48,7 +48,7 @@ A recorder is never a seat. If the recorder also plays, they are simply one of t
    4. **Manual fix-up:** in the preview the admin can tap a participant and move them to another table, or swap them with someone. A move that would put a no-stakes participant at a stake table, or push a table above 6 or below 2 players, is blocked inline.
    If the constraints can't be met (e.g. 7 no-stakes participants and only one stake-0 table), the shuffle shows the reason and suggests making one more table stake-0.
 3. **Start tour** creates one scorekeeper room per table with proxy players already seated and ready, and immediately starts the game in each room (hand 1, betting). Rooms are created `silent` with no Telegram announce.
-4. The TV opens `/tournament/<CODE>/tv`. Each table column shows a QR code until it is claimed. The QR encodes `/tournament/<CODE>/table/<n>?k=<secret>`.
+4. The TV opens `/tournament/<CODE>/tv`. Each table column shows a large QR code until it is claimed, then a small QR in the column corner so anyone can take over recording at any time. The QR encodes `/tournament/<CODE>/table/<n>?k=<secret>`.
 5. The recorder scans the QR and becomes the room's host (`claim_table`). The recorder screen shows:
    - the existing briefing (dealer, play order, trump, cards in this hand);
    - **betting:** "<Name> bets", a 0..N number pad with the forbidden last-bidder value disabled, and an **Undo last bet** button;
@@ -174,7 +174,8 @@ All strings go to EN / RU / ES locales.
 
 ## Error handling
 
-- A recorder phone that goes to sleep or reloads re-opens the same URL; `claim_table` is idempotent for the current host. A second phone claiming the same table takes over, which is the intended recovery when a phone dies.
+- A recorder phone that goes to sleep or reloads re-opens the same URL; `claim_table` is idempotent for the current host.
+- **Takeover:** any phone that opens the table link (or scans the TV QR) becomes the recorder; this is the intended recovery when a phone dies. The previous recorder's screen notices on the next state update (room host is no longer this session), and its controls are replaced by "Recording was taken over by another phone" with a **Take back** button (re-claims the table).
 - An action rejected with `not_your_turn` / `someone_must_be_unhappy` shows an inline message and the refreshed snapshot; nothing is lost.
 - If the TV loses its connection it shows a "reconnecting" badge and refetches on reconnect; it holds no state of its own.
 
