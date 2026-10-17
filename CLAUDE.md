@@ -86,5 +86,27 @@ Full rule: `docs/principles.md` §8 "Test side-effect hygiene".
 - [Legacy codebase](https://github.com/akadymov/nagels-app) — original Svelte/Firebase implementation
 - Product roadmap spreadsheet — private Google Sheet (ask Akula for access; link kept out of the repo deliberately)
 
+## Available skills
+
+- `changelog` — generate changelog / release notes from git commits (global skill).
+- `skill-creator` — interactively build new skills (plugin).
+- `humanizer` — strip AI-writing tells from English text, e.g. release announcements (plugin, `/humanizer`).
+- `pohuy` — terse replies in idiomatic Russian profanity, 18+ (plugin, enabled for this project only).
+  On: `/pohuy [lite|full|ultra]`. Off: `/pohuy normal`. Chat replies only — never in code, commits, docs or i18n strings.
+
+## Changelog policy
+
+- scope: user-facing
+- group-by: type
+- version-bump: confirm
+
+The `changelog` skill reads this section and infers line format from the existing `CHANGELOG.md`.
+
+## Interview modes
+
+Before non-trivial work, pick one:
+- `superpowers:brainstorming` — default for creative work; continues into `writing-plans`.
+- `/interview-me` — strict requirements interview with pushback and a decision audit trail. Run explicitly.
+
 ## Workflow
 Akula (User) provides strategic direction. Specialized agents in `.claude/agents/` handle domain-specific tasks. See `.claude/rules/` for immutable constraints.
