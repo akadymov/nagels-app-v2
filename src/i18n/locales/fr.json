@@ -556,6 +556,7 @@
     "reconnecting": "Reconnexion…",
     "takenOver": "La saisie a été reprise par un autre téléphone",
     "takeBack": "Reprendre",
+    "tableNotInTour": "La table {{n}} n'est pas dans le tour {{tour}}",
     "errors": {
       "no_stakes_capacity": "Trop de joueurs « sans argent » pour les tables sans mise — rendez une table de plus sans mise.",
       "no_stakes_at_stake_table": "Un joueur « sans argent » ne peut pas s'asseoir à une table avec mise.",
@@ -564,6 +565,14 @@
       "invalid_participants": "Saisissez au moins 2 noms différents.",
       "bad_secret": "Ce lien n'est plus valide.",
       "not_admin": "Seul l'administrateur du tournoi peut faire cela.",
+      "unknown_tournament": "Tournoi introuvable.",
+      "no_such_table": "Cette table n'existe pas dans le tour actuel.",
+      "not_recorder": "Un autre téléphone enregistre cette table.",
+      "wrong_phase": "Impossible à ce stade de la donne.",
+      "nothing_to_undo": "Rien à annuler.",
+      "cannot_undo": "La dernière mise ne peut plus être annulée.",
+      "internal_error": "Erreur serveur — réessayez.",
+      "not_signed_in": "Non connecté — rechargez la page.",
       "generic": "Une erreur s'est produite — réessayez."
     }
   }

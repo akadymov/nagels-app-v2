@@ -26,15 +26,14 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
   const { colors } = useTheme();
   const snapshot = useRoomStore((s) => s.snapshot);
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
-  const [roomId, setRoomId] = useState<string | undefined>();
   const [claimError, setClaimError] = useState<string | null>(null);
   const [showBoard, setShowBoard] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [missingTour, setMissingTour] = useState<number | null>(null);
   const claimSeq = useRef(0);
   const claimedTour = useRef<number | null>(null);
+  const roomIdRef = useRef<string | undefined>();
 
-  const { data } = useTournamentState(code, { skipRoomId: roomId });
+  const { data } = useTournamentState(code, { roomChannels: false });
 
   const claim = useCallback(async (fresh: boolean) => {
     const seq = ++claimSeq.current;
@@ -44,7 +43,7 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
       const r = await gameClient.tournamentClaimTable(code, tableNumber, secret);
       if (seq !== claimSeq.current) return;
       if (r.ok) {
-        setRoomId(r.room_id);
+        roomIdRef.current = r.room_id;
         subscribeRoom(r.room_id);
         claimedTour.current = r.state?.room?.tour_number ?? claimedTour.current;
       } else {
@@ -62,19 +61,23 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
 
   // Follow the tournament to the next tour on the same QR/URL.
   const currentTour = data?.tournament.current_tour;
+  const tourTables = data?.tables ?? [];
+  const tourTable = tourTables.find((tb) => tb.table_number === tableNumber);
+  const tourRoomId = tourTable?.room_id ?? '';
+  // Derived, never latched: start_tour creates rooms table by table.
+  const missingTour =
+    currentTour != null && claimedTour.current != null && currentTour !== claimedTour.current
+      && tourTables.length > 0 && !tourTable
+      ? currentTour : null;
+
   useEffect(() => {
-    if (currentTour == null || !data) return;
-    if (claimedTour.current == null || currentTour === claimedTour.current) { setMissingTour(null); return; }
-    if (data.tables.some((tb) => tb.table_number === tableNumber)) {
-      setMissingTour(null);
-      claimedTour.current = currentTour;
-      unsubscribeRoom();
-      void claim(true);
-    } else {
-      setMissingTour(currentTour);
-    }
+    if (currentTour == null || claimedTour.current == null) return;
+    if (!tourRoomId || tourRoomId === roomIdRef.current) return;
+    claimedTour.current = currentTour;
+    unsubscribeRoom();
+    void claim(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTour]);
+  }, [currentTour + ':' + tourRoomId]);
 
   const room = snapshot?.room ?? null;
   const hand = snapshot?.current_hand ?? null;
@@ -100,7 +103,7 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
     return (
       <Centered>
         <Text style={[styles.msg, { color: colors.textPrimary }]}>
-          {t('tournament.tableNotInTour', { n: tableNumber, tour: missingTour, defaultValue: 'Table {{n}} is not in tour {{tour}}' })}
+          {t('tournament.tableNotInTour', { n: tableNumber, tour: missingTour })}
         </Text>
         {exitBtn}
       </Centered>

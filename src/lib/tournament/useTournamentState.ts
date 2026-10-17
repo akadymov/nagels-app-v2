@@ -13,16 +13,19 @@ const REFETCH_DEBOUNCE_MS = 250;
  * channel plus every current-tour room channel and refetches the whole
  * get_tournament_state on any change. A slow poll covers missed broadcasts.
  *
+ * `opts.roomChannels` (default true): false subscribes only the tournament
+ * channel, for callers that own the room channel themselves (recorder).
  * `opts.skipRoomId`: a room the caller already subscribes to via
  * subscribeRoom (supabase-js returns the same channel instance for a
  * duplicate topic), so it is left out of the room channel list here.
  */
-export function useTournamentState(code: string | undefined, opts?: { skipRoomId?: string }) {
+export function useTournamentState(code: string | undefined, opts?: { skipRoomId?: string; roomChannels?: boolean }) {
   const [data, setData] = useState<TournamentState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipRoomId = opts?.skipRoomId;
+  const roomChannels = opts?.roomChannels ?? true;
 
   const refetch = useCallback(async () => {
     if (!code) return;
@@ -49,7 +52,7 @@ export function useTournamentState(code: string | undefined, opts?: { skipRoomId
   }, [refetch]);
 
   const tournamentId = data?.tournament.id;
-  const roomKey = (data?.tables ?? [])
+  const roomKey = !roomChannels ? '' : (data?.tables ?? [])
     .map((t) => t.room_id)
     .filter((rid) => rid !== skipRoomId)
     .join(',');

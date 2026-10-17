@@ -561,6 +561,7 @@
     "reconnecting": "Reconnecting…",
     "takenOver": "Recording was taken over by another phone",
     "takeBack": "Take back",
+    "tableNotInTour": "Table {{n}} is not in tour {{tour}}",
     "errors": {
       "no_stakes_capacity": "Too many “no money” players for the tables without stakes — make one more table stake-free.",
       "no_stakes_at_stake_table": "A “no money” player can't sit at a table with stakes.",
@@ -569,6 +570,14 @@
       "invalid_participants": "Enter at least 2 unique names.",
       "bad_secret": "This link is no longer valid.",
       "not_admin": "Only the tournament admin can do this.",
+      "unknown_tournament": "Tournament not found.",
+      "no_such_table": "This table doesn't exist in the current tour.",
+      "not_recorder": "Another phone is recording this table.",
+      "wrong_phase": "That isn't possible at this stage of the hand.",
+      "nothing_to_undo": "Nothing to undo.",
+      "cannot_undo": "The last bet can't be undone any more.",
+      "internal_error": "Server error — try again.",
+      "not_signed_in": "Not signed in — reload the page.",
       "generic": "Something went wrong — try again."
     }
   }
