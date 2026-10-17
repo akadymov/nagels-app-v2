@@ -14,20 +14,20 @@ const mkPlayers = (n: number): BriefingPlayer[] =>
   }));
 
 describe('getDealerSeat', () => {
-  it('is the seat after the starting seat (mod N)', () => {
-    expect(getDealerSeat(2, 4)).toBe(3);
-    expect(getDealerSeat(3, 4)).toBe(0);
-    expect(getDealerSeat(0, 4)).toBe(1);
+  it('is the seat before the starting seat (mod N)', () => {
+    expect(getDealerSeat(2, 4)).toBe(1);
+    expect(getDealerSeat(3, 4)).toBe(2);
+    expect(getDealerSeat(0, 4)).toBe(3);
     expect(getDealerSeat(0, 2)).toBe(1);
     expect(getDealerSeat(1, 2)).toBe(0);
-    expect(getDealerSeat(5, 6)).toBe(0);
+    expect(getDealerSeat(5, 6)).toBe(4);
   });
 });
 
 describe('getPlayOrder', () => {
-  it('starts at the first player and steps counter-clockwise', () => {
+  it('starts at the first player and follows the server seat order (+1)', () => {
     const order = getPlayOrder(mkPlayers(4), 2);
-    expect(order.map((p) => p.seat_index)).toEqual([2, 1, 0, 3]);
+    expect(order.map((p) => p.seat_index)).toEqual([2, 3, 0, 1]);
   });
   it('ends on the dealer', () => {
     const players = mkPlayers(4);
@@ -35,7 +35,7 @@ describe('getPlayOrder', () => {
     expect(order[order.length - 1].seat_index).toBe(getDealerSeat(2, players.length));
   });
   it('wraps correctly from seat 0', () => {
-    expect(getPlayOrder(mkPlayers(3), 0).map((p) => p.seat_index)).toEqual([0, 2, 1]);
+    expect(getPlayOrder(mkPlayers(3), 2).map((p) => p.seat_index)).toEqual([2, 0, 1]);
   });
   it('returns [] for no players', () => {
     expect(getPlayOrder([], 0)).toEqual([]);

@@ -3,8 +3,9 @@
  *
  * Pure, dependency-light derivations for the offline instructions card.
  * The engine has NO dealer concept — the dealer is derived here from
- * `starting_seat`. Play is counter-clockwise by DECREASING seat index
- * (engine getNextPlayerIndex = (i + N - 1) % N).
+ * `starting_seat`. Play is counter-clockwise by INCREASING seat index:
+ * the server RPCs (place_bet_action, play_card_action) advance
+ * current_seat to (seat + 1) % N.
  */
 
 import { SuitSymbols } from '../../constants/colors';
@@ -20,11 +21,12 @@ export interface BriefingPlayer {
 /**
  * The dealer is the player who, in play direction, immediately precedes the
  * first player: the dealer deals and the next player counter-clockwise leads.
- * Since next(seat) = (seat - 1 + N) % N, the predecessor of the starting seat
- * is (startingSeat + 1) % N.
+ * Since next(seat) = (seat + 1) % N, the predecessor of the starting seat
+ * is (startingSeat - 1 + N) % N. The dealer is also the last bidder, so the
+ * forbidden-sum rule lands on this seat.
  */
 export function getDealerSeat(startingSeat: number, playerCount: number): number {
-  return (startingSeat + 1) % playerCount;
+  return (startingSeat + playerCount - 1) % playerCount;
 }
 
 /**
@@ -41,7 +43,7 @@ export function getPlayOrder(
   const bySeat = new Map(players.map((p) => [p.seat_index, p]));
   const order: BriefingPlayer[] = [];
   for (let i = 0; i < n; i++) {
-    const seat = (((startingSeat - i) % n) + n) % n;
+    const seat = (startingSeat + i) % n;
     const p = bySeat.get(seat);
     if (p) order.push(p);
   }

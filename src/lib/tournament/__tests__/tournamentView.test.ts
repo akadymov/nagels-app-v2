@@ -18,7 +18,8 @@ describe('tableRows', () => {
     const rows = tableRows(snap);
     expect(rows.map((r) => r.name)).toEqual(['A', 'B', 'C']);
     expect(rows[2].isTurn).toBe(true);
-    expect(rows[2].isDealer).toBe(true);          // dealer = (starting_seat + 1) % n
+    expect(rows[0].isDealer).toBe(true);          // dealer = (starting_seat - 1 + n) % n, the last bidder
+    expect(rows[2].isDealer).toBe(false);
     expect(rows[1].bet).toBe(1);
     expect(rows[0].bet).toBeNull();
     expect(rows[0].total).toBe(12);
