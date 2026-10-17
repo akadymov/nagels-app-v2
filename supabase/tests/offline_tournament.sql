@@ -1,7 +1,7 @@
 BEGIN;
 DO $$
 DECLARE
-  v_t uuid; v_p uuid[]; v_s uuid[]; v_room uuid; v_hand uuid; r jsonb; i int;
+  v_t uuid; v_u uuid; v_p uuid[]; v_s uuid[]; v_room uuid; v_hand uuid; r jsonb; i int;
 BEGIN
   INSERT INTO tournaments (code, name, max_cards, table_secret, current_tour)
     VALUES ('TSTTST', 'test', 2, 'sec', 1) RETURNING id INTO v_t;
@@ -67,6 +67,17 @@ BEGIN
   UPDATE room_players SET last_seen_at = now() - interval '3 days' WHERE room_id = v_room;
   PERFORM cleanup_stale_rooms();
   ASSERT EXISTS (SELECT 1 FROM rooms WHERE id = v_room), 'tournament room survives cleanup';
+
+  -- cleanup_stale_guests must not delete a stale anonymous guest that hosts a
+  -- tournament room (auth.users -> room_sessions -> rooms cascades).
+  -- Static only so far (written while the local DB was down).
+  v_u := gen_random_uuid();
+  INSERT INTO auth.users (id, is_anonymous, created_at, last_sign_in_at)
+    VALUES (v_u, true, now() - interval '3 days', now() - interval '3 days');
+  UPDATE room_sessions SET auth_user_id = v_u WHERE id = v_s[1];
+  PERFORM cleanup_stale_guests();
+  ASSERT EXISTS (SELECT 1 FROM auth.users WHERE id = v_u), 'tournament host guest survives cleanup';
+  ASSERT EXISTS (SELECT 1 FROM rooms WHERE id = v_room), 'tournament room survives guest cleanup';
 
   RAISE NOTICE 'offline_tournament: ALL OK';
 END $$;

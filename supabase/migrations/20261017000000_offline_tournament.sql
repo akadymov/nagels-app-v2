@@ -331,3 +331,54 @@ BEGIN
   RETURN v_deleted;
 END;
 $$;
+
+-- 8. cleanup_stale_guests: never GC a guest that hosts a tournament room or
+--    administers a tournament. room_sessions.auth_user_id cascades from
+--    auth.users and rooms.host_session_id cascades from room_sessions, so
+--    deleting a recorder's guest would wipe its tournament rooms (hands,
+--    hand_scores -> balance history). Body copied from the baseline with
+--    one added WHERE.
+CREATE OR REPLACE FUNCTION public.cleanup_stale_guests() RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_catalog', 'auth'
+    AS $$
+DECLARE
+  v_deleted INT;
+BEGIN
+  WITH stale AS (
+    SELECT u.id
+      FROM auth.users u
+      LEFT JOIN public.room_sessions    rs  ON rs.auth_user_id = u.id
+      LEFT JOIN public.room_players     rp  ON rp.session_id   = rs.id
+      LEFT JOIN public.room_spectators  rsp ON rsp.session_id  = rs.id
+     WHERE u.is_anonymous = true
+       AND NOT EXISTS (
+             SELECT 1
+               FROM public.room_sessions trs
+              WHERE trs.auth_user_id = u.id
+                AND (EXISTS (SELECT 1 FROM public.rooms tr
+                              WHERE tr.host_session_id = trs.id
+                                AND tr.tournament_id IS NOT NULL)
+                     OR EXISTS (SELECT 1 FROM public.tournaments tt
+                                 WHERE tt.admin_session_id = trs.id))
+           )
+     GROUP BY u.id, u.created_at, u.last_sign_in_at
+    HAVING GREATEST(
+             COALESCE(MAX(rp.last_seen_at),  'epoch'::timestamptz),
+             COALESCE(MAX(rsp.last_seen_at), 'epoch'::timestamptz),
+             COALESCE(u.last_sign_in_at, u.created_at)
+           ) < now() - INTERVAL '24 hours'
+  )
+  DELETE FROM auth.users
+   WHERE id IN (SELECT id FROM stale);
+  GET DIAGNOSTICS v_deleted = ROW_COUNT;
+
+  RAISE LOG '[cleanup_stale_guests] deleted % stale guest user(s)', v_deleted;
+  RETURN v_deleted;
+END;
+$$;
+ALTER FUNCTION public.cleanup_stale_guests() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.cleanup_stale_guests() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cleanup_stale_guests() TO anon;
+GRANT ALL ON FUNCTION public.cleanup_stale_guests() TO authenticated;
+GRANT ALL ON FUNCTION public.cleanup_stale_guests() TO service_role;
