@@ -36,6 +36,8 @@ ALTER TABLE public.rooms
   ADD COLUMN IF NOT EXISTS table_number  INT,
   ADD COLUMN IF NOT EXISTS table_claimed BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS rooms_tournament_idx ON public.rooms (tournament_id, tour_number);
+CREATE UNIQUE INDEX IF NOT EXISTS rooms_tournament_table_uniq
+  ON public.rooms (tournament_id, tour_number, table_number) WHERE tournament_id IS NOT NULL;
 
 -- 3. Proxy sessions: no auth user; UNIQUE(auth_user_id) still holds (NULLs don't collide).
 ALTER TABLE public.room_sessions ALTER COLUMN auth_user_id DROP NOT NULL;

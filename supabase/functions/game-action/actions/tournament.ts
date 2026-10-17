@@ -142,39 +142,66 @@ export async function tournamentStartTour(
   }
 
   const tour = t.current_tour + 1;
+  // Same max_cards for every table in a tour: clamp by the largest table.
+  const tourMaxCards = Math.min(10, t.max_cards, ...seating.map((s) => Math.floor(52 / s.length)));
+
+  // Claim the tour first (compare-and-swap) so concurrent / retried calls can't
+  // create a second set of rooms.
+  const claimedVersion = t.version + 1;
+  const { data: claimed } = await svc.from('tournaments')
+    .update({ current_tour: tour, version: claimedVersion })
+    .eq('id', t.id).eq('current_tour', t.current_tour).select('id');
+  if (!claimed || claimed.length === 0) return { ok: false, error: 'tour_in_progress' };
+
   const nameById = new Map((parts ?? []).map((p: any) => [p.id, p.display_name]));
   const rooms: Array<{ table_number: number; room_id: string }> = [];
+  const createdSessionIds: string[] = [];
 
-  for (let i = 0; i < seating.length; i++) {
-    const seats = seating[i];
-    const { data: sessions, error: sErr } = await svc.from('room_sessions')
-      .insert(seats.map((pid) => ({ display_name: nameById.get(pid), tournament_participant_id: pid })))
-      .select('id, tournament_participant_id');
-    if (sErr) throw sErr;
-    const sessionByPid = new Map((sessions ?? []).map((s: any) => [s.tournament_participant_id, s.id]));
+  try {
+    for (let i = 0; i < seating.length; i++) {
+      const seats = seating[i];
+      const { data: sessions, error: sErr } = await svc.from('room_sessions')
+        .insert(seats.map((pid) => ({ display_name: nameById.get(pid), tournament_participant_id: pid })))
+        .select('id, tournament_participant_id');
+      if (sErr) throw sErr;
+      for (const s of sessions ?? []) createdSessionIds.push((s as any).id);
+      const sessionByPid = new Map((sessions ?? []).map((s: any) => [s.tournament_participant_id, s.id]));
 
-    let room: { id: string } | null = null;
-    for (let attempt = 0; attempt < 5 && !room; attempt++) {
-      const { data, error } = await svc.from('rooms').insert({
-        code: generateCode(), host_session_id: actor.session_id,
-        player_count: seats.length, max_cards: t.max_cards, mode: 'scorekeeper', phase: 'waiting',
-        tournament_id: t.id, tour_number: tour, table_number: i + 1, stake: stakes[i],
-      }).select('id').single();
-      if (!error) room = data as any;
-      else if ((error as any).code !== '23505') throw error;
+      let room: { id: string } | null = null;
+      for (let attempt = 0; attempt < 5 && !room; attempt++) {
+        const { data, error } = await svc.from('rooms').insert({
+          code: generateCode(), host_session_id: actor.session_id,
+          player_count: seats.length, max_cards: tourMaxCards, mode: 'scorekeeper', phase: 'waiting',
+          tournament_id: t.id, tour_number: tour, table_number: i + 1, stake: stakes[i],
+        }).select('id').single();
+        if (!error) room = data as any;
+        else if ((error as any).code !== '23505') throw error;
+      }
+      if (!room) throw new Error('could_not_allocate_code');
+      rooms.push({ table_number: i + 1, room_id: room.id });
+
+      const { error: rpErr } = await svc.from('room_players').insert(
+        seats.map((pid, seat) => ({ room_id: room!.id, session_id: sessionByPid.get(pid), seat_index: seat, is_ready: true })));
+      if (rpErr) throw rpErr;
+
+      const started = await startGame(svc, actor, { kind: 'start_game', room_id: room.id });
+      if (!started.ok) throw new Error(`start_game_failed:${started.error}`);
     }
-    if (!room) throw new Error('could_not_allocate_code');
-
-    const { error: rpErr } = await svc.from('room_players').insert(
-      seats.map((pid, seat) => ({ room_id: room!.id, session_id: sessionByPid.get(pid), seat_index: seat, is_ready: true })));
-    if (rpErr) throw rpErr;
-
-    const started = await startGame(svc, actor, { kind: 'start_game', room_id: room.id });
-    if (!started.ok) throw new Error(`start_game_failed:${started.error}`);
-    rooms.push({ table_number: i + 1, room_id: room.id });
+  } catch (e) {
+    // Roll back everything this call created, then release the tour.
+    try {
+      await svc.from('rooms').delete().eq('tournament_id', t.id).eq('tour_number', tour);
+      if (createdSessionIds.length) await svc.from('room_sessions').delete().in('id', createdSessionIds);
+      await svc.from('tournaments').update({ current_tour: t.current_tour, version: claimedVersion + 1 })
+        .eq('id', t.id).eq('current_tour', tour);
+    } catch (rbErr) {
+      console.error('[tournament] start_tour rollback failed:', rbErr);
+    }
+    throw e;
   }
 
-  await bump(svc, t, { current_tour: tour });
+  void broadcastTournamentChanged(svc, t.id, claimedVersion).catch((e) =>
+    console.error('[tournament] broadcast failed:', e));
   return { ok: true, tour_number: tour, rooms };
 }
 
