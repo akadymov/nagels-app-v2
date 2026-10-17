@@ -48,6 +48,7 @@ export async function editHand(
 
   const { data, error } = await svc.rpc('edit_hand_action', {
     p_room_id: action.room_id, p_hand_id: action.hand_id, p_entries: entries,
+    p_actor_session_id: actor.session_id,
   });
   if (error) {
     const s = await buildSnapshot(svc, action.room_id, actor.session_id).catch(() => ({} as RoomSnapshot));

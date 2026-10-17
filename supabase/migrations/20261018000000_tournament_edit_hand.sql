@@ -5,7 +5,7 @@
 -- Same rules as live play: values in 0..cards, tricks sum to cards, bets
 -- don't sum to cards. Every edit is journaled as a 'hand_edited' event.
 
-CREATE OR REPLACE FUNCTION public.edit_hand_action(p_room_id uuid, p_hand_id uuid, p_entries jsonb)
+CREATE OR REPLACE FUNCTION public.edit_hand_action(p_room_id uuid, p_hand_id uuid, p_entries jsonb, p_actor_session_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_catalog
@@ -77,8 +77,8 @@ BEGIN
     FROM jsonb_array_elements(p_entries) e
    WHERE hs.hand_id = p_hand_id AND hs.session_id = (e->>'session_id')::uuid;
 
-  INSERT INTO public.game_events (room_id, hand_id, kind, payload)
-  VALUES (p_room_id, p_hand_id, 'hand_edited',
+  INSERT INTO public.game_events (room_id, hand_id, session_id, kind, payload)
+  VALUES (p_room_id, p_hand_id, p_actor_session_id, 'hand_edited',
           jsonb_build_object('before', v_before, 'after', p_entries));
 
   UPDATE public.rooms SET version = version + 1, updated_at = now() WHERE id = p_room_id
@@ -88,6 +88,6 @@ BEGIN
   RETURN jsonb_build_object('ok', true, 'state', v_state, 'version', v_new_version);
 END;
 $$;
-ALTER FUNCTION public.edit_hand_action(uuid, uuid, jsonb) OWNER TO postgres;
-REVOKE ALL ON FUNCTION public.edit_hand_action(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.edit_hand_action(uuid, uuid, jsonb) TO service_role;
+ALTER FUNCTION public.edit_hand_action(uuid, uuid, jsonb, uuid) OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.edit_hand_action(uuid, uuid, jsonb, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.edit_hand_action(uuid, uuid, jsonb, uuid) TO service_role;

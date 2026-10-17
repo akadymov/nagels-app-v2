@@ -115,7 +115,6 @@ export const RecorderHands: React.FC<Props> = ({ state, onDone }) => {
         {t('tournament.editHand', { n: editing.hand_number })} · {t('tournament.cards', { count: cards })} · {trumpLabel(editing.trump)}
       </Text>
       <View style={styles.headRow}>
-        <Text style={[styles.name, { color: colors.textSecondary }]} />
         <Text style={[styles.colHead, { color: colors.textSecondary }]}>{t('tournament.colBet')}</Text>
         <Text style={[styles.colHead, { color: colors.textSecondary }]}>{t('tournament.colTaken')}</Text>
         <Text style={[styles.scoreHead, { color: colors.textSecondary }]}>{t('tournament.colHand')}</Text>
@@ -123,13 +122,15 @@ export const RecorderHands: React.FC<Props> = ({ state, onDone }) => {
       {editing.rows.map((r) => {
         const e = draft.find((x) => x.seat === r.seat)!;
         return (
-          <View key={r.seat} style={styles.editRow}>
-            <Text style={[styles.name, { color: colors.textPrimary }]} numberOfLines={1}>{r.name}</Text>
+          <View key={r.seat} style={styles.editBlock}>
+            <Text style={[styles.editName, { color: colors.textPrimary }]} numberOfLines={1}>{r.name}</Text>
+            <View style={styles.editRow}>
             <Stepper id={`recorder-edit-bet-${r.seat}`} value={e.bet} max={cards} disabled={busy}
               onChange={(v) => set(r.seat, 'bet', v)} colors={colors} />
             <Stepper id={`recorder-edit-taken-${r.seat}`} value={e.taken} max={cards} disabled={busy}
               onChange={(v) => set(r.seat, 'taken', v)} colors={colors} />
             <Text style={[styles.score, { color: colors.textPrimary }]}>{handScore(e.bet, e.taken)}</Text>
+            </View>
           </View>
         );
       })}
@@ -166,16 +167,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', marginBottom: Spacing.md },
   handRow: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.sm, minHeight: 56 },
   handHead: { fontSize: 17, fontWeight: '600', marginBottom: 4 },
-  headRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
-  editRow: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm },
-  name: { flex: 1, fontSize: 16 },
-  colHead: { width: 120, textAlign: 'center', fontSize: 13 },
-  scoreHead: { width: 36, textAlign: 'right', fontSize: 13 },
-  stepper: { width: 120, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  step: { width: 44, height: 44, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.xs },
+  editBlock: { marginBottom: Spacing.sm },
+  editName: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
+  editRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  colHead: { width: 140, textAlign: 'center', fontSize: 13 },
+  scoreHead: { width: 44, textAlign: 'right', fontSize: 13 },
+  stepper: { width: 140, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  step: { width: 48, height: 48, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stepText: { fontSize: 22, fontWeight: '700' },
-  value: { width: 28, textAlign: 'center', fontSize: 20, fontWeight: '700' },
-  score: { width: 36, textAlign: 'right', fontSize: 18, fontWeight: '700' },
+  value: { width: 36, textAlign: 'center', fontSize: 20, fontWeight: '700' },
+  score: { width: 44, textAlign: 'right', fontSize: 18, fontWeight: '700' },
   sum: { fontSize: 17, fontWeight: '600', marginVertical: Spacing.sm },
   primary: { minHeight: 56, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.sm },
   primaryText: { color: '#fff', fontSize: 18, fontWeight: '700' },

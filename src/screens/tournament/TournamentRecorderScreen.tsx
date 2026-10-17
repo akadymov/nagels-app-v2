@@ -60,37 +60,50 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
     return false;
   }, [code, tableNumber, secret]);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      // A reload of the recording phone continues silently; any other phone
-      // only watches until the takeover is confirmed.
-      try {
-        const [ts, me] = await Promise.all([
-          gameClient.getTournamentState(code), gameClient.getMySessionId(),
-        ]);
-        if (!alive) return;
-        const tb = ts?.tables.find((x) => x.table_number === tableNumber);
-        const host = tb?.state?.room?.host_session_id;
-        if (ts && tb?.claimed && host && host !== me) {
-          claimSeq.current++;
-          useRoomStore.getState().reset();
-          roomIdRef.current = tb.room_id;
-          claimedTour.current = ts.tournament.current_tour;
-          subscribeRoom(tb.room_id);
-          setConfirmTakeover(true);
-          return;
-        }
-      } catch {
-        // Fall through to a normal claim; its errors surface on screen.
+  // A reload of the recording phone continues silently; any other phone only
+  // watches until the takeover is confirmed. A failed pre-check never claims.
+  const start = useCallback(async () => {
+    const seq = ++claimSeq.current;
+    setClaimError(null);
+    try {
+      const [ts, me] = await Promise.all([
+        gameClient.getTournamentState(code), gameClient.getMySessionId(),
+      ]);
+      if (seq !== claimSeq.current) return;
+      const tb = ts?.tables.find((x) => x.table_number === tableNumber);
+      const host = tb?.state?.room?.host_session_id;
+      if (ts && tb?.claimed && host && host !== me) {
+        useRoomStore.getState().reset();
+        roomIdRef.current = tb.room_id;
+        claimedTour.current = ts.tournament.current_tour;
+        subscribeRoom(tb.room_id);
+        setConfirmTakeover(true);
+        return;
       }
-      if (alive) void claim(true);
-    })();
-    return () => { alive = false; claimSeq.current++; unsubscribeRoom(); };
-  }, [claim]);
+    } catch (e: any) {
+      if (seq === claimSeq.current) setClaimError(e?.message ?? 'generic');
+      return;
+    }
+    void claim(true);
+  }, [claim, code, tableNumber]);
 
+  useEffect(() => {
+    void start();
+    return () => { claimSeq.current++; unsubscribeRoom(); };
+  }, [start]);
+
+  const [confirming, setConfirming] = useState(false);
   const confirmClaim = async () => {
-    if (await claim(false)) setConfirmTakeover(false);
+    if (confirming) return;
+    setConfirming(true);
+    try {
+      if (await claim(false)) {
+        setConfirmTakeover(false);
+        setPendingRoomId(null);
+      }
+    } finally {
+      setConfirming(false);
+    }
   };
 
   // Follow the tournament to the next tour on the same QR/URL.
@@ -110,6 +123,10 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
   // A new tour's table this phone did not auto-claim (it was taken over, or
   // someone else already claimed the new table). Shows the Take back screen.
   const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  // The hands modal only belongs to the live recorder view.
+  useEffect(() => {
+    if (takenOver || pendingRoomId || confirmTakeover) setShowHands(false);
+  }, [takenOver, pendingRoomId, confirmTakeover]);
 
   useEffect(() => {
     if (currentTour == null || claimedTour.current == null) return;
@@ -168,7 +185,7 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
         <Text style={[styles.msg, { color: colors.error }]}>
           {t(`tournament.errors.${claimError}`, { defaultValue: t('tournament.errors.generic') })}
         </Text>
-        <TouchableOpacity testID="recorder-retry" onPress={() => { void claim(true); }} style={[styles.primary, { backgroundColor: colors.accent }]}>
+        <TouchableOpacity testID="recorder-retry" onPress={() => { void start(); }} style={[styles.primary, { backgroundColor: colors.accent }]}>
           <Text style={styles.primaryText}>{t('common.retry')}</Text>
         </TouchableOpacity>
         {exitBtn}
@@ -183,7 +200,7 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
         <View testID="recorder-confirm-takeover" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
           <Text style={[styles.msg, { color: colors.textPrimary }]}>{t('tournament.takeOverTitle', { n: tableNumber })}</Text>
           <Text style={[styles.body, { color: colors.textSecondary }]}>{t('tournament.takeOverBody')}</Text>
-          <TouchableOpacity testID="recorder-confirm-takeover-yes" onPress={confirmClaim} style={[styles.primary, { backgroundColor: colors.accent }]}>
+          <TouchableOpacity testID="recorder-confirm-takeover-yes" disabled={confirming} onPress={confirmClaim} style={[styles.primary, { backgroundColor: colors.accent, opacity: confirming ? 0.5 : 1 }]}>
             <Text style={styles.primaryText}>{t('tournament.takeOver')}</Text>
           </TouchableOpacity>
           <Text style={[styles.body, { color: colors.textSecondary, marginTop: Spacing.md }]}>{t('tournament.watchOnlyHint')}</Text>

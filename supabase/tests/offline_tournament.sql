@@ -62,25 +62,25 @@ BEGIN
   r := edit_hand_action(v_room, v_hand, jsonb_build_array(
     jsonb_build_object('session_id', v_s[1], 'bet', 1, 'taken', 1),
     jsonb_build_object('session_id', v_s[2], 'bet', 0, 'taken', 0),
-    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)));
+    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)), v_s[1]);
   ASSERT r->>'error' = 'tricks_sum', 'edit: tricks must sum to cards: '||r;
   r := edit_hand_action(v_room, v_hand, jsonb_build_array(
     jsonb_build_object('session_id', v_s[1], 'bet', 1, 'taken', 2),
     jsonb_build_object('session_id', v_s[2], 'bet', 1, 'taken', 0),
-    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)));
+    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)), v_s[1]);
   ASSERT r->>'error' = 'bets_sum', 'edit: bets may not sum to cards: '||r;
   r := edit_hand_action(v_room, v_hand, jsonb_build_array(
     jsonb_build_object('session_id', v_s[1], 'bet', 1, 'taken', 1),
-    jsonb_build_object('session_id', v_s[2], 'bet', 0, 'taken', 1)));
+    jsonb_build_object('session_id', v_s[2], 'bet', 0, 'taken', 1)), v_s[1]);
   ASSERT r->>'error' = 'invalid_entries', 'edit: every seat required: '||r;
   r := edit_hand_action(v_room, v_hand, jsonb_build_array(
     jsonb_build_object('session_id', v_s[1], 'bet', 1, 'taken', 1),
     jsonb_build_object('session_id', v_s[2], 'bet', 0, 'taken', 1),
-    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)));
+    jsonb_build_object('session_id', v_s[3], 'bet', 0, 'taken', 0)), v_s[1]);
   ASSERT (r->>'ok')::bool, 'edit ok: '||r;
   ASSERT (SELECT hand_score FROM hand_scores WHERE hand_id = v_hand AND session_id = v_s[1]) = 11, 'rescored exact';
   ASSERT (SELECT hand_score FROM hand_scores WHERE hand_id = v_hand AND session_id = v_s[2]) = 1, 'rescored miss';
-  ASSERT EXISTS (SELECT 1 FROM game_events WHERE hand_id = v_hand AND kind = 'hand_edited'), 'edit journaled';
+  ASSERT EXISTS (SELECT 1 FROM game_events WHERE hand_id = v_hand AND kind = 'hand_edited' AND session_id = v_s[1]), 'edit journaled with actor';
   r := get_tournament_state('tsttst');
   ASSERT abs((SELECT sum((x->>'balance')::numeric) FROM jsonb_array_elements(r->'leaderboard') x)) < 0.0001, 'zero-sum after edit';
 

@@ -70,9 +70,29 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
   await expect(tv.locator('[data-testid="tournament-status-1"]')).toContainText(/scored/i, { timeout: 5000 });
   await expect(tv.locator('[data-testid="tournament-leaderboard"]')).toBeVisible();
 
-  // Takeover: a second phone claims the table; the first phone offers Take back.
+  // Correct the scored hand: move one trick from seat 0 to seat 1.
+  await tap(phone, 'recorder-hands-toggle');
+  await tap(phone, 'recorder-hand-1');
+  await expect(phone.locator('[data-testid="recorder-hand-editor"]')).toBeVisible();
+  await tap(phone, 'recorder-edit-taken-0-dec');
+  await expect(phone.locator('[data-testid="recorder-edit-taken-0"]')).toHaveText('9');
+  await tap(phone, 'recorder-edit-taken-1-inc');
+  await expect(phone.locator('[data-testid="recorder-edit-taken-1"]')).toHaveText('1');
+  await expect(dis('recorder-edit-save')).not.toHaveAttribute('aria-disabled', 'true');
+  await tap(phone, 'recorder-edit-save');
+  await expect(phone.locator('[data-testid="recorder-hands"]')).toBeVisible({ timeout: 5000 });
+  await tap(phone, 'recorder-hand-1');
+  await expect(phone.locator('[data-testid="recorder-edit-taken-1"]')).toHaveText('1');
+  await tap(phone, 'recorder-edit-cancel');
+  await tap(phone, 'recorder-hands-close');
+
+  // Takeover needs an explicit confirm: opening the link alone changes nothing.
   const phone2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await phone2.goto(`${BASE}/tournament/${code}/table/1?k=${k}`);
+  await expect(phone2.locator('[data-testid="recorder-confirm-takeover"]')).toBeVisible();
+  await expect(phone.locator('[data-testid="recorder-next-hand"]')).toBeVisible();
+  await expect(phone.locator('[data-testid="recorder-taken-over"]')).toHaveCount(0);
+  await tap(phone2, 'recorder-confirm-takeover-yes');
   await expect(phone2.locator('[data-testid="recorder-next-hand"]')).toBeVisible();
   await expect(phone.locator('[data-testid="recorder-taken-over"]')).toBeVisible({ timeout: 5000 });
   await tap(phone, 'recorder-take-back');
