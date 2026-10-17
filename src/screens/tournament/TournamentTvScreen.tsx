@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.sm },
   title: { fontSize: 32, fontWeight: '800', flexShrink: 1 },
   badge: { fontSize: 18, borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 2 },
-  tables: { flex: 7, flexDirection: 'row', gap: Spacing.md },
+  tables: { flex: 11, flexDirection: 'row', gap: Spacing.md },
   column: { flex: 1, minWidth: 0, justifyContent: 'center' },
   qrSmall: { position: 'absolute', top: 0, right: 0 },
   qrBig: {
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   qrLabel: { fontSize: 22, fontWeight: '600', marginTop: Spacing.sm },
-  bottom: { flex: 3, marginTop: Spacing.md },
+  bottom: { flex: 9, marginTop: Spacing.md },
   waiting: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   names: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
   nameChip: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 16, paddingVertical: 6 },

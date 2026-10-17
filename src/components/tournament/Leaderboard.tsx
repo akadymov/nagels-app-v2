@@ -23,8 +23,9 @@ export const Leaderboard: React.FC<{
   const fs = tv ? { fontSize: 22 } : null;
   const fsTitle = tv ? { fontSize: 26 } : null;
   const fsSmall = tv ? 18 : 12;
-  const twoCols = tv && rows.length > 8;
-  const half = Math.ceil(rows.length / 2);
+  const colCount = tv ? (rows.length > 12 ? 3 : rows.length > 8 ? 2 : 1) : 1;
+  const perCol = Math.ceil(rows.length / colCount);
+  const columns = Array.from({ length: colCount }, (_, c) => rows.slice(c * perCol, (c + 1) * perCol));
 
   const renderRow = (r: (typeof rows)[number], i: number) => {
     const bal = Math.round(r.balance * 10) / 10;
@@ -34,17 +35,17 @@ export const Leaderboard: React.FC<{
       <View
         key={r.participant_id}
         testID={`tournament-leader-${r.participant_id}`}
-        style={[styles.row, hl && { backgroundColor: colors.accent + '22', borderRadius: Radius.sm }]}
+        style={[styles.row, tv && styles.rowTv, hl && { backgroundColor: colors.accent + '22', borderRadius: Radius.sm }]}
       >
-        <Text style={[styles.rank, fs, { color: colors.textSecondary }]}>{i + 1}</Text>
+        <Text style={[styles.rank, tv && styles.rankTv, fs, { color: colors.textSecondary }]}>{i + 1}</Text>
         <Text style={[styles.name, fs, { color: colors.textPrimary }]} numberOfLines={1}>
           {r.name}
           {r.no_stakes ? (
             <Text style={{ fontSize: fsSmall, color: colors.textSecondary }}>{`  ${t('tournament.noStakes')}`}</Text>
           ) : null}
         </Text>
-        <Text style={[styles.num, fs, { color: balColor, fontWeight: '700' }]}>{formatBalance(r.balance)}</Text>
-        <Text style={[styles.num, fs, { color: colors.textPrimary }]}>{r.total_points}</Text>
+        <Text style={[styles.num, tv && styles.numTv, fs, { color: balColor, fontWeight: '700' }]}>{formatBalance(r.balance)}</Text>
+        <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textPrimary }]}>{r.total_points}</Text>
       </View>
     );
   };
@@ -53,8 +54,8 @@ export const Leaderboard: React.FC<{
     <View style={styles.row}>
       <Text style={[styles.rank, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.name, fs, { color: colors.textSecondary }]} />
-      <Text style={[styles.num, fs, { color: colors.textSecondary }]}>{t('tournament.colBalance')}</Text>
-      <Text style={[styles.num, fs, { color: colors.textSecondary }]}>{t('tournament.colPoints')}</Text>
+      <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colBalance')}</Text>
+      <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colPoints')}</Text>
     </View>
   );
 
@@ -64,16 +65,14 @@ export const Leaderboard: React.FC<{
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
     >
       <Text style={[styles.title, fsTitle, { color: colors.textPrimary }]}>{t('tournament.leaderboard')}</Text>
-      {twoCols ? (
+      {colCount > 1 ? (
         <View style={styles.cols}>
-          <View style={styles.col}>
-            {header}
-            {rows.slice(0, half).map((r, i) => renderRow(r, i))}
-          </View>
-          <View style={styles.col}>
-            {header}
-            {rows.slice(half).map((r, i) => renderRow(r, half + i))}
-          </View>
+          {columns.map((col, c) => (
+            <View key={c} style={styles.col}>
+              {header}
+              {col.map((r, i) => renderRow(r, c * perCol + i))}
+            </View>
+          ))}
         </View>
       ) : (
         <>
@@ -91,6 +90,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingHorizontal: 4 },
   cols: { flexDirection: 'row', gap: Spacing.lg },
   col: { flex: 1 },
+  rowTv: { paddingVertical: 2 },
+  rankTv: { width: 40 },
+  numTv: { width: 96 },
   rank: { width: 28, fontSize: 16 },
   name: { flex: 1, fontSize: 16 },
   num: { width: 72, textAlign: 'right', fontSize: 16 },
