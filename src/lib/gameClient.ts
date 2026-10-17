@@ -1,6 +1,7 @@
 import { getSupabaseClient } from './supabase/client';
 import { useRoomStore } from '../store/roomStore';
 import { getDiscordInstanceId } from './discord/bootstrap';
+import type { TournamentState } from './tournament/types';
 import type {
   Action, ActionResult, RoomSnapshot,
 } from '../../supabase/functions/_shared/types.ts';
@@ -423,4 +424,37 @@ export const gameClient = {
 
     useRoomStore.getState().applySnapshot(snapshot, snapshot.room?.version ?? 0);
   },
+
+  // --- Offline tournament ---
+
+  tournamentCreate: (name: string, participants: Array<{ display_name: string; no_stakes: boolean }>, max_cards: number) =>
+    postAction(null, { kind: 'tournament_create', name, participants, max_cards }) as Promise<any>,
+
+  tournamentUpdateParticipants: (tournament_id: string, secret: string, participants: Array<{ display_name: string; no_stakes: boolean }>) =>
+    postAction(null, { kind: 'tournament_update_participants', tournament_id, secret, participants }) as Promise<any>,
+
+  tournamentSetMaxCards: (tournament_id: string, secret: string, max_cards: number) =>
+    postAction(null, { kind: 'tournament_set_max_cards', tournament_id, secret, max_cards }) as Promise<any>,
+
+  tournamentStartTour: (tournament_id: string, secret: string, tables: Array<{ seats: string[]; stake: number }>, force = false) =>
+    postAction(null, { kind: 'tournament_start_tour', tournament_id, secret, tables, force }) as Promise<any>,
+
+  tournamentClaimTable: (code: string, table_number: number, secret: string) =>
+    postAction(null, { kind: 'tournament_claim_table', code, table_number, secret }) as Promise<any>,
+
+  getTournamentState: async (code: string): Promise<TournamentState | null> => {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('get_tournament_state', { p_code: code });
+    if (error) throw error;
+    return (data as TournamentState) ?? null;
+  },
+
+  placeBetFor: (room_id: string, hand_id: string, seat: number, bet: number) =>
+    postAction(null, { kind: 'place_bet', room_id, hand_id, bet, on_behalf_of_seat: seat }),
+
+  recordTricksFor: (room_id: string, hand_id: string, seat: number, tricks: number) =>
+    postAction(null, { kind: 'record_tricks', room_id, hand_id, tricks, on_behalf_of_seat: seat }),
+
+  undoBet: (room_id: string, hand_id: string) =>
+    postAction(null, { kind: 'undo_bet', room_id, hand_id }),
 };
