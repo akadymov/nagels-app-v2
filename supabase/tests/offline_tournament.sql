@@ -3,8 +3,8 @@ DO $$
 DECLARE
   v_t uuid; v_p uuid[]; v_s uuid[]; v_room uuid; v_hand uuid; r jsonb; i int;
 BEGIN
-  INSERT INTO tournaments (code, name, max_cards, table_secret)
-    VALUES ('TSTTST', 'test', 2, 'sec') RETURNING id INTO v_t;
+  INSERT INTO tournaments (code, name, max_cards, table_secret, current_tour)
+    VALUES ('TSTTST', 'test', 2, 'sec', 1) RETURNING id INTO v_t;
   FOR i IN 1..3 LOOP
     v_p[i] := gen_random_uuid();
     INSERT INTO tournament_participants (id, tournament_id, display_name) VALUES (v_p[i], v_t, 'P'||i);
