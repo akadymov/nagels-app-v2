@@ -12,7 +12,9 @@ Run an in-person Nägels tournament (2–3 tables, 4–6 players each, physical 
 - one **recorder** per table enters everything for that table from a single phone — random seating, bets, tricks taken after each hand;
 - a **big screen (TV)** shows every table live: seating, dealer, trump and cards-per-hand, whose turn it is, the bets / tricks / score table, and each player's money balance;
 - the tournament runs in several **tours** with random reseating between them; the money balance accumulates across tours and updates after every closed hand;
-- each table in each tour has its own **stake** (units per point); `0` means the table plays for fun and contributes nothing to the balance.
+- each table in each tour has its own **stake** (units per point); `0` means the table plays for fun and contributes nothing to the balance;
+- some participants never play for money: they are flagged **no-stakes** and may only sit at stake-0 tables;
+- the admin can place specific participants at specific tables by hand; random shuffle fills in the rest.
 
 Built as an extension of the existing scorekeeper room mode (`rooms.mode = 'scorekeeper'`), not as a separate app.
 
@@ -37,8 +39,13 @@ A recorder is never a seat. If the recorder also plays, they are simply one of t
 
 ## User flow
 
-1. Admin opens `/tournament/new`, enters a name, the participant names, the number of tables and `max_cards`. Default `max_cards` = `floor(52 / largest table size)`, the same for all tables so the tours are fair.
-2. Admin taps **Shuffle seating**: participants are split as evenly as possible across tables (e.g. 14 → 5/5/4) and randomly ordered into seats. Admin can reshuffle, and can set a stake per table (chips 0 / 1 / 5 / 10 / 25, default 0).
+1. Admin opens `/tournament/new`, enters a name, the participant names (each with a **no-stakes** toggle), the number of tables and `max_cards`. Default `max_cards` = `floor(52 / largest table size)`, the same for all tables so the tours are fair.
+2. Tour setup, in this order:
+   1. **Stakes:** admin sets a stake per table (chips 0 / 1 / 5 / 10 / 25, default 0). Stakes come first because they constrain seating.
+   2. **Pins (optional):** admin assigns specific participants to specific tables by hand. A pinned participant stays at that table through every reshuffle of this tour.
+   3. **Shuffle seating:** the shuffle keeps pins, puts no-stakes participants only at stake-0 tables, then fills the remaining places so table sizes are as even as possible (e.g. 14 → 5/5/4), and randomizes the seat order inside each table. Admin can reshuffle as often as they like.
+   4. **Manual fix-up:** in the preview the admin can tap a participant and move them to another table, or swap them with someone. A move that would put a no-stakes participant at a stake table, or push a table above 6 or below 2 players, is blocked inline.
+   If the constraints can't be met (e.g. 7 no-stakes participants and only one stake-0 table), the shuffle shows the reason and suggests making one more table stake-0.
 3. **Start tour** creates one scorekeeper room per table with proxy players already seated and ready, and immediately starts the game in each room (hand 1, betting). Rooms are created `silent` with no Telegram announce.
 4. The TV opens `/tournament/<CODE>/tv`. Each table column shows a QR code until it is claimed. The QR encodes `/tournament/<CODE>/table/<n>?k=<secret>`.
 5. The recorder scans the QR and becomes the room's host (`claim_table`). The recorder screen shows:
@@ -80,6 +87,7 @@ CREATE TABLE public.tournament_participants (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tournament_id UUID NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
   display_name  TEXT NOT NULL,
+  no_stakes     BOOLEAN NOT NULL DEFAULT false,  -- may only sit at stake-0 tables
   UNIQUE (tournament_id, display_name)
 );
 
@@ -120,7 +128,7 @@ New action kinds:
 | `claim_table` `{code, table_number, secret}` | anyone with the secret | set the room's `host_session_id` to the caller, `table_claimed = true` |
 | `undo_bet` `{room_id, hand_id}` | room host | calls `undo_last_bet_action` |
 
-The client does the shuffle (so the admin sees it before committing). The server validates that every participant is seated at most once and that each table has 2–6 seats.
+The client does the shuffle and the manual edits, so the admin sees the final seating before committing. Pins are a client-side setup aid for the current tour and are not stored. The server validates that every participant is seated at most once, that each table has 2–6 seats, and that no `no_stakes` participant is at a table with `stake > 0` (error `no_stakes_at_stake_table`).
 
 Existing actions get an optional `on_behalf_of_seat?: number` on `place_bet` and `record_tricks`. When it is present the handler requires the room to have a `tournament_id` and the caller to be the room host or the tournament admin. It then looks up the proxy session at that seat and passes that session id to the unchanged RPC. Without the field, behaviour is identical to today.
 
@@ -149,7 +157,8 @@ New routes in `AppNavigator` linking:
 
 Pure helpers in `src/lib/tournament/` with unit tests:
 
-- `shuffleSeating(participants, tableCount, rng)` → balanced tables;
+- `shuffleSeating({participants, tables: [{stake}], pins: {participantId: tableIndex}}, rng)` → `{ok: true, tables: participantId[][]} | {ok: false, reason}`; honours pins and no-stakes, then balances sizes;
+- `validateSeating(tables, participants, stakes)`: the same rules for manual moves and the server check, shared via `_shared/engine`;
 - `computeBalance(hands, stake)` → per-participant deltas. The same math is mirrored in SQL; a fixture test asserts parity.
 
 All strings go to EN / RU / ES locales.
@@ -162,7 +171,7 @@ All strings go to EN / RU / ES locales.
 
 ## Testing
 
-- jest: `shuffleSeating` (balance, no duplicates, determinism with a seeded rng), `computeBalance` (zero-sum, stake 0 → 0, equals the game-level settlement over a full game).
+- jest: `shuffleSeating` (balance, no duplicates, determinism with a seeded rng, pins kept, no-stakes never at a stake table, infeasible → reason), `validateSeating`, `computeBalance` (zero-sum, stake 0 → 0, equals the game-level settlement over a full game).
 - e2e (local Supabase): create a tournament with 4 participants and 1 table, claim it, play 2 hands entirely from one page including an undo and a tricks mismatch, assert the TV page shows bets, trump and balance.
 - `npm run smoke` before merge, `npm run test:lint -- --update-todo` for new testIDs.
 - Side-effect hygiene: tournament rooms are always created `silent: true` with no announce; proxies have no push subscriptions.
