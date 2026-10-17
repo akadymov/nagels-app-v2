@@ -24,7 +24,7 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
   await expect(phone.locator('[data-testid="tournament-preview-0"]')).toBeVisible();
   await tap(phone, 'tournament-start-tour');
   // Wait for the tour to exist before opening the TV.
-  await expect(phone.locator('[data-testid="tournament-tv-link"]')).toBeVisible();
+  await expect(phone.locator('[data-testid="tournament-table-1"]')).toBeVisible();
 
   await tv.goto(`${BASE}/tournament/${code}/tv?k=${k}`);
   await expect(tv.locator('[data-testid="tournament-table-1"]')).toBeVisible();
