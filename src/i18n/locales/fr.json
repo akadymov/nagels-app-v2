@@ -527,6 +527,8 @@
     "tour": "Tour {{n}}",
     "table": "Table {{n}}",
     "moveTo": "Déplacer à la table",
+    "sitOut": "Ne joue pas ce tour (touchez pour basculer)",
+    "swapHint": "…ou touchez quelqu'un d'une autre table pour les échanger",
     "tvLink": "Écran TV",
     "adminLink": "Lien administrateur (à garder privé)",
     "scanToRecord": "Scannez pour saisir cette table",

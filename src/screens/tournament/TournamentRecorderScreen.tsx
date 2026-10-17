@@ -70,18 +70,37 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
       && tourTables.length > 0 && !tourTable
       ? currentTour : null;
 
-  useEffect(() => {
-    if (currentTour == null || claimedTour.current == null) return;
-    if (!tourRoomId || tourRoomId === roomIdRef.current) return;
-    claimedTour.current = currentTour;
-    unsubscribeRoom();
-    void claim(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTour + ':' + tourRoomId]);
-
   const room = snapshot?.room ?? null;
   const hand = snapshot?.current_hand ?? null;
   const takenOver = !!room && !!myPlayerId && room.host_session_id !== myPlayerId;
+  // A new tour's table this phone did not auto-claim (it was taken over, or
+  // someone else already claimed the new table). Shows the Take back screen.
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentTour == null || claimedTour.current == null) return;
+    if (!tourRoomId || tourRoomId === roomIdRef.current || tourRoomId === pendingRoomId) return;
+    // Only the phone that was actually recording the old table follows the
+    // tour automatically, and only onto a table nobody has claimed yet —
+    // otherwise a reseated player's leftover phone would steal the table.
+    const wasHost = !pendingRoomId && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
+    claimedTour.current = currentTour;
+    unsubscribeRoom();
+    if (wasHost && tourTable?.claimed === false) {
+      setPendingRoomId(null);
+      void claim(true);
+    } else {
+      claimSeq.current++;
+      useRoomStore.getState().reset();
+      setPendingRoomId(tourRoomId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTour + ':' + tourRoomId]);
+
+  const takeBackPending = () => {
+    setPendingRoomId(null);
+    void claim(true);
+  };
 
   const liveTable: TournamentTable | null = snapshot && room
     ? (data?.tables.find((tb) => tb.table_number === tableNumber && tb.room_id === room.id)
@@ -115,8 +134,26 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
         <Text style={[styles.msg, { color: colors.error }]}>
           {t(`tournament.errors.${claimError}`, { defaultValue: t('tournament.errors.generic') })}
         </Text>
+        <TouchableOpacity testID="recorder-retry" onPress={() => { void claim(true); }} style={[styles.primary, { backgroundColor: colors.accent }]}>
+          <Text style={styles.primaryText}>{t('common.retry')}</Text>
+        </TouchableOpacity>
         {exitBtn}
       </Centered>
+    );
+  }
+  if (pendingRoomId) {
+    const pendingTable = tourTable && tourTable.room_id === pendingRoomId ? tourTable : null;
+    return (
+      <ScrollView testID="tournament-recorder" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}>
+        <View testID="recorder-taken-over" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.msg, { color: colors.textPrimary }]}>{t('tournament.takenOver')}</Text>
+          <TouchableOpacity testID="recorder-take-back" onPress={takeBackPending} style={[styles.primary, { backgroundColor: colors.accent }]}>
+            <Text style={styles.primaryText}>{t('tournament.takeBack')}</Text>
+          </TouchableOpacity>
+        </View>
+        {pendingTable && <TableBoard table={pendingTable} size="phone" />}
+        {exitBtn}
+      </ScrollView>
     );
   }
   if (!snapshot || !room) {

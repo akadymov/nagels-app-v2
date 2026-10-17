@@ -117,6 +117,8 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
 
   const [stakes, setStakes] = useState<number[]>(() => Array(tableCount).fill(0));
   const [pins, setPins] = useState<Record<string, number>>({});
+  // Per-tour: participants left out of this tour's seating.
+  const [sittingOut, setSittingOut] = useState<Set<string>>(() => new Set());
   const [pinFor, setPinFor] = useState<string | null>(null);
   const [moveFor, setMoveFor] = useState<string | null>(null);
   const [preview, setPreview] = useState<string[][] | null>(null);
@@ -151,7 +153,7 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
     if (!data) return;
     setError(null);
     const r = await gameClient.tournamentUpdateParticipants(data.tournament.id, secret!, parseParticipants(pText));
-    if (r?.ok) { setPreview(null); setPins({}); void refetch(); } else setError(r?.error ?? 'generic');
+    if (r?.ok) { setPreview(null); setPins({}); setSittingOut(new Set()); void refetch(); } else setError(r?.error ?? 'generic');
   };
 
   const setMax = async (v: number) => {
@@ -161,15 +163,38 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
     if (r?.ok) void refetch(); else setError(r?.error ?? 'generic');
   };
 
+  const playing = participants.filter((p) => !sittingOut.has(p.id));
+
+  const toggleSitOut = (pid: string) => {
+    setSittingOut((prev) => {
+      const next = new Set(prev);
+      if (next.has(pid)) next.delete(pid); else next.add(pid);
+      return next;
+    });
+    setPins((p) => { if (!(pid in p)) return p; const n = { ...p }; delete n[pid]; return n; });
+    if (pinFor === pid) setPinFor(null);
+    setPreview(null); setMoveFor(null);
+  };
+
   const shuffle = () => {
     setError(null); setMoveFor(null); setLinks(null);
-    const r = shuffleSeating({ participants, stakes, pins });
+    const activePins = Object.fromEntries(Object.entries(pins).filter(([pid]) => !sittingOut.has(pid)));
+    const r = shuffleSeating({ participants: playing, stakes, pins: activePins });
     if (r.ok) setPreview(r.tables); else { setPreview(null); setError(r.reason); }
   };
 
   const move = (pid: string, to: number) => {
     if (!preview) return;
     const next = moveParticipant(preview, pid, to);
+    setMoveFor(null);
+    const bad = validateSeating(next, participants, stakes);
+    if (bad) setError(bad); else { setError(null); setPreview(next); }
+  };
+
+  // Swap two people at different tables (works when every table is full).
+  const swap = (a: string, b: string) => {
+    if (!preview) return;
+    const next = preview.map((t) => t.map((x) => (x === a ? b : x === b ? a : x)));
     setMoveFor(null);
     const bad = validateSeating(next, participants, stakes);
     if (bad) setError(bad); else { setError(null); setPreview(next); }
@@ -190,6 +215,8 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
       );
       if (r?.ok) {
         setError(null);
+        // Pins and sit-outs are per tour.
+        setPins({}); setSittingOut(new Set()); setPinFor(null); setMoveFor(null);
         setLinks(seatsSnap.map((_, i) => i + 1));
         void refetch();
       } else {
@@ -211,7 +238,8 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
 
   if (!isAdmin) {
     return (
-      <ScrollView testID="tournament-setup" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}>
+      <ScrollView testID="tournament-setup" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}
+        keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.textPrimary }]}>{t('tournament.newTitle')}</Text>
         <Text style={[styles.label, { color: colors.textSecondary }]}>{t('tournament.name')}</Text>
         <TextInput testID="tournament-name" value={name} onChangeText={setName} maxLength={60}
@@ -246,7 +274,8 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
   );
 
   return (
-    <ScrollView testID="tournament-setup" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}>
+    <ScrollView testID="tournament-setup" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}
+      keyboardShouldPersistTaps="handled">
       <View style={[styles.card, card]}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{data?.tournament.name ?? ''}</Text>
         <Text style={{ color: colors.textSecondary }}>
@@ -301,9 +330,24 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
             </View>
           ))}
 
+          <Text style={[styles.label, { color: colors.textSecondary, marginTop: Spacing.md }]}>{t('tournament.sitOut')}</Text>
+          <View style={styles.wrap}>
+            {participants.map((p) => {
+              const out = sittingOut.has(p.id);
+              return (
+                <TouchableOpacity key={p.id} testID={`tournament-sitout-${p.id}`} onPress={() => toggleSitOut(p.id)}
+                  style={[styles.chip, { borderColor: colors.glassLight }, out && { backgroundColor: colors.accent }]}>
+                  <Text style={{ color: out ? '#fff' : colors.textPrimary, textDecorationLine: out ? 'line-through' : 'none' }}>
+                    {p.display_name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           <Text style={[styles.label, { color: colors.textSecondary, marginTop: Spacing.md }]}>{t('tournament.pin')}</Text>
           <View style={styles.wrap}>
-            {participants.map((p) => (
+            {playing.map((p) => (
               <TouchableOpacity key={p.id} testID={`tournament-pin-${p.id}`} onPress={() => setPinFor(pinFor === p.id ? null : p.id)}
                 style={[styles.chip, { borderColor: colors.glassLight }, p.id in pins && { backgroundColor: colors.accent }]}>
                 <Text style={{ color: p.id in pins ? '#fff' : colors.textPrimary }}>
@@ -341,7 +385,12 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
               </Text>
               <View style={styles.wrap}>
                 {seats.map((pid) => (
-                  <TouchableOpacity key={pid} onPress={() => setMoveFor(moveFor === pid ? null : pid)}
+                  <TouchableOpacity key={pid}
+                    onPress={() => {
+                      // A person is picked at another table → tap here swaps them.
+                      if (moveFor && moveFor !== pid && !seats.includes(moveFor)) swap(moveFor, pid);
+                      else setMoveFor(moveFor === pid ? null : pid);
+                    }}
                     style={[styles.chip, { borderColor: colors.glassLight }, moveFor === pid && { backgroundColor: colors.accent }]}>
                     <Text style={{ color: moveFor === pid ? '#fff' : colors.textPrimary }}>{nameOf(pid)}</Text>
                   </TouchableOpacity>
@@ -355,6 +404,7 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
                       <Text style={{ color: colors.textPrimary }}>{j + 1}</Text>
                     </TouchableOpacity>
                   ))}
+                  <Text style={{ color: colors.textSecondary, width: '100%' }}>{t('tournament.swapHint')}</Text>
                 </View>
               )}
             </View>

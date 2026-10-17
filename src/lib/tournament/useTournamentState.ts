@@ -57,18 +57,28 @@ export function useTournamentState(code: string | undefined, opts?: { skipRoomId
     .filter((rid) => rid !== skipRoomId)
     .join(',');
 
+  // Tournament channel in its own effect, keyed only on the tournament id:
+  // if it shared an effect with the room channels, a room-list change would
+  // remove and immediately re-create `tournament:<id>`, and realtime-js hands
+  // back the still-leaving instance, so the tournament channel would die
+  // after the first tour start.
   useEffect(() => {
     if (!tournamentId) return;
     const supabase = getSupabaseClient();
-    const channels: RealtimeChannel[] = [
-      supabase.channel(`tournament:${tournamentId}`)
-        .on('broadcast', { event: 'tournament_changed' }, schedule),
-      ...roomKey.split(',').filter(Boolean).map((rid) =>
-        supabase.channel(`room:${rid}`).on('broadcast', { event: 'state_changed' }, schedule)),
-    ];
+    const channel = supabase.channel(`tournament:${tournamentId}`)
+      .on('broadcast', { event: 'tournament_changed' }, schedule);
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tournamentId, schedule]);
+
+  useEffect(() => {
+    if (!roomKey) return;
+    const supabase = getSupabaseClient();
+    const channels: RealtimeChannel[] = roomKey.split(',').filter(Boolean).map((rid) =>
+      supabase.channel(`room:${rid}`).on('broadcast', { event: 'state_changed' }, schedule));
     channels.forEach((c) => c.subscribe());
     return () => { channels.forEach((c) => supabase.removeChannel(c)); };
-  }, [tournamentId, roomKey, schedule]);
+  }, [roomKey, schedule]);
 
   return { data, loading, error, refetch };
 }

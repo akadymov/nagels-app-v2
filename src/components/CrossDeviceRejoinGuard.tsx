@@ -35,7 +35,14 @@ export function CrossDeviceRejoinGuard({ navigationRef }: Props) {
     let lastCheckMs = 0;
     const COOLDOWN_MS = 5_000;
 
+    // Tournament screens don't fill roomStore.snapshot, so the snapshot gate
+    // below can't protect them; never navigate a tournament screen away.
+    const onTournamentScreen = () =>
+      !!navigationRef.isReady()
+      && !!navigationRef.getCurrentRoute()?.name?.startsWith('Tournament');
+
     const check = async (reason: string) => {
+      if (onTournamentScreen()) return;
       const now = Date.now();
       if (now - lastCheckMs < COOLDOWN_MS) return;
       lastCheckMs = now;
@@ -44,7 +51,7 @@ export function CrossDeviceRejoinGuard({ navigationRef }: Props) {
       try {
         const { tryRestoreActiveRoom } = await import('../lib/activeRoom');
         const dest = await tryRestoreActiveRoom();
-        if (!dest || !navigationRef.isReady()) return;
+        if (!dest || !navigationRef.isReady() || onTournamentScreen()) return;
         if (dest === 'GameTable') {
           // Restored room is always multiplayer.
           (navigationRef as any).navigate('GameTable', { isMultiplayer: true });

@@ -532,6 +532,8 @@
     "tour": "Tour {{n}}",
     "table": "Table {{n}}",
     "moveTo": "Move to table",
+    "sitOut": "Sits out this tour (tap to toggle)",
+    "swapHint": "…or tap someone at another table to swap",
     "tvLink": "TV screen",
     "adminLink": "Admin link (keep it private)",
     "scanToRecord": "Scan to record this table",

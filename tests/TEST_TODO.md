@@ -67,9 +67,9 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `rating-proposal-accept` — src/screens/WaitingRoomScreen.tsx:566
 - [ ] `rating-proposal-banner` — src/screens/WaitingRoomScreen.tsx:546
 - [ ] `rating-proposal-decline` — src/screens/WaitingRoomScreen.tsx:575
-- [ ] `recorder-bidder` — src/components/tournament/RecorderBetPad.tsx:49
-- [ ] `recorder-board-toggle` — src/screens/tournament/TournamentRecorderScreen.tsx:158
-- [ ] `recorder-exit` — src/screens/tournament/TournamentRecorderScreen.tsx:97
+- [ ] `recorder-board-toggle` — src/screens/tournament/TournamentRecorderScreen.tsx:195
+- [ ] `recorder-exit` — src/screens/tournament/TournamentRecorderScreen.tsx:116
+- [ ] `recorder-retry` — src/screens/tournament/TournamentRecorderScreen.tsx:137
 - [ ] `recorder-tricks-sum` — src/components/tournament/RecorderTricks.tsx:104
 - [ ] `recorder-tricks-undo` — src/components/tournament/RecorderTricks.tsx:122
 - [ ] `row-announce-telegram` — src/screens/LobbyScreen.tsx:718
@@ -100,8 +100,7 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `stake-optin-host-badge` — src/components/stakes/StakeSelector.tsx:194
 - [ ] `switch-announce-telegram` — src/screens/LobbyScreen.tsx:731
 - [ ] `switch-skip-ones` — src/screens/WaitingRoomScreen.tsx:892
-- [ ] `tournament-error` — src/screens/tournament/TournamentSetupScreen.tsx:209
-- [ ] `tournament-setup` — src/screens/tournament/TournamentSetupScreen.tsx:214
+- [ ] `tournament-error` — src/screens/tournament/TournamentSetupScreen.tsx:236
 - [ ] `tournament-tv` — src/screens/tournament/TournamentTvScreen.tsx:26
 - [ ] `trick-card` — src/screens/GameTableScreen.tsx:1636
 - [ ] `tricks-btn-chat` — src/components/scorekeeper/TricksRecorder.tsx:151

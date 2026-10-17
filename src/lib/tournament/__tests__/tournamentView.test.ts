@@ -30,6 +30,20 @@ describe('tableRows', () => {
     expect(tableRows(s)[0].total).toBe(22);
     expect(tableRows(s).every((r) => !r.isTurn)).toBe(true);
   });
+  it('does not double-count the final hand of a finished room', () => {
+    // After the last hand the room is finished, the hand is 'closed' and is
+    // already in score_history, but current_hand still points at it.
+    const s = { ...snap,
+      room: { ...snap.room, phase: 'finished' },
+      current_hand: { ...snap.current_hand, phase: 'closed' },
+      hand_scores: [{ hand_id: 'h2', session_id: 's0', bet: 0, taken_tricks: 0, hand_score: 10 }],
+      score_history: [...snap.score_history, { hand_number: 2, scores: [
+        { session_id: 's0', hand_score: 10 }, { session_id: 's1', hand_score: 0 }, { session_id: 's2', hand_score: 0 }] }] };
+    const rows = tableRows(s);
+    expect(rows[0].total).toBe(22);
+    expect(rows[0].hand_score).toBe(10);
+    expect(rows[0].taken).toBe(0);
+  });
 });
 
 describe('fullLeaderboard', () => {

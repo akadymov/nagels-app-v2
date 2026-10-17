@@ -532,6 +532,8 @@
     "tour": "Ronda {{n}}",
     "table": "Mesa {{n}}",
     "moveTo": "Mover a la mesa",
+    "sitOut": "No juega esta ronda (toca para marcar)",
+    "swapHint": "…o toca a alguien de otra mesa para intercambiarlos",
     "tvLink": "Pantalla de TV",
     "adminLink": "Enlace de administrador (mantenlo privado)",
     "scanToRecord": "Escanea para anotar esta mesa",

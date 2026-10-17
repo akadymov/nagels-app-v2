@@ -30,7 +30,8 @@ export function tableRows(state: RoomSnapshot): TablePlayerRow[] {
       bet: hs ? hs.bet : null,
       taken: scored || recorded ? (hs?.taken_tricks ?? null) : null,
       hand_score: scored ? (hs?.hand_score ?? null) : null,
-      total: (totals.get(p.session_id) ?? 0) + (scored && hs ? hs.hand_score : 0),
+      // A 'closed' current hand (finished room) is already in score_history.
+      total: (totals.get(p.session_id) ?? 0) + (hand?.phase === 'scoring' && hs ? hs.hand_score : 0),
       isDealer: !!hand && n > 0 && getDealerSeat(hand.starting_seat, n) === p.seat_index,
       isTurn: hand?.phase === 'betting' && hand.current_seat === p.seat_index,
     };
