@@ -187,7 +187,4 @@ All strings go to EN / RU / ES locales.
 
 ## Rollout
 
-1. Migration → local → `supabase db push` to prod.
-2. Deploy the edge function.
-3. Push to main → Vercel. Do a dry run on prod with fake names the day before the tournament.
-4. Checkpoint on the evening of 2026-10-19: if the TV or the recorder flow isn't solid, use whatever works and keep the rest on paper.
+Ship as soon as it's ready: migration → `supabase db push` to prod, deploy the edge function, push to main (Vercel auto-deploys). Akula does the end-to-end testing on prod.
