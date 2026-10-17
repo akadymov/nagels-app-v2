@@ -511,6 +511,17 @@
     "joinedAsSpectator": "Partida en curso — entraste como espectador."
   },
   "tournament": {
+    "hands": "Manos",
+    "handsTitle": "Manos de esta partida",
+    "noHandsYet": "Aún no hay manos puntuadas.",
+    "handShort": "Mano {{n}}",
+    "editHand": "Corregir mano {{n}}",
+    "takeOverQr": "Tomar el registro",
+    "takeOverTitle": "La mesa {{n}} ya se está registrando en otro teléfono",
+    "takeOverBody": "Si la tomas, el registro pasa a este teléfono y el otro mostrará «El registro fue tomado».",
+    "takeOver": "Tomar el registro",
+    "watchOnlyHint": "O simplemente mira la mesa abajo: nada cambia hasta que pulses el botón.",
+    "editErrors": { "range": "Cada valor debe estar entre 0 y el número de cartas.", "tricks_sum": "Las bazas deben sumar el número de cartas.", "bets_sum": "Las apuestas suman {{sum}} = cartas: alguien debe quedar insatisfecho. Revisa las apuestas." },
     "title": "Torneo",
     "newTitle": "Nuevo torneo",
     "name": "Nombre del torneo",
@@ -573,6 +584,8 @@
     "participantsPanel": "Participantes",
     "currentTour": "Ronda actual",
     "errors": {
+      "invalid_entries": "Los datos de la mano no coinciden con la mesa; recarga e inténtalo de nuevo.",
+      "not_tournament": "Esta no es una mesa de torneo.",
       "no_stakes_capacity": "Demasiados jugadores «sin dinero» para las mesas sin apuesta — haz que una mesa más sea sin apuesta.",
       "no_stakes_at_stake_table": "Un jugador «sin dinero» no puede sentarse en una mesa con apuesta.",
       "table_too_small": "Cada mesa necesita al menos 2 jugadores.",

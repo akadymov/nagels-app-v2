@@ -457,4 +457,13 @@ export const gameClient = {
 
   undoBet: (room_id: string, hand_id: string) =>
     postAction(null, { kind: 'undo_bet', room_id, hand_id }),
+
+  editHand: (room_id: string, hand_id: string, entries: Array<{ seat: number; bet: number; taken: number }>) =>
+    postAction(null, { kind: 'edit_hand', room_id, hand_id, entries }),
+
+  getMySessionId: async (): Promise<string | null> => {
+    const supabase = getSupabaseClient();
+    const { data } = await supabase.rpc('get_my_session_id');
+    return (data as string | null) ?? null;
+  },
 };

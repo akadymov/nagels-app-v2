@@ -18,6 +18,7 @@ import { OfflineHandBriefing } from '../../components/offline/OfflineHandBriefin
 import { TableBoard } from '../../components/tournament/TableBoard';
 import { RecorderBetPad } from '../../components/tournament/RecorderBetPad';
 import { RecorderTricks } from '../../components/tournament/RecorderTricks';
+import { RecorderHands } from '../../components/tournament/RecorderHands';
 
 interface Props { code: string; tableNumber: number; secret: string; onExit: () => void }
 
@@ -28,6 +29,10 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
   const myPlayerId = useRoomStore((s) => s.myPlayerId);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [showBoard, setShowBoard] = useState(false);
+  const [showHands, setShowHands] = useState(false);
+  // Someone else is already recording this table: watch until the user
+  // explicitly confirms the takeover (scanning the TV's small QR).
+  const [confirmTakeover, setConfirmTakeover] = useState(false);
   const [busy, setBusy] = useState(false);
   const claimSeq = useRef(0);
   const claimedTour = useRef<number | null>(null);
@@ -35,29 +40,58 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
 
   const { data } = useTournamentState(code, { roomChannels: false });
 
-  const claim = useCallback(async (fresh: boolean) => {
+  const claim = useCallback(async (fresh: boolean): Promise<boolean> => {
     const seq = ++claimSeq.current;
     if (fresh) useRoomStore.getState().reset();
     setClaimError(null);
     try {
       const r = await gameClient.tournamentClaimTable(code, tableNumber, secret);
-      if (seq !== claimSeq.current) return;
+      if (seq !== claimSeq.current) return false;
       if (r.ok) {
         roomIdRef.current = r.room_id;
         subscribeRoom(r.room_id);
         claimedTour.current = r.state?.room?.tour_number ?? claimedTour.current;
-      } else {
-        setClaimError(r.error ?? 'generic');
+        return true;
       }
+      setClaimError(r.error ?? 'generic');
     } catch (e: any) {
       if (seq === claimSeq.current) setClaimError(e?.message ?? 'generic');
     }
+    return false;
   }, [code, tableNumber, secret]);
 
   useEffect(() => {
-    void claim(true);
-    return () => { claimSeq.current++; unsubscribeRoom(); };
+    let alive = true;
+    (async () => {
+      // A reload of the recording phone continues silently; any other phone
+      // only watches until the takeover is confirmed.
+      try {
+        const [ts, me] = await Promise.all([
+          gameClient.getTournamentState(code), gameClient.getMySessionId(),
+        ]);
+        if (!alive) return;
+        const tb = ts?.tables.find((x) => x.table_number === tableNumber);
+        const host = tb?.state?.room?.host_session_id;
+        if (ts && tb?.claimed && host && host !== me) {
+          claimSeq.current++;
+          useRoomStore.getState().reset();
+          roomIdRef.current = tb.room_id;
+          claimedTour.current = ts.tournament.current_tour;
+          subscribeRoom(tb.room_id);
+          setConfirmTakeover(true);
+          return;
+        }
+      } catch {
+        // Fall through to a normal claim; its errors surface on screen.
+      }
+      if (alive) void claim(true);
+    })();
+    return () => { alive = false; claimSeq.current++; unsubscribeRoom(); };
   }, [claim]);
+
+  const confirmClaim = async () => {
+    if (await claim(false)) setConfirmTakeover(false);
+  };
 
   // Follow the tournament to the next tour on the same QR/URL.
   const currentTour = data?.tournament.current_tour;
@@ -141,6 +175,24 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
       </Centered>
     );
   }
+  if (confirmTakeover) {
+    const watched = snapshot?.room ? { table_number: tableNumber, room_id: snapshot.room.id,
+      stake: snapshot.room.stake, claimed: true, state: snapshot } as TournamentTable : null;
+    return (
+      <ScrollView testID="tournament-recorder" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.pad}>
+        <View testID="recorder-confirm-takeover" style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}>
+          <Text style={[styles.msg, { color: colors.textPrimary }]}>{t('tournament.takeOverTitle', { n: tableNumber })}</Text>
+          <Text style={[styles.body, { color: colors.textSecondary }]}>{t('tournament.takeOverBody')}</Text>
+          <TouchableOpacity testID="recorder-confirm-takeover-yes" onPress={confirmClaim} style={[styles.primary, { backgroundColor: colors.accent }]}>
+            <Text style={styles.primaryText}>{t('tournament.takeOver')}</Text>
+          </TouchableOpacity>
+          <Text style={[styles.body, { color: colors.textSecondary, marginTop: Spacing.md }]}>{t('tournament.watchOnlyHint')}</Text>
+        </View>
+        {watched && <TableBoard table={watched} size="phone" />}
+        {exitBtn}
+      </ScrollView>
+    );
+  }
   if (pendingRoomId) {
     const pendingTable = tourTable && tourTable.room_id === pendingRoomId ? tourTable : null;
     return (
@@ -192,6 +244,9 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
     <View testID="tournament-recorder" style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={styles.topBar}>
         <Text style={[styles.topTitle, { color: colors.textPrimary }]}>{t('tournament.table', { n: tableNumber })}</Text>
+        <TouchableOpacity testID="recorder-hands-toggle" onPress={() => setShowHands(true)} style={styles.btn}>
+          <Text style={{ color: colors.accent, fontSize: 16 }}>{t('tournament.hands')}</Text>
+        </TouchableOpacity>
         <TouchableOpacity testID="recorder-board-toggle" onPress={() => setShowBoard(true)} style={styles.btn}>
           <Text style={{ color: colors.accent, fontSize: 16 }}>{t('tournament.showBoard')}</Text>
         </TouchableOpacity>
@@ -231,6 +286,11 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
           </>
         )}
       </ScrollView>
+      <Modal visible={showHands} animationType="slide" onRequestClose={() => setShowHands(false)}>
+        <ScrollView style={{ flex: 1, backgroundColor: colors.background }} keyboardShouldPersistTaps="handled">
+          <RecorderHands state={snapshot} onDone={() => setShowHands(false)} />
+        </ScrollView>
+      </Modal>
       <Modal visible={showBoard} transparent animationType="fade" onRequestClose={() => setShowBoard(false)}>
         <View style={styles.modalBg}>
           <ScrollView contentContainerStyle={styles.pad}>
@@ -249,6 +309,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
   pad: { padding: Spacing.md, gap: Spacing.md },
   msg: { fontSize: 18, fontWeight: '600', textAlign: 'center', marginBottom: Spacing.md },
+  body: { fontSize: 16, textAlign: 'center', lineHeight: 22 },
   card: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, width: '100%' },
   topBar: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.sm },
   topTitle: { flex: 1, fontSize: 18, fontWeight: '700' },

@@ -40,13 +40,14 @@ import {
   tournamentStartTour, tournamentClaimTable, shouldNotify,
 } from './actions/tournament.ts';
 import { undoBet } from './actions/undoBet.ts';
+import { editHand } from './actions/editHand.ts';
 import { resolveOnBehalfActor } from './onBehalf.ts';
 
 // Gameplay mutations rejected while a room is paused (see the pause gate below).
 // Module scope: built once, not per request.
 const GAMEPLAY_WHILE_PAUSED_BLOCKED = new Set([
   'place_bet', 'play_card', 'continue_hand', 'record_tricks', 'request_timeout',
-  'ready', 'start_game', 'restart_game', 'set_stake', 'toggle_stake_optin', 'undo_bet',
+  'ready', 'start_game', 'restart_game', 'set_stake', 'toggle_stake_optin', 'undo_bet', 'edit_hand',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -207,6 +208,7 @@ Deno.serve(async (req: Request) => {
         case 'continue_hand':   result = await continueHand(svc, actor, action); break;
         case 'record_tricks':   result = await recordTricks(svc, handlerActor, action); break;
         case 'undo_bet':        result = await undoBet(svc, actor, action); break;
+        case 'edit_hand':       result = await editHand(svc, actor, action); break;
         case 'request_timeout': result = await requestTimeout(svc, actor, action); break;
         case 'restart_game':    result = await restartGame(svc, actor, action); break;
         case 'set_display_name': result = await setDisplayName(svc, actor, action); break;

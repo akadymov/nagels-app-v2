@@ -35,3 +35,18 @@ Deno.test('shouldNotify: tournament rooms never notify', () => {
   assertEquals(shouldNotify({ tournament_id: null }), true);
   assertEquals(shouldNotify(null), true);
 });
+
+import { toSessionEntries } from '../../game-action/actions/editHand.ts';
+
+Deno.test('toSessionEntries maps seats to sessions', () => {
+  const m = new Map([[0, 's0'], [1, 's1']]);
+  assertEquals(toSessionEntries([{ seat: 0, bet: 1, taken: 2 }, { seat: 1, bet: 0, taken: 0 }], m), [
+    { session_id: 's0', bet: 1, taken: 2 }, { session_id: 's1', bet: 0, taken: 0 },
+  ]);
+});
+Deno.test('toSessionEntries rejects unknown seats and non-integers', () => {
+  const m = new Map([[0, 's0']]);
+  assertEquals(toSessionEntries([{ seat: 5, bet: 1, taken: 1 }], m), null);
+  assertEquals(toSessionEntries([{ seat: 0, bet: '1', taken: 1 }], m), null);
+  assertEquals(toSessionEntries('nope', m), null);
+});

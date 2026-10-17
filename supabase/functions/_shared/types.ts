@@ -2,7 +2,7 @@ export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room'
   | 'ready' | 'start_game'
   | 'place_bet' | 'play_card' | 'continue_hand'
-  | 'record_tricks' | 'undo_bet'
+  | 'record_tricks' | 'undo_bet' | 'edit_hand'
   | 'request_timeout'
   | 'restart_game'
   | 'pause_game' | 'resume_game'
@@ -21,6 +21,7 @@ export type Action =
   | { kind: 'continue_hand'; room_id: string; hand_id: string }
   | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number; on_behalf_of_seat?: number }
   | { kind: 'undo_bet'; room_id: string; hand_id: string }
+  | { kind: 'edit_hand'; room_id: string; hand_id: string; entries: Array<{ seat: number; bet: number; taken: number }> }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string }
   | { kind: 'set_display_name'; display_name: string; room_id?: string }

@@ -506,6 +506,17 @@
     "joinedAsSpectator": "Partie en cours — tu as rejoint en spectateur."
   },
   "tournament": {
+    "hands": "Donnes",
+    "handsTitle": "Donnes de cette partie",
+    "noHandsYet": "Aucune donne comptée pour l’instant.",
+    "handShort": "Donne {{n}}",
+    "editHand": "Corriger la donne {{n}}",
+    "takeOverQr": "Reprendre la saisie",
+    "takeOverTitle": "La table {{n}} est déjà saisie sur un autre téléphone",
+    "takeOverBody": "Si vous reprenez, la saisie passe sur ce téléphone et l’autre affichera « La saisie a été reprise ».",
+    "takeOver": "Reprendre la saisie",
+    "watchOnlyHint": "Ou regardez simplement la table ci-dessous — rien ne change tant que vous n’appuyez pas.",
+    "editErrors": { "range": "Chaque valeur doit être entre 0 et le nombre de cartes.", "tricks_sum": "Les plis doivent totaliser le nombre de cartes.", "bets_sum": "Les annonces totalisent {{sum}} = cartes — quelqu’un doit être mécontent. Vérifiez les annonces." },
     "title": "Tournoi",
     "newTitle": "Nouveau tournoi",
     "name": "Nom du tournoi",
@@ -568,6 +579,8 @@
     "participantsPanel": "Participants",
     "currentTour": "Tour en cours",
     "errors": {
+      "invalid_entries": "Les données de la donne ne correspondent pas à la table — rechargez et réessayez.",
+      "not_tournament": "Ce n’est pas une table de tournoi.",
       "no_stakes_capacity": "Trop de joueurs « sans argent » pour les tables sans mise — rendez une table de plus sans mise.",
       "no_stakes_at_stake_table": "Un joueur « sans argent » ne peut pas s'asseoir à une table avec mise.",
       "table_too_small": "Chaque table doit avoir au moins 2 joueurs.",

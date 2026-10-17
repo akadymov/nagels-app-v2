@@ -63,8 +63,14 @@ export const TournamentTvScreen: React.FC<Props> = ({ code, secret }) => {
                   <TableBoard table={table} size="tv" />
                   {secret ? (
                     table.claimed ? (
-                      <View style={styles.qrSmall} pointerEvents="none">
+                      <View
+                        style={[styles.qrSmall, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
+                        pointerEvents="none"
+                      >
                         <TableQr url={url} size={96} />
+                        <Text testID={`tournament-takeover-label-${n}`} style={[styles.qrSmallLabel, { color: colors.textSecondary }]}>
+                          {t('tournament.takeOverQr')}
+                        </Text>
                       </View>
                     ) : (
                       <View
@@ -111,7 +117,11 @@ const styles = StyleSheet.create({
   badge: { fontSize: 18, borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 2 },
   tables: { flex: 11, flexDirection: 'row', gap: Spacing.md },
   column: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  qrSmall: { position: 'absolute', top: 0, right: 0 },
+  qrSmall: {
+    position: 'absolute', top: 0, right: 0, alignItems: 'center',
+    padding: 6, borderWidth: 1, borderRadius: 10, maxWidth: 140,
+  },
+  qrSmallLabel: { fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 4 },
   qrBig: {
     position: 'absolute',
     alignSelf: 'center',

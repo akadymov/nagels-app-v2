@@ -511,6 +511,17 @@
     "joinedAsSpectator": "Game in progress — you joined as a spectator."
   },
   "tournament": {
+    "hands": "Hands",
+    "handsTitle": "Hands of this game",
+    "noHandsYet": "No scored hands yet.",
+    "handShort": "Hand {{n}}",
+    "editHand": "Fix hand {{n}}",
+    "takeOverQr": "Take over recording",
+    "takeOverTitle": "Table {{n}} is already being recorded on another phone",
+    "takeOverBody": "If you take over, recording moves to this phone and the other phone will show “Recording was taken over”.",
+    "takeOver": "Take over recording",
+    "watchOnlyHint": "Or just watch the table below — nothing changes until you tap the button.",
+    "editErrors": { "range": "Each value must be between 0 and the number of cards.", "tricks_sum": "Tricks must add up to the number of cards.", "bets_sum": "Bets add up to {{sum}} = cards — someone must be unhappy. Check the bets." },
     "title": "Tournament",
     "newTitle": "New tournament",
     "name": "Tournament name",
@@ -573,6 +584,8 @@
     "participantsPanel": "Participants",
     "currentTour": "Current tour",
     "errors": {
+      "invalid_entries": "The hand data doesn't match this table — reload and try again.",
+      "not_tournament": "This isn't a tournament table.",
       "no_stakes_capacity": "Too many “no money” players for the tables without stakes — make one more table stake-free.",
       "no_stakes_at_stake_table": "A “no money” player can't sit at a table with stakes.",
       "table_too_small": "Each table needs at least 2 players.",
