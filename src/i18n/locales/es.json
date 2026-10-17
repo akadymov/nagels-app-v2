@@ -562,6 +562,13 @@
     "takenOver": "Otro teléfono ha tomado el control del registro",
     "takeBack": "Recuperar",
     "tableNotInTour": "La mesa {{n}} no está en la ronda {{tour}}",
+    "participantsHint": "Uno por línea. Añade ' -' si es sin dinero.",
+    "save": "Guardar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "tableLinks": "Enlaces de mesas",
+    "participantsPanel": "Participantes",
+    "currentTour": "Ronda actual",
     "errors": {
       "no_stakes_capacity": "Demasiados jugadores «sin dinero» para las mesas sin apuesta — haz que una mesa más sea sin apuesta.",
       "no_stakes_at_stake_table": "Un jugador «sin dinero» no puede sentarse en una mesa con apuesta.",
@@ -578,7 +585,13 @@
       "cannot_undo": "Ya no se puede deshacer la última apuesta.",
       "internal_error": "Error del servidor — inténtalo de nuevo.",
       "not_signed_in": "Sesión no iniciada — recarga la página.",
-      "generic": "Algo salió mal — inténtalo de nuevo."
+      "generic": "Algo salió mal — inténtalo de nuevo.",
+      "no_tables": "Añade al menos una mesa.",
+      "duplicate": "Un jugador está sentado dos veces.",
+      "unknown_participant": "Jugador desconocido en la distribución.",
+      "bad_pin": "Mesa fijada no válida.",
+      "tour_in_progress": "La ronda actual sigue en curso.",
+      "bad_stake": "Apuesta no válida."
     }
   }
 }

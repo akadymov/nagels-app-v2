@@ -557,6 +557,13 @@
     "takenOver": "La saisie a été reprise par un autre téléphone",
     "takeBack": "Reprendre",
     "tableNotInTour": "La table {{n}} n'est pas dans le tour {{tour}}",
+    "participantsHint": "Un par ligne. Ajoutez ' -' pour sans argent.",
+    "save": "Enregistrer",
+    "copy": "Copier",
+    "copied": "Copié",
+    "tableLinks": "Liens des tables",
+    "participantsPanel": "Participants",
+    "currentTour": "Tour en cours",
     "errors": {
       "no_stakes_capacity": "Trop de joueurs « sans argent » pour les tables sans mise — rendez une table de plus sans mise.",
       "no_stakes_at_stake_table": "Un joueur « sans argent » ne peut pas s'asseoir à une table avec mise.",
@@ -573,7 +580,13 @@
       "cannot_undo": "La dernière mise ne peut plus être annulée.",
       "internal_error": "Erreur serveur — réessayez.",
       "not_signed_in": "Non connecté — rechargez la page.",
-      "generic": "Une erreur s'est produite — réessayez."
+      "generic": "Une erreur s'est produite — réessayez.",
+      "no_tables": "Ajoutez au moins une table.",
+      "duplicate": "Un joueur est placé deux fois.",
+      "unknown_participant": "Joueur inconnu dans le placement.",
+      "bad_pin": "Table épinglée invalide.",
+      "tour_in_progress": "Le tour en cours n'est pas terminé.",
+      "bad_stake": "Mise invalide."
     }
   }
 }
