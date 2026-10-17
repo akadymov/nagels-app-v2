@@ -41,10 +41,12 @@ export async function continueHand(
     {
       const { data: roomRow } = await svc
         .from('rooms')
-        .select('stake')
+        .select('stake, tournament_id')
         .eq('id', action.room_id)
         .maybeSingle();
-      const stake = roomRow?.stake ?? 0;
+      // Tournament stakes are symbolic and tournament-scoped (derived in
+      // get_tournament_state) — never touch account rating.
+      const stake = roomRow?.tournament_id ? 0 : (roomRow?.stake ?? 0);
 
       if (stake > 0) {
         // Opted-in players in this room with their session_id + auth_user_id.

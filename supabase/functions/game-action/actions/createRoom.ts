@@ -4,7 +4,7 @@ import { buildSnapshot } from '../snapshot.ts';
 import { notifyNewRoom } from '../../_shared/telegram.ts';
 import { isAdminEmail } from '../../_shared/auth/isAdmin.ts';
 
-function generateCode(): string {
+export function generateCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 6; i++) {

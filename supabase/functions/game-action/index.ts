@@ -35,12 +35,18 @@ import { adminSearchUsers } from './actions/adminSearchUsers.ts';
 import { adminResetRating, adminResetAllRatings } from './actions/adminResetRating.ts';
 import { adminGrantTelegram }  from './actions/adminGrantTelegram.ts';
 import { adminRevokeTelegram } from './actions/adminRevokeTelegram.ts';
+import {
+  tournamentCreate, tournamentUpdateParticipants, tournamentSetMaxCards,
+  tournamentStartTour, tournamentClaimTable, shouldNotify,
+} from './actions/tournament.ts';
+import { undoBet } from './actions/undoBet.ts';
+import { resolveOnBehalfActor } from './onBehalf.ts';
 
 // Gameplay mutations rejected while a room is paused (see the pause gate below).
 // Module scope: built once, not per request.
 const GAMEPLAY_WHILE_PAUSED_BLOCKED = new Set([
   'place_bet', 'play_card', 'continue_hand', 'record_tricks', 'request_timeout',
-  'ready', 'start_game', 'restart_game', 'set_stake', 'toggle_stake_optin',
+  'ready', 'start_game', 'restart_game', 'set_stake', 'toggle_stake_optin', 'undo_bet',
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -104,6 +110,29 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Tournament management — no room snapshot/push pipeline. Rooms created by
+  // start_tour are broadcast by their own state; never notified (spec).
+  if (action.kind.startsWith('tournament_')) {
+    try {
+      let r: Record<string, unknown>;
+      switch (action.kind) {
+        case 'tournament_create':              r = await tournamentCreate(svc, actor, action); break;
+        case 'tournament_update_participants': r = await tournamentUpdateParticipants(svc, actor, action); break;
+        case 'tournament_set_max_cards':       r = await tournamentSetMaxCards(svc, actor, action); break;
+        case 'tournament_start_tour':          r = await tournamentStartTour(svc, actor, action); break;
+        case 'tournament_claim_table':         r = await tournamentClaimTable(svc, actor, action); break;
+        default: return respond({ ok: false, error: 'unknown_action' }, 400);
+      }
+      if (r.ok && typeof r.room_id === 'string') {
+        void broadcastStateChanged(svc, r.room_id, (r.version as number) ?? 0).catch(() => {});
+      }
+      return respond({ ...r, me_session_id: actor.session_id });
+    } catch (err) {
+      console.error('[game-action] tournament handler threw:', err);
+      return respond({ ok: false, error: 'internal_error' }, 500);
+    }
+  }
+
   // Snapshot of room state BEFORE the action — needed by the push detector.
   // Skipped for create_room (room doesn't exist yet) and join_room (the
   // detector handles join_room with prev=null using actor + action_kind).
@@ -140,6 +169,24 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const isTournamentRoom = !shouldNotify(prev?.room);
+  if (isTournamentRoom && action.kind === 'request_timeout') {
+    return respond({ ok: false, error: 'not_applicable', state: prev, version: prev?.room?.version ?? 0 });
+  }
+
+  // Tournament recorder acting for a proxy seat. The real actor stays in
+  // me_session_id; only the handler sees the proxy.
+  let handlerActor = actor;
+  if ((action.kind === 'place_bet' || action.kind === 'record_tricks')
+      && typeof action.on_behalf_of_seat === 'number') {
+    const r = await resolveOnBehalfActor(svc, actor, action.room_id, action.on_behalf_of_seat);
+    if (!r.ok) {
+      return respond({ ok: false, error: r.error, state: prev, version: prev?.room?.version ?? 0,
+                       me_session_id: actor.session_id });
+    }
+    handlerActor = r.actor;
+  }
+
   let result: ActionResult;
   try {
     if (action.kind === 'create_room') {
@@ -155,10 +202,11 @@ Deno.serve(async (req: Request) => {
         case 'leave_room':      result = await leaveRoom(svc, actor, action); break;
         case 'ready':           result = await setReady(svc, actor, action); break;
         case 'start_game':      result = await startGame(svc, actor, action); break;
-        case 'place_bet':       result = await placeBet(svc, actor, action); break;
+        case 'place_bet':       result = await placeBet(svc, handlerActor, action); break;
         case 'play_card':       result = await playCard(svc, actor, action); break;
         case 'continue_hand':   result = await continueHand(svc, actor, action); break;
-        case 'record_tricks':   result = await recordTricks(svc, actor, action); break;
+        case 'record_tricks':   result = await recordTricks(svc, handlerActor, action); break;
+        case 'undo_bet':        result = await undoBet(svc, actor, action); break;
         case 'request_timeout': result = await requestTimeout(svc, actor, action); break;
         case 'restart_game':    result = await restartGame(svc, actor, action); break;
         case 'set_display_name': result = await setDisplayName(svc, actor, action); break;
@@ -184,7 +232,7 @@ Deno.serve(async (req: Request) => {
   // (in parallel) only so 410-cleanup deletes and last_used_at updates settle
   // before the function context tears down — sequential await would stack
   // up to 3s × N events of latency on the response.
-  if (result.ok) {
+  if (result.ok && !isTournamentRoom) {
     try {
       const events = detectTransitions(prev, result.state, actor, action.kind as ActionKind);
       await Promise.all(events.map((ev) => notifyPush(svc, ev)));
