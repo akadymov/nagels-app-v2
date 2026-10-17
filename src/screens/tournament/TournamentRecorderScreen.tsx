@@ -31,7 +31,7 @@ export const TournamentRecorderScreen: React.FC<Props> = ({ code, tableNumber, s
   const [busy, setBusy] = useState(false);
   const claimSeq = useRef(0);
   const claimedTour = useRef<number | null>(null);
-  const roomIdRef = useRef<string | undefined>();
+  const roomIdRef = useRef<string | undefined>(undefined);
 
   const { data } = useTournamentState(code, { roomChannels: false });
 
