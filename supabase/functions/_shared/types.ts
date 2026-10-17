@@ -2,7 +2,7 @@ export type ActionKind =
   | 'create_room' | 'join_room' | 'leave_room'
   | 'ready' | 'start_game'
   | 'place_bet' | 'play_card' | 'continue_hand'
-  | 'record_tricks'
+  | 'record_tricks' | 'undo_bet'
   | 'request_timeout'
   | 'restart_game'
   | 'pause_game' | 'resume_game'
@@ -16,10 +16,11 @@ export type Action =
   | { kind: 'leave_room';  room_id: string; target_session_id?: string }
   | { kind: 'ready';       room_id: string; is_ready: boolean; target_session_id?: string }
   | { kind: 'start_game';  room_id: string }
-  | { kind: 'place_bet';   room_id: string; hand_id: string; bet: number }
+  | { kind: 'place_bet';   room_id: string; hand_id: string; bet: number; on_behalf_of_seat?: number }
   | { kind: 'play_card';   room_id: string; hand_id: string; card: string }
   | { kind: 'continue_hand'; room_id: string; hand_id: string }
-  | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number }
+  | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number; on_behalf_of_seat?: number }
+  | { kind: 'undo_bet'; room_id: string; hand_id: string }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string }
   | { kind: 'set_display_name'; display_name: string; room_id?: string }
@@ -32,7 +33,12 @@ export type Action =
   | { kind: 'admin_reset_rating';        target_user_id: string }
   | { kind: 'admin_reset_all_ratings' }
   | { kind: 'admin_grant_telegram';  target_user_id: string }
-  | { kind: 'admin_revoke_telegram'; target_user_id: string };
+  | { kind: 'admin_revoke_telegram'; target_user_id: string }
+  | { kind: 'tournament_create'; name: string; participants: Array<{ display_name: string; no_stakes: boolean }>; max_cards: number }
+  | { kind: 'tournament_update_participants'; tournament_id: string; secret: string; participants: Array<{ display_name: string; no_stakes: boolean }> }
+  | { kind: 'tournament_set_max_cards'; tournament_id: string; secret: string; max_cards: number }
+  | { kind: 'tournament_start_tour'; tournament_id: string; secret: string; tables: Array<{ seats: string[]; stake: number }>; force?: boolean }  // force: start while a slow table is still finishing
+  | { kind: 'tournament_claim_table'; code: string; table_number: number; secret: string };
 
 export interface ActorContext {
   auth_user_id: string;
@@ -73,6 +79,11 @@ export interface RoomSnapshot {
     stake_locked: boolean;
     paused_at?: string | null;
     paused_lineup?: string[] | null;
+    /** Offline tournament: room belongs to a tournament tour. Optional for backwards-compat. */
+    tournament_id?: string | null;
+    tour_number?: number | null;
+    table_number?: number | null;
+    table_claimed?: boolean;
   } | null;
   players: Array<{
     session_id: string;
@@ -90,6 +101,9 @@ export interface RoomSnapshot {
     avatar_color?: string | null;
     opt_in_stake: boolean;
     is_guest?: boolean;
+    /** Offline tournament: seat is a proxy (entered by the recorder, not a live player). */
+    is_proxy?: boolean;
+    participant_id?: string | null;
   }>;
   spectators: Spectator[];
   current_hand: {
