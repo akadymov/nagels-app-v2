@@ -26,6 +26,7 @@ Built as an extension of the existing scorekeeper room mode (`rooms.mode = 'scor
 - No link to account rating. The tournament balance is symbolic units, scoped to the tournament, keyed by participant name; it never writes `rating_events`.
 - No per-player stake opt-in. Stake is per table per tour.
 - No player devices. Participants are names only.
+- No external notifications for tournament rooms, ever: no Telegram announce, no Web Push. This is a hard server-side rule, not a client flag (see Notifications).
 
 ## Roles
 
@@ -137,6 +138,14 @@ The recorder submits tricks as N `record_tricks` calls in seat order. The last o
 `continue_hand`: the end-of-game settlement block is skipped when `rooms.tournament_id IS NOT NULL`. Proxies would be filtered out anyway (no `auth_user_id`), but the explicit guard keeps tournament stakes away from `rating_events`.
 
 `broadcastStateChanged` already fires per room on success. The new tournament actions also bump `tournaments.version` and broadcast on a `tournament:<id>` channel so the TV can refetch.
+
+## Notifications
+
+Tournament rooms never notify anyone outside the venue:
+
+- `start_tour` inserts rooms directly and never calls `notifyNewRoom`, whatever `silent`/`announce` the client sends; `create_tournament` doesn't notify either;
+- the `game-action` push step (`detectTransitions` → `notifyPush`) is skipped when the room has a `tournament_id`;
+- tested: an edge unit test asserts `notifyNewRoom` and `notifyPush` are not called for `start_tour` or for bet/tricks actions in a tournament room.
 
 ## Timers off
 
