@@ -59,6 +59,7 @@
     "expo-localization": "~17.0.8",
     "expo-status-bar": "~3.0.9",
     "i18next": "^24.2.2",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-i18next": "^15.4.0",
@@ -73,6 +74,7 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/jest": "^30.0.0",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "~19.1.10",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.6",
