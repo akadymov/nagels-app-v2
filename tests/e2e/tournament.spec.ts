@@ -18,9 +18,13 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
   const code = url.pathname.split('/')[2];
   const k = url.searchParams.get('k')!;
 
+  // The shuffle button renders before tournament state loads; wait for the title (data.tournament.name).
+  await expect(phone.locator('[data-testid="tournament-setup"]')).toContainText('E2E');
   await tap(phone, 'tournament-shuffle');
   await expect(phone.locator('[data-testid="tournament-preview-0"]')).toBeVisible();
   await tap(phone, 'tournament-start-tour');
+  // Wait for the tour to exist before opening the TV.
+  await expect(phone.locator('[data-testid="tournament-tv-link"]')).toBeVisible();
 
   await tv.goto(`${BASE}/tournament/${code}/tv?k=${k}`);
   await expect(tv.locator('[data-testid="tournament-table-1"]')).toBeVisible();
@@ -28,21 +32,38 @@ test('tournament: one table, bets with undo, tricks, TV mirrors', async ({ brows
 
   await phone.goto(`${BASE}/tournament/${code}/table/1?k=${k}`);
   await expect(phone.locator('[data-testid="tournament-recorder"]')).toBeVisible();
-  // After claim the QR stays, small, for takeover.
+  // After claim the big QR label goes away, the small QR stays for takeover.
+  await expect(tv.getByText('Scan to record this table')).toHaveCount(0, { timeout: 8000 });
   await expect(tv.locator('[data-testid="tournament-table-qr"]')).toHaveCount(1);
 
-  // 4 bets of 0 except the last; undo once in the middle.
+  // Bets: the pad ignores clicks while busy, so wait for the turn to advance after each action.
+  const bidder = phone.locator('[data-testid="recorder-bidder"]');
+  const dis = (id: string) => phone.locator(`[data-testid="${id}"]`);
+  await expect(bidder).toBeVisible();
+  let prev = await bidder.innerText();
   await tap(phone, 'recorder-bet-0');
+  await expect(bidder).not.toHaveText(prev);
   await tap(phone, 'recorder-undo');
-  for (let i = 0; i < 3; i++) await tap(phone, 'recorder-bet-0');
+  await expect(bidder).toHaveText(prev);
+  for (let i = 0; i < 3; i++) {
+    prev = await bidder.innerText();
+    await tap(phone, 'recorder-bet-0');
+    await expect(bidder).not.toHaveText(prev);
+  }
   // Last bidder: 10 cards, sum so far 0 -> saying 10 is forbidden.
-  // RN Web exposes TouchableOpacity `disabled` as aria-disabled, which toBeDisabled honors.
-  await expect(phone.locator('[data-testid="recorder-bet-10"]')).toBeDisabled();
+  // RN Web exposes `disabled` on TouchableOpacity as aria-disabled="true" (roleless div).
+  await expect(dis('recorder-bet-10')).toHaveAttribute('aria-disabled', 'true');
+  await expect(dis('recorder-bet-1')).not.toHaveAttribute('aria-disabled', 'true');
   await tap(phone, 'recorder-bet-1');
+  await expect(dis('recorder-tricks-inc-0')).toBeVisible();
 
   // Hand 1: max_cards for 4 -> 10 cards. Give all 10 to seat 0.
-  for (let i = 0; i < 10; i++) await tap(phone, 'recorder-tricks-inc-0');
-  await expect(phone.locator('[data-testid="recorder-tricks-submit"]')).toBeEnabled();
+  for (let i = 0; i < 10; i++) {
+    await tap(phone, 'recorder-tricks-inc-0');
+    await expect(phone.locator('[data-testid="recorder-tricks-value-0"]')).toHaveText(String(i + 1));
+  }
+  await expect(phone.locator('[data-testid="recorder-tricks-value-0"]')).toHaveText('10');
+  await expect(dis('recorder-tricks-submit')).not.toHaveAttribute('aria-disabled', 'true');
   await tap(phone, 'recorder-tricks-submit');
   await expect(phone.locator('[data-testid="recorder-next-hand"]')).toBeVisible();
 
