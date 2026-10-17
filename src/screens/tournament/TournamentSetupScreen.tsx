@@ -175,21 +175,30 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
     if (bad) setError(bad); else { setError(null); setPreview(next); }
   };
 
+  const startingRef = useRef(false);
   const startTour = async () => {
-    if (!data || !preview) return;
+    if (!data || !preview || startingRef.current) return;
+    startingRef.current = true;
+    const seatsSnap = preview;
+    const stakesSnap = stakes;
+    const force = forceOpen;
     setBusy(true); setError(null);
+    setPreview(null); setForceOpen(false);
     try {
       const r = await gameClient.tournamentStartTour(
-        data.tournament.id, secret!, preview.map((seats, i) => ({ seats, stake: stakes[i] })), forceOpen,
+        data.tournament.id, secret!, seatsSnap.map((seats, i) => ({ seats, stake: stakesSnap[i] })), force,
       );
       if (r?.ok) {
-        setLinks(preview.map((_, i) => i + 1));
-        setPreview(null); setForceOpen(false);
+        setError(null);
+        setLinks(seatsSnap.map((_, i) => i + 1));
         void refetch();
-      } else setError(r?.error ?? 'generic');
+      } else {
+        setPreview(seatsSnap); setForceOpen(force); setError(r?.error ?? 'generic');
+      }
     } catch (e: any) {
-      setError(e?.message ?? 'generic');
+      setPreview(seatsSnap); setForceOpen(force); setError(e?.message ?? 'generic');
     } finally {
+      startingRef.current = false;
       setBusy(false);
     }
   };
@@ -306,15 +315,19 @@ export const TournamentSetupScreen: React.FC<Props> = ({ code, secret, initialTa
           {pinFor && (
             <View style={styles.wrap}>
               <TouchableOpacity style={[styles.chip, { borderColor: colors.glassLight }]}
-                onPress={() => { setPins((p) => { const n = { ...p }; delete n[pinFor]; return n; }); setPinFor(null); }}>
+                onPress={() => { setPins((p) => { const n = { ...p }; delete n[pinFor]; return n; }); setPreview(null); setMoveFor(null); setPinFor(null); }}>
                 <Text style={{ color: colors.textPrimary }}>{t('tournament.unpinned')}</Text>
               </TouchableOpacity>
-              {stakes.map((_, i) => (
-                <TouchableOpacity key={i} style={[styles.chip, { borderColor: colors.glassLight }]}
-                  onPress={() => { setPins((p) => ({ ...p, [pinFor]: i })); setPinFor(null); }}>
-                  <Text style={{ color: colors.textPrimary }}>{i + 1}</Text>
-                </TouchableOpacity>
-              ))}
+              {stakes.map((st, i) => {
+                const blocked = !!participants.find((p) => p.id === pinFor)?.no_stakes && st > 0;
+                return (
+                  <TouchableOpacity key={i} disabled={blocked}
+                    style={[styles.chip, { borderColor: colors.glassLight, opacity: blocked ? 0.4 : 1 }]}
+                    onPress={() => { setPins((p) => ({ ...p, [pinFor]: i })); setPreview(null); setMoveFor(null); setPinFor(null); }}>
+                    <Text style={{ color: colors.textPrimary }}>{i + 1}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
 
