@@ -24,6 +24,8 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
   const tv = size === 'tv';
   const fs = tv ? 24 : 16;
   const fsSmall = tv ? 18 : 12;
+  // Header (table, hand, cards, trump) is read from across the room — keep it dominant.
+  const fsHead = tv ? 44 : 26;
   const n = table.table_number;
   const state = table.state;
   const room = state.room;
@@ -47,7 +49,7 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
     >
       <View style={styles.header}>
-        <Text style={[styles.bold, { fontSize: fs, color: colors.textPrimary }]}>
+        <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>
           {t('tournament.table', { n })}
         </Text>
         <Text style={[styles.badge, { fontSize: fsSmall, color: colors.textSecondary, borderColor: colors.glassLight }]}>
@@ -55,16 +57,16 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
         </Text>
         {hand && (
           <>
-            <Text style={{ fontSize: fsSmall, color: colors.textSecondary }}>
+            <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>
               {t('tournament.hand', { n: hand.hand_number, total: getTotalHands(room?.max_cards ?? 10) })}
             </Text>
-            <Text style={{ fontSize: fsSmall, color: colors.textSecondary }}>
+            <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>
               {t('tournament.cards', { count: hand.cards_per_player })}
             </Text>
             {trump === 'notrump' ? (
-              <Text style={{ fontSize: fsSmall, color: colors.textSecondary }}>{t('tournament.noTrump')}</Text>
+              <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>{t('tournament.noTrump')}</Text>
             ) : (
-              <Text style={{ fontSize: fs, fontWeight: '700', color: getTrumpColor(trump) }}>
+              <Text style={{ fontSize: fsHead * 1.2, lineHeight: fsHead * 1.3, fontWeight: '700', color: getTrumpColor(trump) }}>
                 {suitGlyph(trump)}
               </Text>
             )}
@@ -117,7 +119,7 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md },
-  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: Spacing.md, rowGap: Spacing.xs, marginBottom: Spacing.sm },
   bold: { fontWeight: '700' },
   badge: { borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 6, paddingVertical: 1 },
   status: { fontWeight: '600', marginBottom: Spacing.sm },
