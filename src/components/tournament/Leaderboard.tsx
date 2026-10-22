@@ -1,13 +1,14 @@
 /**
- * Tournament standings: rank, name and money balance. Points are per table,
- * so summing them across tables is meaningless and not shown.
+ * Tournament standings: rank, name, place points and money balance. Place
+ * points are awarded per table by finishing order (computed server-side);
+ * raw table scores aren't comparable across tables, so they aren't summed.
  */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
-import { fullLeaderboard, formatBalance } from '../../lib/tournament/view';
+import { fullLeaderboard, formatBalance, formatPoints } from '../../lib/tournament/view';
 import type { TournamentState } from '../../lib/tournament/types';
 
 export const Leaderboard: React.FC<{
@@ -48,7 +49,8 @@ export const Leaderboard: React.FC<{
             <Text style={{ fontSize: fsSmall, color: colors.textSecondary }}>{`  ${t('tournament.noStakes')}`}</Text>
           ) : null}
         </Text>
-        <Text style={[styles.num, tv && styles.numTv, fs, { color: balColor, fontWeight: '700' }]}>{formatBalance(r.balance)}</Text>
+        <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textPrimary, fontWeight: '700' }]}>{formatPoints(r.place_points)}</Text>
+        <Text style={[styles.num, tv && styles.numTv, fs, { color: balColor }]}>{formatBalance(r.balance)}</Text>
       </View>
     );
   };
@@ -57,6 +59,7 @@ export const Leaderboard: React.FC<{
     <View style={styles.row}>
       <Text style={[styles.rank, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.name, fs, { color: colors.textSecondary }]} />
+      <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colPoints')}</Text>
       <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colBalance')}</Text>
     </View>
   );

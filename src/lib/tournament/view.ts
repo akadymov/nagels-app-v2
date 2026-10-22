@@ -44,9 +44,15 @@ export function fullLeaderboard(ts: TournamentState): Array<LeaderRow & { name: 
     .map((p) => ({
       participant_id: p.id, name: p.display_name, no_stakes: p.no_stakes,
       balance: Number(byId.get(p.id)?.balance ?? 0),
-      total_points: Number(byId.get(p.id)?.total_points ?? 0),
+      place_points: Number(byId.get(p.id)?.place_points ?? 0),
     }))
-    .sort((a, b) => b.balance - a.balance || a.name.localeCompare(b.name));
+    .sort((a, b) => b.place_points - a.place_points || b.balance - a.balance || a.name.localeCompare(b.name));
+}
+
+/** Place points: whole, or .5 when tied players split places. */
+export function formatPoints(n: number): string {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
 }
 
 export function formatBalance(n: number): string {

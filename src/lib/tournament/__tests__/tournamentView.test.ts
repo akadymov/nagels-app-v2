@@ -52,10 +52,27 @@ describe('fullLeaderboard', () => {
     const rows = fullLeaderboard({
       tournament: {} as any, tables: [],
       participants: [{ id: 'a', display_name: 'A', no_stakes: false }, { id: 'z', display_name: 'Z', no_stakes: true }],
-      leaderboard: [{ participant_id: 'a', balance: -3, total_points: 5 }],
+      leaderboard: [{ participant_id: 'a', balance: -3, place_points: 0 }],
     });
     expect(rows.map((r) => r.name)).toEqual(['Z', 'A']);
     expect(rows[0].balance).toBe(0);
+  });
+
+  it('sorts by place points first, then balance', () => {
+    const rows = fullLeaderboard({
+      tournament: {} as any, tables: [],
+      participants: [
+        { id: 'a', display_name: 'A', no_stakes: false },
+        { id: 'b', display_name: 'B', no_stakes: false },
+        { id: 'c', display_name: 'C', no_stakes: false },
+      ],
+      leaderboard: [
+        { participant_id: 'a', balance: 20, place_points: 1 },
+        { participant_id: 'b', balance: -5, place_points: 3.5 },
+        { participant_id: 'c', balance: 2, place_points: 3.5 },
+      ],
+    });
+    expect(rows.map((r) => r.name)).toEqual(['C', 'B', 'A']);
   });
 });
 
