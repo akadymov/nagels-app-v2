@@ -1,10 +1,10 @@
 /**
- * TV dashboard for an offline tournament: one board per table, a claim QR
- * on every table (large while unclaimed, small once claimed so anyone can
- * take over) and the standings strip along the bottom. Web only.
+ * TV dashboard for an offline tournament: table boards stacked in a left
+ * column, each with a claim QR (large while unclaimed, small once claimed so
+ * anyone can take over), and the standings on the right. Web only.
  */
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
@@ -53,13 +53,13 @@ export const TournamentTvScreen: React.FC<Props> = ({ code, secret }) => {
       </View>
 
       {started ? (
-        <>
-          <View style={styles.tables}>
+        <View style={styles.split}>
+          <ScrollView style={styles.tables} contentContainerStyle={styles.tablesContent}>
             {data.tables.map((table) => {
               const n = table.table_number;
               const url = `${origin()}/tournament/${code}/table/${n}?k=${secret}`;
               return (
-                <View key={table.room_id} style={styles.column}>
+                <View key={table.room_id}>
                   <TableBoard table={table} size="tv" />
                   {secret ? (
                     table.claimed ? (
@@ -86,11 +86,11 @@ export const TournamentTvScreen: React.FC<Props> = ({ code, secret }) => {
                 </View>
               );
             })}
-          </View>
-          <View style={styles.bottom}>
+          </ScrollView>
+          <ScrollView style={styles.side}>
             <Leaderboard state={data} size="tv" />
-          </View>
-        </>
+          </ScrollView>
+        </View>
       ) : (
         <View style={styles.waiting}>
           <Text style={[bigText, { fontWeight: '700', marginBottom: Spacing.md }]}>
@@ -115,8 +115,10 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.sm },
   title: { fontSize: 32, fontWeight: '800', flexShrink: 1 },
   badge: { fontSize: 18, borderWidth: 1, borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 2 },
-  tables: { flex: 11, flexDirection: 'row', gap: Spacing.md },
-  column: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  split: { flex: 1, flexDirection: 'row', gap: Spacing.md },
+  tables: { flex: 3 },
+  tablesContent: { gap: Spacing.md },
+  side: { flex: 2 },
   qrSmall: {
     position: 'absolute', top: 0, right: 0, alignItems: 'center',
     padding: 6, borderWidth: 1, borderRadius: 10, maxWidth: 140,
@@ -132,7 +134,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
   },
   qrLabel: { fontSize: 22, fontWeight: '600', marginTop: Spacing.sm },
-  bottom: { flex: 9, marginTop: Spacing.md },
   waiting: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   names: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
   nameChip: { borderWidth: 1, borderRadius: Radius.md, paddingHorizontal: 16, paddingVertical: 6 },

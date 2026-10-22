@@ -46,7 +46,7 @@ export function fullLeaderboard(ts: TournamentState): Array<LeaderRow & { name: 
       balance: Number(byId.get(p.id)?.balance ?? 0),
       total_points: Number(byId.get(p.id)?.total_points ?? 0),
     }))
-    .sort((a, b) => b.balance - a.balance || b.total_points - a.total_points || a.name.localeCompare(b.name));
+    .sort((a, b) => b.balance - a.balance || a.name.localeCompare(b.name));
 }
 
 export function formatBalance(n: number): string {

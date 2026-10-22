@@ -1,4 +1,7 @@
-/** Tournament standings: rank, name, money balance and total points. */
+/**
+ * Tournament standings: rank, name and money balance. Points are per table,
+ * so summing them across tables is meaningless and not shown.
+ */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +26,8 @@ export const Leaderboard: React.FC<{
   const fs = tv ? { fontSize: 22 } : null;
   const fsTitle = tv ? { fontSize: 26 } : null;
   const fsSmall = tv ? 18 : 12;
-  const colCount = tv ? (rows.length > 12 ? 3 : rows.length > 8 ? 2 : 1) : 1;
+  // TV board sits in a side panel — one column unless the field is very large.
+  const colCount = tv && rows.length > 20 ? 2 : 1;
   const perCol = Math.ceil(rows.length / colCount);
   const columns = Array.from({ length: colCount }, (_, c) => rows.slice(c * perCol, (c + 1) * perCol));
 
@@ -45,7 +49,6 @@ export const Leaderboard: React.FC<{
           ) : null}
         </Text>
         <Text style={[styles.num, tv && styles.numTv, fs, { color: balColor, fontWeight: '700' }]}>{formatBalance(r.balance)}</Text>
-        <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textPrimary }]}>{r.total_points}</Text>
       </View>
     );
   };
@@ -55,7 +58,6 @@ export const Leaderboard: React.FC<{
       <Text style={[styles.rank, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.name, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colBalance')}</Text>
-      <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colPoints')}</Text>
     </View>
   );
 
