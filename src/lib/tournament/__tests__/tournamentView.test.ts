@@ -52,7 +52,7 @@ describe('fullLeaderboard', () => {
     const rows = fullLeaderboard({
       tournament: {} as any, tables: [],
       participants: [{ id: 'a', display_name: 'A', no_stakes: false }, { id: 'z', display_name: 'Z', no_stakes: true }],
-      leaderboard: [{ participant_id: 'a', balance: -3, place_points: 0 }],
+      leaderboard: [{ participant_id: 'a', balance: -3, place_points: 0, bonuses: 0 }],
     });
     expect(rows.map((r) => r.name)).toEqual(['Z', 'A']);
     expect(rows[0].balance).toBe(0);
@@ -67,9 +67,9 @@ describe('fullLeaderboard', () => {
         { id: 'c', display_name: 'C', no_stakes: false },
       ],
       leaderboard: [
-        { participant_id: 'a', balance: 20, place_points: 1 },
-        { participant_id: 'b', balance: -5, place_points: 3.5 },
-        { participant_id: 'c', balance: 2, place_points: 3.5 },
+        { participant_id: 'a', balance: 20, place_points: 1, bonuses: 0 },
+        { participant_id: 'b', balance: -5, place_points: 3.5, bonuses: 0 },
+        { participant_id: 'c', balance: 2, place_points: 3.5, bonuses: 0 },
       ],
     });
     expect(rows.map((r) => r.name)).toEqual(['C', 'B', 'A']);
@@ -81,5 +81,24 @@ describe('formatBalance', () => {
     expect(formatBalance(12.46)).toBe('+12.5');
     expect(formatBalance(-3)).toBe('−3');
     expect(formatBalance(0.04)).toBe('0');
+  });
+});
+
+describe('tableRows bonuses', () => {
+  it('counts hands where bet = tricks taken, incl. the scored current hand', () => {
+    const s: any = {
+      ...snap,
+      current_hand: { ...snap.current_hand, phase: 'scoring' },
+      hand_scores: [{ session_id: 's0', bet: 1, taken_tricks: 1, hand_score: 11 }],
+      score_history: [
+        { hand_number: 1, scores: [
+          { session_id: 's0', bet: 0, taken_tricks: 0, hand_score: 10 },
+          { session_id: 's1', bet: 1, taken_tricks: 0, hand_score: 0 },
+        ] },
+      ],
+    };
+    const rows = tableRows(s);
+    expect(rows.find((r) => r.name === 'A')!.bonuses).toBe(2);
+    expect(rows.find((r) => r.name === 'B')!.bonuses).toBe(0);
   });
 });

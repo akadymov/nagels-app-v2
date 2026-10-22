@@ -1,6 +1,6 @@
 /**
  * Read-only board for one tournament table: header (table, stake, hand,
- * cards, trump), status line and a per-player bet/taken/score grid.
+ * cards, trump), status line and a per-player bet/taken/score/bonus grid.
  * Shared by the TV screen and the phone recorder.
  */
 import React from 'react';
@@ -42,6 +42,8 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
 
   const trump = (hand?.trump_suit ?? 'notrump') as TrumpSuit;
   const cell = { fontSize: fs, color: colors.textPrimary };
+  // Five numeric columns: narrower on phones so names keep some room.
+  const num = [styles.num, { width: tv ? 96 : 52 }];
 
   return (
     <View
@@ -85,8 +87,8 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
 
       <View style={styles.row}>
         <Text style={[styles.name, { fontSize: fsSmall, color: colors.textSecondary }]} />
-        {(['colBet', 'colTaken', 'colHand', 'colTotal'] as const).map((k) => (
-          <Text key={k} style={[styles.num, { fontSize: fsSmall, color: colors.textSecondary }]}>
+        {(['colBet', 'colTaken', 'colHand', 'colTotal', 'colBonuses'] as const).map((k) => (
+          <Text key={k} style={[...num, { fontSize: fsSmall, color: colors.textSecondary }]}>
             {t(`tournament.${k}`)}
           </Text>
         ))}
@@ -107,10 +109,11 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
             {r.name}
             {r.isDealer ? `  🂠 ${t('tournament.dealer')}` : ''}
           </Text>
-          <Text style={[styles.num, cell]}>{dash(r.bet)}</Text>
-          <Text style={[styles.num, cell]}>{dash(r.taken)}</Text>
-          <Text style={[styles.num, cell]}>{dash(r.hand_score)}</Text>
-          <Text style={[styles.num, cell, styles.bold]}>{r.total}</Text>
+          <Text style={[...num, cell]}>{dash(r.bet)}</Text>
+          <Text style={[...num, cell]}>{dash(r.taken)}</Text>
+          <Text style={[...num, cell]}>{dash(r.hand_score)}</Text>
+          <Text style={[...num, cell, styles.bold]}>{r.total}</Text>
+          <Text style={[...num, cell]}>{r.bonuses}</Text>
         </View>
       ))}
     </View>
@@ -125,5 +128,5 @@ const styles = StyleSheet.create({
   status: { fontWeight: '600', marginBottom: Spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingHorizontal: 4 },
   name: { flex: 1 },
-  num: { width: 64, textAlign: 'right' },
+  num: { textAlign: 'right' },
 });

@@ -5,7 +5,7 @@ import type { TournamentState, LeaderRow } from './types';
 export interface TablePlayerRow {
   seat: number; participant_id: string | null; name: string;
   bet: number | null; taken: number | null; hand_score: number | null;
-  total: number; isDealer: boolean; isTurn: boolean;
+  total: number; bonuses: number; isDealer: boolean; isTurn: boolean;
 }
 
 export function tableRows(state: RoomSnapshot): TablePlayerRow[] {
@@ -14,9 +14,11 @@ export function tableRows(state: RoomSnapshot): TablePlayerRow[] {
   const scored = hand?.phase === 'scoring' || hand?.phase === 'closed';
   const bySession = new Map(state.hand_scores.map((s) => [s.session_id, s]));
   const totals = new Map<string, number>();
+  const bonuses = new Map<string, number>();
   for (const h of state.score_history ?? []) {
     for (const s of (h as any).scores ?? []) {
       totals.set(s.session_id, (totals.get(s.session_id) ?? 0) + (s.hand_score ?? 0));
+      if (s.bet === s.taken_tricks) bonuses.set(s.session_id, (bonuses.get(s.session_id) ?? 0) + 1);
     }
   }
   return [...state.players].sort((a, b) => a.seat_index - b.seat_index).map((p) => {
@@ -32,6 +34,8 @@ export function tableRows(state: RoomSnapshot): TablePlayerRow[] {
       hand_score: scored ? (hs?.hand_score ?? null) : null,
       // A 'closed' current hand (finished room) is already in score_history.
       total: (totals.get(p.session_id) ?? 0) + (hand?.phase === 'scoring' && hs ? hs.hand_score : 0),
+      bonuses: (bonuses.get(p.session_id) ?? 0)
+        + (hand?.phase === 'scoring' && hs && hs.bet === hs.taken_tricks ? 1 : 0),
       isDealer: !!hand && n > 0 && getDealerSeat(hand.starting_seat, n) === p.seat_index,
       isTurn: hand?.phase === 'betting' && hand.current_seat === p.seat_index,
     };
@@ -45,6 +49,7 @@ export function fullLeaderboard(ts: TournamentState): Array<LeaderRow & { name: 
       participant_id: p.id, name: p.display_name, no_stakes: p.no_stakes,
       balance: Number(byId.get(p.id)?.balance ?? 0),
       place_points: Number(byId.get(p.id)?.place_points ?? 0),
+      bonuses: Number(byId.get(p.id)?.bonuses ?? 0),
     }))
     .sort((a, b) => b.place_points - a.place_points || b.balance - a.balance || a.name.localeCompare(b.name));
 }

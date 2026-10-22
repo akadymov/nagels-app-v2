@@ -1,5 +1,5 @@
 /**
- * Tournament standings: rank, name, place points and money balance. Place
+ * Tournament standings: rank, name, place points, bonuses and money balance. Place
  * points are awarded per table by finishing order (computed server-side);
  * raw table scores aren't comparable across tables, so they aren't summed.
  */
@@ -50,6 +50,7 @@ export const Leaderboard: React.FC<{
           ) : null}
         </Text>
         <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textPrimary, fontWeight: '700' }]}>{formatPoints(r.place_points)}</Text>
+        <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textPrimary }]}>{r.bonuses}</Text>
         <Text style={[styles.num, tv && styles.numTv, fs, { color: balColor }]}>{formatBalance(r.balance)}</Text>
       </View>
     );
@@ -60,6 +61,7 @@ export const Leaderboard: React.FC<{
       <Text style={[styles.rank, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.name, fs, { color: colors.textSecondary }]} />
       <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colPoints')}</Text>
+      <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colBonuses')}</Text>
       <Text style={[styles.num, tv && styles.numTv, fs, { color: colors.textSecondary }]}>{t('tournament.colBalance')}</Text>
     </View>
   );
