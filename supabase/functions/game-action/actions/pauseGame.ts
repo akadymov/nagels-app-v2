@@ -39,11 +39,15 @@ export async function pauseGame(
     return { ok: false, error: guestErr ? 'internal_error' : 'guests_present', state: empty(), version: 0 };
   }
 
+  // Offline seats (no account, scorekeeper host records them) never heartbeat,
+  // so they can't be required back for resume.
   const { data: rps } = await svc
     .from('room_players')
-    .select('session_id')
+    .select('session_id, room_sessions!inner(auth_user_id)')
     .eq('room_id', room.id);
-  const lineup = (rps ?? []).map((r: { session_id: string }) => r.session_id);
+  const lineup = (rps ?? [])
+    .filter((r: any) => !!r.room_sessions?.auth_user_id)
+    .map((r: { session_id: string }) => r.session_id);
 
   const newVersion = (room.version ?? 0) + 1;
   await svc.from('rooms').update({

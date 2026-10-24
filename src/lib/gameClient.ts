@@ -461,6 +461,9 @@ export const gameClient = {
   editHand: (room_id: string, hand_id: string, entries: Array<{ seat: number; bet: number; taken: number }>) =>
     postAction(null, { kind: 'edit_hand', room_id, hand_id, entries }),
 
+  addOfflinePlayer: (room_id: string, display_name: string) =>
+    postAction(null, { kind: 'add_offline_player', room_id, display_name }),
+
   getMySessionId: async (): Promise<string | null> => {
     const supabase = getSupabaseClient();
     const { data } = await supabase.rpc('get_my_session_id');

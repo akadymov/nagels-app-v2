@@ -6,6 +6,7 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 
 <!-- AUTO-DETECTED:BEGIN — do not edit manually; rewritten by test:lint --update-todo -->
 - [ ] `active-turn-pulse` — src/components/ActiveTurnPulseBorder.tsx:50
+- [ ] `add-offline-player` — src/components/scorekeeper/AddOfflinePlayer.tsx:37
 - [ ] `admin-rating-block` — src/components/admin/AdminRatingBlock.tsx:83
 - [ ] `admin-reset-all-btn` — src/components/admin/AdminRatingBlock.tsx:143
 - [ ] `admin-reset-all-input` — src/components/admin/AdminRatingBlock.tsx:137
@@ -17,6 +18,7 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `betting-btn-settings` — src/components/betting/BettingPhase.tsx:695
 - [ ] `betting-btn-share-spectator` — src/components/betting/BettingPhase.tsx:857
 - [ ] `betting-leave` — src/components/betting/BettingPhase.tsx:773
+- [ ] `btn-add-offline-player` — src/components/scorekeeper/AddOfflinePlayer.tsx:56
 - [ ] `btn-cancel-modal` — src/components/ConfirmModal.tsx:33
 - [ ] `btn-edit-nickname` — src/components/SettingsBody.tsx:372
 - [ ] `btn-invite-discord` — src/components/DiscordInviteButton.tsx:32
@@ -27,8 +29,8 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `btn-lookup-recipient` — src/screens/TransferRatingModal.tsx:195
 - [ ] `btn-paused-to-lobby` — src/components/PausedOverlay.tsx:61
 - [ ] `btn-play-again-scoreboard` — src/screens/ScoreboardModal.tsx:618
-- [ ] `btn-self-to-player` — src/screens/WaitingRoomScreen.tsx:833
-- [ ] `btn-share-spectator` — src/screens/WaitingRoomScreen.tsx:521
+- [ ] `btn-self-to-player` — src/screens/WaitingRoomScreen.tsx:846
+- [ ] `btn-share-spectator` — src/screens/WaitingRoomScreen.tsx:522
 - [ ] `btn-toggle-rating-history` — src/components/SettingsBody.tsx:532
 - [ ] `btn-transfer-back` — src/screens/TransferRatingModal.tsx:247
 - [ ] `btn-transfer-confirm` — src/screens/TransferRatingModal.tsx:258
@@ -36,22 +38,23 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `btn-transfer-rating` — src/components/SettingsBody.tsx:507
 - [ ] `btn-welcome-signout` — src/screens/WelcomeScreen.tsx:161
 - [ ] `confirm-modal` — src/components/ConfirmModal.tsx:24
-- [ ] `dealer-button` — src/screens/GameTableScreen.tsx:1513
+- [ ] `dealer-button` — src/screens/GameTableScreen.tsx:1518
 - [ ] `desktop-primer-skip` — src/components/DesktopWelcomePane.tsx:105
 - [ ] `desktop-welcome-learn` — src/components/DesktopWelcomePane.tsx:197
 - [ ] `feedback-fab` — src/components/FeedbackButton.tsx:74
-- [ ] `game-btn-end` — src/screens/GameTableScreen.tsx:1234
-- [ ] `game-btn-settings` — src/screens/GameTableScreen.tsx:1207
-- [ ] `game-btn-share-spectator` — src/screens/GameTableScreen.tsx:1388
+- [ ] `game-btn-end` — src/screens/GameTableScreen.tsx:1239
+- [ ] `game-btn-settings` — src/screens/GameTableScreen.tsx:1212
+- [ ] `game-btn-share-spectator` — src/screens/GameTableScreen.tsx:1393
 - [ ] `haptics-switch` — src/components/SettingsBody.tsx:668
 - [ ] `host-left-banner` — src/components/HostLeftBanner.tsx:20
 - [ ] `host-left-banner-leave` — src/components/HostLeftBanner.tsx:27
+- [ ] `input-offline-player` — src/components/scorekeeper/AddOfflinePlayer.tsx:50
 - [ ] `input-recipient-email` — src/screens/TransferRatingModal.tsx:145
 - [ ] `input-transfer-amount` — src/screens/TransferRatingModal.tsx:165
-- [ ] `last-trick-close` — src/screens/GameTableScreen.tsx:1909
-- [ ] `left-mid-game-banner` — src/screens/WaitingRoomScreen.tsx:492
+- [ ] `last-trick-close` — src/screens/GameTableScreen.tsx:1927
+- [ ] `left-mid-game-banner` — src/screens/WaitingRoomScreen.tsx:493
 - [ ] `lobby-paused-card` — src/screens/LobbyScreen.tsx:498
-- [ ] `mode-skip-ones-row` — src/screens/WaitingRoomScreen.tsx:880
+- [ ] `mode-skip-ones-row` — src/screens/WaitingRoomScreen.tsx:893
 - [ ] `notifications-switch` — src/components/SettingsBody.tsx:690
 - [ ] `offline-briefing` — src/components/offline/OfflineHandBriefing.tsx:56
 - [ ] `offline-briefing-order` — src/components/offline/OfflineHandBriefing.tsx:78
@@ -64,9 +67,9 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `pwa-done` — src/components/PwaInstallModal.tsx:98
 - [ ] `pwa-install` — src/components/PwaInstallModal.tsx:115
 - [ ] `pwa-not-now` — src/components/PwaInstallModal.tsx:107
-- [ ] `rating-proposal-accept` — src/screens/WaitingRoomScreen.tsx:566
-- [ ] `rating-proposal-banner` — src/screens/WaitingRoomScreen.tsx:546
-- [ ] `rating-proposal-decline` — src/screens/WaitingRoomScreen.tsx:575
+- [ ] `rating-proposal-accept` — src/screens/WaitingRoomScreen.tsx:567
+- [ ] `rating-proposal-banner` — src/screens/WaitingRoomScreen.tsx:547
+- [ ] `rating-proposal-decline` — src/screens/WaitingRoomScreen.tsx:576
 - [ ] `recorder-board-toggle` — src/screens/tournament/TournamentRecorderScreen.tsx:267
 - [ ] `recorder-edit-problem` — src/components/tournament/RecorderHands.tsx:141
 - [ ] `recorder-exit` — src/screens/tournament/TournamentRecorderScreen.tsx:167
@@ -81,7 +84,8 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `scoreboard-delta-row` — src/screens/ScoreboardModal.tsx:542
 - [ ] `scoreboard-stake-badge` — src/screens/ScoreboardModal.tsx:313
 - [ ] `scoreboard-title-hand` — src/screens/ScoreboardModal.tsx:328
-- [ ] `scorekeeper-table-cover` — src/screens/GameTableScreen.tsx:1751
+- [ ] `scorekeeper-host-panel` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:63
+- [ ] `scorekeeper-table-cover` — src/screens/GameTableScreen.tsx:1756
 - [ ] `settings-nickname` — src/components/SettingsBody.tsx:358
 - [ ] `settings-pwa-install` — src/components/SettingsBody.tsx:730
 - [ ] `settings-save` — src/components/SettingsBody.tsx:363
@@ -91,19 +95,24 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `settings-set-password-toggle` — src/components/SettingsBody.tsx:452
 - [ ] `settlement-close` — src/screens/RatingSettlementModal.tsx:84
 - [ ] `settlement-play-again` — src/screens/RatingSettlementModal.tsx:74
-- [ ] `spectator-badge` — src/screens/WaitingRoomScreen.tsx:816
-- [ ] `spectator-count` — src/screens/GameTableScreen.tsx:1407
-- [ ] `spectator-strip` — src/screens/GameTableScreen.tsx:1682
-- [ ] `spectators-list` — src/screens/WaitingRoomScreen.tsx:750
+- [ ] `sk-host-btn-chat` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:77
+- [ ] `sk-host-btn-scores` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:73
+- [ ] `sk-host-btn-settings` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:69
+- [ ] `sk-host-hands-toggle` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:86
+- [ ] `sk-host-leave` — src/components/scorekeeper/ScorekeeperHostPanel.tsx:81
+- [ ] `spectator-badge` — src/screens/WaitingRoomScreen.tsx:829
+- [ ] `spectator-count` — src/screens/GameTableScreen.tsx:1412
+- [ ] `spectator-strip` — src/screens/GameTableScreen.tsx:1687
+- [ ] `spectators-list` — src/screens/WaitingRoomScreen.tsx:763
 - [ ] `stake-chip-custom` — src/components/stakes/StakeSelector.tsx:148
 - [ ] `stake-custom-apply` — src/components/stakes/StakeSelector.tsx:180
 - [ ] `stake-custom-input` — src/components/stakes/StakeSelector.tsx:174
 - [ ] `stake-optin-host-badge` — src/components/stakes/StakeSelector.tsx:194
 - [ ] `switch-announce-telegram` — src/screens/LobbyScreen.tsx:731
-- [ ] `switch-skip-ones` — src/screens/WaitingRoomScreen.tsx:892
+- [ ] `switch-skip-ones` — src/screens/WaitingRoomScreen.tsx:905
 - [ ] `tournament-error` — src/screens/tournament/TournamentSetupScreen.tsx:236
 - [ ] `tournament-tv` — src/screens/tournament/TournamentTvScreen.tsx:26
-- [ ] `trick-card` — src/screens/GameTableScreen.tsx:1636
+- [ ] `trick-card` — src/screens/GameTableScreen.tsx:1641
 - [ ] `tricks-btn-chat` — src/components/scorekeeper/TricksRecorder.tsx:151
 - [ ] `tricks-btn-scores` — src/components/scorekeeper/TricksRecorder.tsx:141
 - [ ] `tricks-btn-settings` — src/components/scorekeeper/TricksRecorder.tsx:132
@@ -113,8 +122,8 @@ Auto-maintained partially by `scripts/test-coverage-check.ts`.
 - [ ] `tricks-recorder-instruction` — src/components/scorekeeper/TricksRecorder.tsx:198
 - [ ] `tricks-recorder-reminder` — src/components/scorekeeper/TricksRecorder.tsx:180
 - [ ] `turn-timer` — src/components/TurnTimer.tsx:69
-- [ ] `waiting-btn-settings` — src/screens/WaitingRoomScreen.tsx:475
-- [ ] `waiting-btn-sync` — src/screens/WaitingRoomScreen.tsx:423
+- [ ] `waiting-btn-settings` — src/screens/WaitingRoomScreen.tsx:476
+- [ ] `waiting-btn-sync` — src/screens/WaitingRoomScreen.tsx:424
 - [ ] `welcome-profile` — src/screens/WelcomeScreen.tsx:138
 <!-- AUTO-DETECTED:END -->
 

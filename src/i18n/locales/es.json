@@ -481,7 +481,20 @@
     "waitingForOthers": "Esperando a que los demás ingresen sus bazas…",
     "mismatchTitle": "La suma no coincide",
     "mismatchBody": "Bazas registradas ({{actual}}) ≠ cartas repartidas ({{expected}}). Alguien se equivocó — corrige tu entrada.",
-    "submit": "Confirmar"
+    "submit": "Confirmar",
+    "addOfflineTitle": "Jugadores sin teléfono",
+    "addOfflineHint": "Tú introducirás sus apuestas y bazas.",
+    "addOfflinePlaceholder": "Nombre",
+    "addOfflineBtn": "Añadir",
+    "offlineBadge": "sin teléfono",
+    "hostRecording": "Llevas la cuenta de todos",
+    "leave": "Salir",
+    "addErrors": {
+      "name_taken": "Ya hay un jugador con ese nombre en la mesa.",
+      "invalid_name": "Escribe un nombre.",
+      "room_full": "La mesa está llena (máximo 6 jugadores).",
+      "generic": "No se pudo añadir al jugador."
+    }
   },
   "admin": {
     "allowTelegram": "Puede anunciar en Telegram",
@@ -608,7 +621,9 @@
       "unknown_participant": "Jugador desconocido en la distribución.",
       "bad_pin": "Mesa fijada no válida.",
       "tour_in_progress": "La ronda actual sigue en curso.",
-      "bad_stake": "Apuesta no válida."
+      "bad_stake": "Apuesta no válida.",
+      "stake_seat": "Este jugador juega por rating: solo él puede introducir sus valores.",
+      "stake_room": "No se pueden corregir manos mientras haya una apuesta de rating."
     }
   }
 }

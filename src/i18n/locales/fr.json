@@ -476,7 +476,20 @@
     "waitingForOthers": "En attente que les autres joueurs entrent leurs plis…",
     "mismatchTitle": "La somme ne colle pas",
     "mismatchBody": "Plis notés ({{actual}}) ≠ cartes distribuées ({{expected}}). Quelqu'un s'est trompé — corrige ton entrée.",
-    "submit": "Confirmer"
+    "submit": "Confirmer",
+    "addOfflineTitle": "Joueurs sans téléphone",
+    "addOfflineHint": "Tu saisiras toi-même leurs paris et leurs plis.",
+    "addOfflinePlaceholder": "Nom",
+    "addOfflineBtn": "Ajouter",
+    "offlineBadge": "sans téléphone",
+    "hostRecording": "Tu tiens le score pour tout le monde",
+    "leave": "Quitter",
+    "addErrors": {
+      "name_taken": "Un joueur porte déjà ce nom à la table.",
+      "invalid_name": "Saisis un nom.",
+      "room_full": "La table est complète (6 joueurs max).",
+      "generic": "Impossible d’ajouter le joueur."
+    }
   },
   "admin": {
     "allowTelegram": "Peut annoncer dans Telegram",
@@ -603,7 +616,9 @@
       "unknown_participant": "Joueur inconnu dans le placement.",
       "bad_pin": "Table épinglée invalide.",
       "tour_in_progress": "Le tour en cours n'est pas terminé.",
-      "bad_stake": "Mise invalide."
+      "bad_stake": "Mise invalide.",
+      "stake_seat": "Ce joueur joue pour le classement : lui seul peut saisir ses valeurs.",
+      "stake_room": "Impossible de corriger les donnes tant qu’une mise de classement est fixée."
     }
   }
 }

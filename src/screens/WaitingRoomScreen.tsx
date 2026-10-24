@@ -51,6 +51,7 @@ import { HostLeftBanner } from '../components/HostLeftBanner';
 import { DiscordInviteButton } from '../components/DiscordInviteButton';
 import { isHostAbsent } from '../lib/hostAbsent';
 import { useHostAbsentTicker } from '../lib/useHostAbsentTicker';
+import { AddOfflinePlayer } from '../components/scorekeeper/AddOfflinePlayer';
 
 // Stable empty-array reference — see note in GameTableScreen.
 const EMPTY_ARRAY: any[] = Object.freeze([]) as any;
@@ -626,7 +627,9 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             // myself — my own card always renders before my first ping lands.
             const seenTs = player.last_seen_at ? Date.parse(player.last_seen_at) : NaN;
             const msSince = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
-            const isOffline = !isMe && msSince > 30_000;
+            // Offline seats (scorekeeper, no phone) never heartbeat by design.
+            const isProxy = !!(player as any).is_proxy;
+            const isOffline = !isMe && !isProxy && msSince > 30_000;
             // Avatar: prefer user-chosen emoji + color (from auth metadata),
             // fall back to a session-id-hashed color (random-looking, stable).
             const avatarBg = (player as any).avatar_color || avatarColorFor(player.session_id);
@@ -661,6 +664,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                       )}
                       {isOffline && (
                         <Text style={styles.seatSuffix}> · 📡</Text>
+                      )}
+                      {isProxy && (
+                        <Text style={styles.seatSuffix} testID={`offline-badge-${player.seat_index}`}>
+                          {` · 📵 ${t('scorekeeper.offlineBadge')}`}
+                        </Text>
                       )}
                       {(player as any).opt_in_stake && (room?.stake ?? 0) > 0 && (
                         <Text
@@ -699,7 +707,7 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
                   </Pressable>
                   {/* Convert-to-spectator button. Self or host (never the
                       host themselves). Only between games / before start. */}
-                  {!isHostPlayer && room?.id && (isMe || isHost) &&
+                  {!isHostPlayer && !isProxy && room?.id && (isMe || isHost) &&
                    (room.phase === 'waiting' || room.phase === 'finished') && (
                     <Pressable
                       onPress={() => handleSwitchRole(player.session_id, 'spectator')}
@@ -741,6 +749,11 @@ export const WaitingRoomScreen: React.FC<WaitingRoomScreenProps> = ({
             );
           })}
         </View>
+
+        {isHost && room?.id && room.phase === 'waiting' &&
+         (room as { mode?: string }).mode === 'scorekeeper' && (
+          <AddOfflinePlayer roomId={room.id} />
+        )}
 
         {/* Spectators — show only to the host so they can promote into
             empty seats. Self-toggle for the spectator themselves lives

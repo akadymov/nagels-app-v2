@@ -25,7 +25,7 @@ import { buildInviteLink } from '../utils/inviteLink';
 import { GlassCard } from '../components/glass';
 import { GameLogo } from '../components/GameLogo';
 import { BettingPhase } from '../components/betting';
-import { TricksRecorder } from '../components/scorekeeper';
+import { TricksRecorder, ScorekeeperHostPanel } from '../components/scorekeeper';
 import { Icon } from '../components/Icon';
 import { ScoreboardModal } from './ScoreboardModal';
 import { RatingSettlementModal } from './RatingSettlementModal';
@@ -232,6 +232,10 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
 
   const isHost = isMultiplayer && !!room && !!myPlayerId && room.host_session_id === myPlayerId;
   const isScorekeeper = (room as { mode?: string } | null)?.mode === 'scorekeeper';
+  // Scorekeeper host records bets/tricks for every seat (incl. offline players).
+  const scorekeeperHostRecording =
+    isHost && isScorekeeper && !isSpectator && room?.phase === 'playing'
+    && (hand?.phase === 'betting' || hand?.phase === 'tricks_recording');
   const handleEndGame = useCallback(async () => {
     // Single-player bot game: ask once, then drop the local game state and exit.
     if (!isMultiplayer) {
@@ -449,7 +453,8 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           if (row) total += row.hand_score;
         }
         const seenTs = p.last_seen_at ? Date.parse(p.last_seen_at) : NaN;
-        const msSinceSeen = Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
+        // Offline seats (scorekeeper, no phone) never heartbeat — never show them away.
+        const msSinceSeen = (p as any).is_proxy ? 0 : Number.isNaN(seenTs) ? Infinity : Date.now() - seenTs;
         return {
           id: p.session_id,
           name: p.display_name,
@@ -1752,10 +1757,11 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
           />
         )}
 
-        {/* Betting Phase Modal — hidden for spectators */}
+        {/* Betting Phase Modal — hidden for spectators. In a scorekeeper
+            room the host records for every seat via ScorekeeperHostPanel. */}
         {!isSpectator && (
           <BettingPhase
-            visible={vm.phase === 'betting'}
+            visible={vm.phase === 'betting' && !scorekeeperHostRecording}
             isMultiplayer={isMultiplayer}
             onClose={() => { if (!isMultiplayer) { try { sp.reset(); } catch {} } onExit?.(); }}
             onShowScore={() => {
@@ -1769,7 +1775,7 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             while the hand sits in 'tricks_recording' after betting. */}
         {!isSpectator && (
           <TricksRecorder
-            visible={vm.isTricksRecording === true}
+            visible={vm.isTricksRecording === true && !scorekeeperHostRecording}
             onShowScore={() => {
               setIsViewingScores(true);
               setShowScoreboard(true);
@@ -1780,6 +1786,18 @@ export const GameTableScreen: React.FC<GameTableScreenProps> = ({
             }}
           />
         )}
+
+        <ScorekeeperHostPanel
+          visible={scorekeeperHostRecording}
+          onShowScore={() => {
+            setIsViewingScores(true);
+            setShowScoreboard(true);
+          }}
+          onShowChat={() => {
+            setShowChat(true);
+            useChatTooltipStore.getState().dismissAll();
+          }}
+        />
 
         {/* Scoreboard Modal — also handles the game-over celebration
             via its built-in winner banner (see ScoreboardModal). */}

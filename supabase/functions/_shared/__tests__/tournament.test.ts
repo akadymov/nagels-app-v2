@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { canActForTable } from '../../game-action/onBehalf.ts';
+import { canActForTable, stakeBlocksProxy } from '../../game-action/onBehalf.ts';
 import { computeBalance, validateSeating } from '../engine/tournament.ts';
 
 Deno.test('canActForTable: host of a tournament room may act', () => {
@@ -11,8 +11,22 @@ Deno.test('canActForTable: tournament admin may act', () => {
 Deno.test('canActForTable: stranger may not act', () => {
   assertEquals(canActForTable({ tournament_id: 't', host_session_id: 'h' }, 'a', 'x'), false);
 });
-Deno.test('canActForTable: never outside a tournament room', () => {
+Deno.test('canActForTable: never in a standard room', () => {
   assertEquals(canActForTable({ tournament_id: null, host_session_id: 'h' }, null, 'h'), false);
+  assertEquals(canActForTable({ tournament_id: null, host_session_id: 'h', mode: 'standard' }, null, 'h'), false);
+});
+Deno.test('canActForTable: host of a scorekeeper room may act, others not', () => {
+  assertEquals(canActForTable({ tournament_id: null, host_session_id: 'h', mode: 'scorekeeper' }, null, 'h'), true);
+  assertEquals(canActForTable({ tournament_id: null, host_session_id: 'h', mode: 'scorekeeper' }, null, 'x'), false);
+});
+Deno.test('stakeBlocksProxy: only real other players in a staked regular room', () => {
+  const real = { session_id: 'p', has_account: true };
+  const offline = { session_id: 'o', has_account: false };
+  assertEquals(stakeBlocksProxy({ tournament_id: null, stake: 5 }, real, 'h'), true);
+  assertEquals(stakeBlocksProxy({ tournament_id: null, stake: 5 }, offline, 'h'), false);
+  assertEquals(stakeBlocksProxy({ tournament_id: null, stake: 5 }, { session_id: 'h', has_account: true }, 'h'), false);
+  assertEquals(stakeBlocksProxy({ tournament_id: null, stake: 0 }, real, 'h'), false);
+  assertEquals(stakeBlocksProxy({ tournament_id: 't', stake: 5 }, real, 'h'), false);
 });
 Deno.test('engine runs under deno (shared with jest)', () => {
   assertEquals(validateSeating([['a', 'b']], [{ id: 'a', no_stakes: false }, { id: 'b', no_stakes: false }], [0]), null);

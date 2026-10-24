@@ -22,6 +22,7 @@ export type Action =
   | { kind: 'record_tricks'; room_id: string; hand_id: string; tricks: number; on_behalf_of_seat?: number }
   | { kind: 'undo_bet'; room_id: string; hand_id: string }
   | { kind: 'edit_hand'; room_id: string; hand_id: string; entries: Array<{ seat: number; bet: number; taken: number }> }
+  | { kind: 'add_offline_player'; room_id: string; display_name: string }
   | { kind: 'request_timeout'; room_id: string; hand_id: string; expected_seat: number }
   | { kind: 'restart_game'; room_id: string }
   | { kind: 'set_display_name'; display_name: string; room_id?: string }

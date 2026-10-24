@@ -26,13 +26,19 @@ export async function editHand(
   action: Extract<Action, { kind: 'edit_hand' }>,
 ): Promise<ActionResult> {
   const { data: room } = await svc.from('rooms')
-    .select('tournament_id, host_session_id').eq('id', action.room_id).maybeSingle();
+    .select('tournament_id, host_session_id, mode, stake').eq('id', action.room_id).maybeSingle();
   const { data: t } = room?.tournament_id
     ? await svc.from('tournaments').select('admin_session_id').eq('id', room.tournament_id).maybeSingle()
     : { data: null };
   if (!room || !canActForTable(room, t?.admin_session_id ?? null, actor.session_id)) {
     const s = await buildSnapshot(svc, action.room_id, actor.session_id);
     return { ok: false, error: 'not_recorder', state: s, version: s.room?.version ?? 0 };
+  }
+  // Rating stakes settle from these rows; outside a tournament, history
+  // stays as the players entered it while a stake is set.
+  if (!room.tournament_id && (room.stake ?? 0) > 0) {
+    const s = await buildSnapshot(svc, action.room_id, actor.session_id);
+    return { ok: false, error: 'stake_room', state: s, version: s.room?.version ?? 0 };
   }
 
   const { data: seats } = await svc.from('room_players')

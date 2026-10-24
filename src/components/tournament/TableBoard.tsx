@@ -51,12 +51,17 @@ export const TableBoard: React.FC<Props> = ({ table, size = 'phone' }) => {
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.glassLight }]}
     >
       <View style={styles.header}>
-        <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>
-          {t('tournament.table', { n })}
-        </Text>
-        <Text style={[styles.badge, { fontSize: fsSmall, color: colors.textSecondary, borderColor: colors.glassLight }]}>
-          {table.stake > 0 ? t('tournament.stakeUnits', { stake: table.stake }) : t('tournament.stakeNone')}
-        </Text>
+        {/* table_number 0: a regular scorekeeper room, no tournament table/stake. */}
+        {n > 0 && (
+          <>
+            <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>
+              {t('tournament.table', { n })}
+            </Text>
+            <Text style={[styles.badge, { fontSize: fsSmall, color: colors.textSecondary, borderColor: colors.glassLight }]}>
+              {table.stake > 0 ? t('tournament.stakeUnits', { stake: table.stake }) : t('tournament.stakeNone')}
+            </Text>
+          </>
+        )}
         {hand && (
           <>
             <Text style={[styles.bold, { fontSize: fsHead, color: colors.textPrimary }]}>

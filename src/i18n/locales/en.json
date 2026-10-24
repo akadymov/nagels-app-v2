@@ -481,7 +481,20 @@
     "waitingForOthers": "Waiting for other players to enter their tricks…",
     "mismatchTitle": "Sum doesn't match",
     "mismatchBody": "Tricks recorded ({{actual}}) ≠ cards dealt ({{expected}}). Someone made a mistake — please fix your entry.",
-    "submit": "Confirm"
+    "submit": "Confirm",
+    "addOfflineTitle": "Players without a phone",
+    "addOfflineHint": "You'll enter their bets and tricks yourself.",
+    "addOfflinePlaceholder": "Name",
+    "addOfflineBtn": "Add",
+    "offlineBadge": "no phone",
+    "hostRecording": "You record for everyone",
+    "leave": "Leave",
+    "addErrors": {
+      "name_taken": "Someone at the table already has this name.",
+      "invalid_name": "Enter a name.",
+      "room_full": "The table is full (6 players max).",
+      "generic": "Couldn't add the player."
+    }
   },
   "admin": {
     "allowTelegram": "Can announce in Telegram",
@@ -608,7 +621,9 @@
       "unknown_participant": "Unknown player in the seating.",
       "bad_pin": "Invalid table pin.",
       "tour_in_progress": "The current tour is still in progress.",
-      "bad_stake": "Invalid stake."
+      "bad_stake": "Invalid stake.",
+      "stake_seat": "This player plays for rating — only they can enter their values.",
+      "stake_room": "Hands can't be edited while a rating stake is set."
     }
   }
 }

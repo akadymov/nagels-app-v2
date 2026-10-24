@@ -30,6 +30,7 @@ import { setStake }       from './actions/setStake.ts';
 import { toggleStakeOptin } from './actions/toggleStakeOptin.ts';
 import { pauseGame } from './actions/pauseGame.ts';
 import { resumeGame } from './actions/resumeGame.ts';
+import { addOfflinePlayer } from './actions/addOfflinePlayer.ts';
 import { adminCheck }      from './actions/adminCheck.ts';
 import { adminSearchUsers } from './actions/adminSearchUsers.ts';
 import { adminResetRating, adminResetAllRatings } from './actions/adminResetRating.ts';
@@ -216,6 +217,7 @@ Deno.serve(async (req: Request) => {
         case 'toggle_stake_optin': result = await toggleStakeOptin(svc, actor, action); break;
         case 'pause_game':      result = await pauseGame(svc, actor, action); break;
         case 'resume_game':     result = await resumeGame(svc, actor, action); break;
+        case 'add_offline_player': result = await addOfflinePlayer(svc, actor, action); break;
         default:                throw new Error('unknown_action');
       }
     }

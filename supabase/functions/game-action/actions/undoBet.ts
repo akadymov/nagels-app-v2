@@ -9,7 +9,7 @@ export async function undoBet(
   action: Extract<Action, { kind: 'undo_bet' }>,
 ): Promise<ActionResult> {
   const { data: room } = await svc.from('rooms')
-    .select('tournament_id, host_session_id').eq('id', action.room_id).maybeSingle();
+    .select('tournament_id, host_session_id, mode').eq('id', action.room_id).maybeSingle();
   const { data: t } = room?.tournament_id
     ? await svc.from('tournaments').select('admin_session_id').eq('id', room.tournament_id).maybeSingle()
     : { data: null };
